@@ -8,6 +8,8 @@ import (
 	"errors"
 	"encoding/json"
 	"bytes"
+	"io/ioutil"
+	"io"
 )
 
 //---------------------------------------------------------------------------
@@ -38,6 +40,20 @@ func HttpLogHandler(handler http.Handler) http.Handler {
 		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
 		handler.ServeHTTP(w, r)
 	})
+}
+
+const HttpContentJson = "application/json"
+
+
+func HttpPut(url string, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest("PUT", url, body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", contentType)
+	client := &http.Client{}
+	return client.Do(req)
 }
 
 //---------------------------------------------------------------------------
@@ -94,8 +110,13 @@ func (mssg *LogMessage) Validate() error {
 	return nil
 }
 
-
 func SendLogMessage(service string, address string, severity string, message string) error {
+
+	address, err := GetServiceAddress("pz-logger")
+	if err != nil {
+		return err
+	}
+	log.Print(address)
 
 	mssg := LogMessage{Service: service, Address: address, Severity: severity, Message: message, Time: time.Now().String()}
 	data, err := json.Marshal(mssg)
@@ -103,13 +124,94 @@ func SendLogMessage(service string, address string, severity string, message str
 		return err
 	}
 
-	resp, err := http.Post("http://localhost:12341/log", "application/json", bytes.NewBuffer(data))
+	resp, err := http.Post(address, HttpContentJson, bytes.NewBuffer(data))
 	if err != nil {
+		log.Print(77)
 		return err
 	}
+	log.Print(66)
+
 	if resp.StatusCode != http.StatusOK {
-		return errors.New("log post failed")
+		return errors.New(resp.Status)
 	}
 
 	return nil
+}
+
+//---------------------------------------------------------------------------
+
+func ReadFrom(reader io.ReadCloser) ([]byte, error) {
+	defer reader.Close()
+	data, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	return data, err
+}
+
+//---------------------------------------------------------------------------
+
+// singelton
+var registryUrl string
+
+type registryItemData struct {
+	Type string `json:"type"`
+	Address string `json:"address"`
+}
+type registryItem struct {
+	Name string `json:"name"`
+	Data registryItemData `json:"data"`
+}
+
+func RegistryInit(url string) {
+	registryUrl = url + "/api/v1/resources"
+}
+
+func RegisterService(name string, itemtype string, url string) error {
+
+	m := registryItem{Name: name, Data: registryItemData{Type: itemtype, Address: url}}
+
+	data, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+
+	resp, err := HttpPut(registryUrl, HttpContentJson,  bytes.NewBuffer(data))
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		return errors.New(resp.Status)
+	}
+
+	return nil
+}
+
+func GetServiceAddress(name string) (string, error) {
+
+	target := fmt.Sprintf("%s/%s", registryUrl, name)
+
+	resp, err := http.Get(target)
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", errors.New(resp.Status)
+	}
+
+	data, err := ReadFrom(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+
+
+	var m registryItemData
+	err = json.Unmarshal(data, &m)
+	if err != nil {
+		return "", err
+	}
+
+	return m.Address, nil
 }
