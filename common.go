@@ -116,7 +116,6 @@ func SendLogMessage(service string, address string, severity string, message str
 	if err != nil {
 		return err
 	}
-	log.Print(address)
 
 	mssg := LogMessage{Service: service, Address: address, Severity: severity, Message: message, Time: time.Now().String()}
 	data, err := json.Marshal(mssg)
@@ -126,10 +125,8 @@ func SendLogMessage(service string, address string, severity string, message str
 
 	resp, err := http.Post(address, HttpContentJson, bytes.NewBuffer(data))
 	if err != nil {
-		log.Print(77)
 		return err
 	}
-	log.Print(66)
 
 	if resp.StatusCode != http.StatusOK {
 		return errors.New(resp.Status)
