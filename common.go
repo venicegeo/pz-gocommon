@@ -1,51 +1,53 @@
 package piazza
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
-	"fmt"
-	"errors"
-	"encoding/json"
-	"bytes"
-	"io/ioutil"
-	"io"
 )
 
 //---------------------------------------------------------------------------
 
-type AdminResponse_UuidGen struct {
+// An AdminResponse represents the data returned from a call to a service's
+// /admin API.
+type AdminResponse struct {
+	StartTime time.Time             `json:"starttime"`
+	Uuidgen   *AdminResponseUuidgen `json:"uuidgen,omitempty"`
+	Logger    *AdminResponseLogger  `json:"logger,omitempty"`
+}
+
+// AdminResponseUuidgen is the response to pz-uuidgen's /admin call
+type AdminResponseUuidgen struct {
 	NumRequests int `json:"num_requests"`
 	NumUUIDs    int `json:"num_uuids"`
 }
 
-type AdminResponse_Logger struct {
+// AdminResponseLogger is the response to pz-logger's /admin call
+type AdminResponseLogger struct {
 	NumMessages int `json:"num_messages"`
-}
-
-type AdminResponse struct {
-	StartTime time.Time              `json:"starttime"`
-	UuidGen   *AdminResponse_UuidGen `json:"uuidgen,omitempty"`
-	Logger    *AdminResponse_Logger  `json:"logger,omitempty"`
-}
-
-func Adder(a int, b int) int {
-	return a + b
 }
 
 //---------------------------------------------------------------------------
 
-func HttpLogHandler(handler http.Handler) http.Handler {
+// ServerLogHandler adds traditional logging support to the http server handlers.
+func ServerLogHandler(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
 		handler.ServeHTTP(w, r)
 	})
 }
 
-const HttpContentJson = "application/json"
+// ContentTypeJSON is the http content-type for JSON.
+const ContentTypeJSON = "application/json"
 
-
-func HttpPut(url string, contentType string, body io.Reader) (*http.Response, error) {
+// Put is because there is not http.Put.
+func Put(url string, contentType string, body io.Reader) (*http.Response, error) {
 	req, err := http.NewRequest("PUT", url, body)
 	if err != nil {
 		return nil, err
@@ -58,7 +60,8 @@ func HttpPut(url string, contentType string, body io.Reader) (*http.Response, er
 
 //---------------------------------------------------------------------------
 
-// all fields required
+// LogMessage represents the contents of a messge for the logger service.
+// All fields are required.
 type LogMessage struct {
 	Service  string `json:"service"`
 	Address  string `json:"address"`
@@ -67,18 +70,29 @@ type LogMessage struct {
 	Message  string `json:"message"`
 }
 
-func (m *LogMessage) ToString() string {
+// ToString returns a LogMessage as a formatted string.
+func (mssg *LogMessage) ToString() string {
 	s := fmt.Sprintf("[%s, %s, %s, %s, %s]",
-		m.Service, m.Address, m.Time, m.Severity, m.Message)
+		mssg.Service, mssg.Address, mssg.Time, mssg.Severity, mssg.Message)
 	return s
 }
 
+// SeverityDebug is for log messages that are only used in development.
 const SeverityDebug = "Debug"
+
+// SeverityInfo is for log messages that are only informative, no action needed.
 const SeverityInfo = "Info"
+
+// SeverityWarning is for log messages that indicate possible problems. Execution continues normally.
 const SeverityWarning = "Warning"
+
+// SeverityError is for log messages that indicate something went wrong. The problem is usually handled and execution continues.
 const SeverityError = "Error"
+
+// SeverityFatal is for log messages that indicate an internal error and the system is likely now unstable. These should never happen.
 const SeverityFatal = "Fatal"
 
+// Validate checks to make sure a LogMessage is properly filled out. If not, a non-nil error is returned.
 func (mssg *LogMessage) Validate() error {
 	if mssg.Service == "" {
 		return errors.New("required field 'service' not set")
@@ -97,7 +111,7 @@ func (mssg *LogMessage) Validate() error {
 	}
 
 	ok := false
-	for _, code := range([...]string{SeverityDebug, SeverityInfo, SeverityWarning, SeverityError, SeverityFatal}) {
+	for _, code := range [...]string{SeverityDebug, SeverityInfo, SeverityWarning, SeverityError, SeverityFatal} {
 		if mssg.Severity == code {
 			ok = true
 			break
@@ -110,7 +124,8 @@ func (mssg *LogMessage) Validate() error {
 	return nil
 }
 
-func SendLogMessage(service string, address string, severity string, message string) error {
+// Log sends a LogMessage to the logger.
+func Log(service string, address string, severity string, message string) error {
 
 	address, err := GetServiceAddress("pz-logger")
 	if err != nil {
@@ -123,7 +138,7 @@ func SendLogMessage(service string, address string, severity string, message str
 		return err
 	}
 
-	resp, err := http.Post(address, HttpContentJson, bytes.NewBuffer(data))
+	resp, err := http.Post(address, ContentTypeJSON, bytes.NewBuffer(data))
 	if err != nil {
 		return err
 	}
@@ -137,8 +152,14 @@ func SendLogMessage(service string, address string, severity string, message str
 
 //---------------------------------------------------------------------------
 
-func ReadFrom(reader io.ReadCloser) ([]byte, error) {
-	defer reader.Close()
+// ReadFrom is a convenience function that returns the bytes taken from a Reader.
+// The reader will be closed if necessary.
+func ReadFrom(reader io.Reader) ([]byte, error) {
+	switch reader.(type) {
+	case io.Closer:
+		defer reader.(io.Closer).Close()
+	}
+
 	data, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return nil, err
@@ -149,21 +170,23 @@ func ReadFrom(reader io.ReadCloser) ([]byte, error) {
 //---------------------------------------------------------------------------
 
 // singelton
-var registryUrl string
+var registryURL string
 
 type registryItemData struct {
-	Type string `json:"type"`
+	Type    string `json:"type"`
 	Address string `json:"address"`
 }
 type registryItem struct {
-	Name string `json:"name"`
+	Name string           `json:"name"`
 	Data registryItemData `json:"data"`
 }
 
+// RegistryInit initialies the Discovery service from pz-discovery.
 func RegistryInit(url string) {
-	registryUrl = url + "/api/v1/resources"
+	registryURL = url + "/api/v1/resources"
 }
 
+// RegisterService adds the given service to the discovery system.
 func RegisterService(name string, itemtype string, url string) error {
 
 	m := registryItem{Name: name, Data: registryItemData{Type: itemtype, Address: url}}
@@ -173,7 +196,7 @@ func RegisterService(name string, itemtype string, url string) error {
 		return err
 	}
 
-	resp, err := HttpPut(registryUrl, HttpContentJson,  bytes.NewBuffer(data))
+	resp, err := Put(registryURL, ContentTypeJSON, bytes.NewBuffer(data))
 	if err != nil {
 		return err
 	}
@@ -184,9 +207,11 @@ func RegisterService(name string, itemtype string, url string) error {
 	return nil
 }
 
+// GetServiceAddress returns the URL of the given service.
+// If the service is not found, a non-nil error is returned.
 func GetServiceAddress(name string) (string, error) {
 
-	target := fmt.Sprintf("%s/%s", registryUrl, name)
+	target := fmt.Sprintf("%s/%s", registryURL, name)
 
 	resp, err := http.Get(target)
 	if err != nil {
@@ -201,8 +226,6 @@ func GetServiceAddress(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-
 
 	var m registryItemData
 	err = json.Unmarshal(data, &m)
