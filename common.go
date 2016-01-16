@@ -46,7 +46,7 @@ func ServerLogHandler(handler http.Handler) http.Handler {
 // ContentTypeJSON is the http content-type for JSON.
 const ContentTypeJSON = "application/json"
 
-// Put is because there is not http.Put.
+// Put is because there is no http.Put.
 func Put(url string, contentType string, body io.Reader) (*http.Response, error) {
 	req, err := http.NewRequest("PUT", url, body)
 	if err != nil {
@@ -54,6 +54,17 @@ func Put(url string, contentType string, body io.Reader) (*http.Response, error)
 	}
 
 	req.Header.Set("Content-Type", contentType)
+	client := &http.Client{}
+	return client.Do(req)
+}
+
+// Delete is because there is no http.Delete.
+func Delete(url string) (*http.Response, error) {
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	client := &http.Client{}
 	return client.Do(req)
 }
