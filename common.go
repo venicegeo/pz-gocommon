@@ -138,10 +138,15 @@ func (mssg *LogMessage) Validate() error {
 // Log sends a LogMessage to the logger.
 func Log(service string, address string, severity string, message string) error {
 
-	address, err := GetServiceAddress("pz-logger")
+	// TODO: should not fetch this anew every time
+	loggerUrl, err := GetServiceAddress("pz-logger")
 	if err != nil {
 		return err
 	}
+
+	loggerUrl += "/log"
+
+	log.Print("111", loggerUrl)
 
 	mssg := LogMessage{Service: service, Address: address, Severity: severity, Message: message, Time: time.Now().String()}
 	data, err := json.Marshal(mssg)
@@ -149,7 +154,7 @@ func Log(service string, address string, severity string, message string) error 
 		return err
 	}
 
-	resp, err := http.Post(address, ContentTypeJSON, bytes.NewBuffer(data))
+	resp, err := http.Post(loggerUrl, ContentTypeJSON, bytes.NewBuffer(data))
 	if err != nil {
 		return err
 	}
@@ -177,4 +182,3 @@ func ReadFrom(reader io.Reader) ([]byte, error) {
 	}
 	return data, err
 }
-

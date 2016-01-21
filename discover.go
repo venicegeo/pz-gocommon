@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"flag"
 )
-
 
 // (1) determine what my own address is
 //
@@ -53,20 +52,22 @@ import (
 //         start server on "localhost:12340"   # mpg's dev setting
 //     endif
 
+var registryURL string
+
 type DiscoverService struct {
 	defaultDiscoverAddress string
 	defaultServerAddress   string
 	defaultServiceName     string
 
-	discoverFlag           *string
-	serverFlag             *string
-	DebugFlag              *bool
+	discoverFlag *string
+	serverFlag   *string
+	DebugFlag    *bool
 
-	serverAddress          string
-	serviceName            string
-	DiscoverAddress        string
+	serverAddress   string
+	serviceName     string
+	DiscoverAddress string
 
-	BindTo                 string
+	BindTo string
 }
 
 func NewDiscoverService(defaultServiceName string, defaultServerAddress string, defaultDiscoverAddress string) (*DiscoverService, error) {
@@ -103,6 +104,8 @@ func NewDiscoverService(defaultServiceName string, defaultServerAddress string, 
 		return nil, err
 	}
 
+	registryURL = "http://" + svc.DiscoverAddress + "/api/v1/resources"
+
 	return &svc, nil
 }
 
@@ -131,15 +134,12 @@ func (svc *DiscoverService) determineServerAddress() error {
 	return nil
 }
 
-
-
 // (2) determine where pz-discover lives
 func (svc *DiscoverService) determineDiscoverAddress() error {
 	svc.DiscoverAddress = *svc.discoverFlag
 	log.Printf("discoverAddress: %s", svc.DiscoverAddress)
 	return nil
 }
-
 
 // (3) register myself with pz-discover
 type discoverDataDetail struct {
@@ -173,7 +173,6 @@ func (svc *DiscoverService) registerServiceWithDiscover() error {
 	return nil
 }
 
-
 func (svc *DiscoverService) determineBindAddress() error {
 	// (4) we have to bind our server to something special, not just serverAddress
 	port := os.Getenv("$PORT")
@@ -188,44 +187,6 @@ func (svc *DiscoverService) determineBindAddress() error {
 }
 
 ///////////////////////////////////////////////////////////////
-
-// singelton
-var registryURL string
-
-type registryItemData struct {
-	Type    string `json:"type"`
-	Address string `json:"address"`
-}
-type registryItem struct {
-	Name string           `json:"name"`
-	Data registryItemData `json:"data"`
-}
-
-// RegistryInit initialies the Discovery service from pz-discovery.
-func RegistryInit(url string) {
-	registryURL = url + "/api/v1/resources"
-}
-
-// RegisterService adds the given service to the discovery system.
-func RegisterService(name string, itemtype string, url string) error {
-
-	m := registryItem{Name: name, Data: registryItemData{Type: itemtype, Address: url}}
-
-	data, err := json.Marshal(m)
-	if err != nil {
-		return err
-	}
-
-	resp, err := Put(registryURL, ContentTypeJSON, bytes.NewBuffer(data))
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
-		return errors.New(resp.Status)
-	}
-
-	return nil
-}
 
 // GetServiceAddress returns the URL of the given service.
 // If the service is not found, a non-nil error is returned.
@@ -247,11 +208,11 @@ func GetServiceAddress(name string) (string, error) {
 		return "", err
 	}
 
-	var m registryItemData
+	var m discoverDataDetail
 	err = json.Unmarshal(data, &m)
 	if err != nil {
 		return "", err
 	}
 
-	return m.Address, nil
+	return "http://" + m.Host, nil
 }
