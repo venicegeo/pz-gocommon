@@ -15,21 +15,24 @@ import (
 type PzService struct {
 	Name            string
 	Address         string // host:port
-	DiscoverAddress string // host:port
-	loggerAddress   string
-	uuidgenAddress  string
+	ServiceAddresses map[string]string // {"pz-uuidgen":"localhost:1234", ...}
 	Debug           bool
+	ElasticSearch   *ElasticSearch
 }
 
 func NewPzService(name string, serviceAddress string, discoverAddress string, debug bool) (pz *PzService, err error) {
-	pz = &PzService{Name: name, Address: serviceAddress, DiscoverAddress: discoverAddress, Debug: debug}
+	pz = &PzService{Name: name, Address: serviceAddress, Debug: debug}
 
-	pz.loggerAddress, err = pz.getServiceAddress("pz-logger")
+	pz.ServiceAddresses = make(map[string]string)
+	pz.ServiceAddresses["pz-discover"] = discoverAddress
+
+	err = pz.setServiceAddresses()
 	if err != nil {
 		return nil, err
 	}
 
-	pz.uuidgenAddress, err = pz.getServiceAddress("pz-uuidgen")
+	pz.ElasticSearch, err = newElasticSearch()
+
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +48,7 @@ func (pz *PzService) postLogMessage(mssg *LogMessage) error {
 		return err
 	}
 
-	resp, err := http.Post("http://"+pz.loggerAddress+"/log", ContentTypeJSON, bytes.NewBuffer(data))
+	resp, err := http.Post("http://"+pz.ServiceAddresses["pz-logger"] +"/log", ContentTypeJSON, bytes.NewBuffer(data))
 	if err != nil {
 		log.Printf("pz-logger failed to post request: %v", err)
 		return err
@@ -86,40 +89,44 @@ func (pz *PzService) Error(text string, err error) error {
 	return pz.postLogMessage(&mssg)
 }
 
-// GetServiceAddress returns the URL of the given service.
-// If the service is not found, a non-nil error is returned.
-func (pz *PzService) getServiceAddress(name string) (string, error) {
+func (pz *PzService) setServiceAddresses() error {
 
-	registryURL := "http://" + pz.DiscoverAddress + "/api/v1/resources"
+	url := "http://" + pz.ServiceAddresses["pz-discover"] + "/api/v1/resources"
 
-	target := fmt.Sprintf("%s/%s", registryURL, name)
-
-	resp, err := http.Get(target)
+	resp, err := http.Get(url)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", errors.New(resp.Status)
+		return errors.New(resp.Status)
 	}
 
 	data, err := ReadFrom(resp.Body)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	var m discoverDataDetail
+	var m map[string]discoverDataDetail
 	err = json.Unmarshal(data, &m)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return m.Host, nil
+	for k,v := range(m) {
+		if k == "kafka" {
+			pz.ServiceAddresses[k] = v.Brokers
+		} else {
+			pz.ServiceAddresses[k] = v.Host
+		}
+	}
+
+	return nil
 }
 
 func (pz *PzService) GetUuid() (string, error) {
 
-	url := "http://" + pz.uuidgenAddress + "/uuid"
+	url := "http://" + pz.ServiceAddresses["pz-uuidgen"] + "/uuid"
 
 	resp, err := http.Post(url, "text/plain", nil)
 	if err != nil {
@@ -149,3 +156,27 @@ func (pz *PzService) GetUuid() (string, error) {
 
 	return uuids[0], nil
 }
+
+func (pz *PzService) WaitForService(name string, msTimeout int) error {
+	msTime := 0
+	const msSleep = 50
+
+	address := pz.ServiceAddresses[name]
+	if address == "" {
+		return errors.New("service not discovered: " + name)
+	}
+
+	for {
+		resp, err := http.Get("http://" + address)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			return nil
+		}
+		if msTime == msTimeout {
+			return errors.New(fmt.Sprintf("timed out waiting for service: %s at %s", name, address))
+		}
+		time.Sleep(msSleep * time.Millisecond)
+		msTime += msSleep
+	}
+	/* notreached */
+}
+

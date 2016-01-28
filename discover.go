@@ -141,6 +141,7 @@ func (svc *discoverService) determineDiscoverAddress() error {
 type discoverDataDetail struct {
 	Type string `json:"type"`
 	Host string `json:"host"`
+	Brokers string `json:"brokers,omitempty"`
 }
 type discoverData struct {
 	Name string      `json:"name"`

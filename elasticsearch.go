@@ -8,7 +8,7 @@ type ElasticSearch struct {
 	Client *elastic.Client
 }
 
-func NewElasticSearch() (es *ElasticSearch, err error) {
+func newElasticSearch() (es *ElasticSearch, err error) {
 	client, err := elastic.NewClient(
 		elastic.SetURL("https://search-venice-es-pjebjkdaueu2gukocyccj4r5m4.us-east-1.es.amazonaws.com"),
 		elastic.SetSniff(false),
