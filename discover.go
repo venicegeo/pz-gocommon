@@ -52,9 +52,7 @@ import (
 //         start server on "localhost:12340"   # mpg's dev setting
 //     endif
 
-var registryURL string
-
-type DiscoverService struct {
+type discoverService struct {
 	defaultDiscoverAddress string
 	defaultServerAddress   string
 	defaultServiceName     string
@@ -70,8 +68,8 @@ type DiscoverService struct {
 	BindTo string
 }
 
-func NewDiscoverService(defaultServiceName string, defaultServerAddress string, defaultDiscoverAddress string) (*DiscoverService, error) {
-	var svc DiscoverService
+func NewDiscoverService(defaultServiceName string, defaultServerAddress string, defaultDiscoverAddress string) (string, string, bool, error) {
+	var svc discoverService
 	svc.defaultServiceName = defaultServiceName
 	svc.defaultServerAddress = defaultServerAddress
 	svc.defaultDiscoverAddress = defaultDiscoverAddress
@@ -86,31 +84,29 @@ func NewDiscoverService(defaultServiceName string, defaultServerAddress string, 
 
 	err := svc.determineServerAddress()
 	if err != nil {
-		return nil, err
+		return "", "", false, err
 	}
 
 	err = svc.determineDiscoverAddress()
 	if err != nil {
-		return nil, err
+		return "", "", false, err
 	}
 
 	err = svc.registerServiceWithDiscover()
 	if err != nil {
-		return nil, err
+		return "", "", false, err
 	}
 
 	err = svc.determineBindAddress()
 	if err != nil {
-		return nil, err
+		return "", "", false, err
 	}
 
-	registryURL = "http://" + svc.DiscoverAddress + "/api/v1/resources"
-
-	return &svc, nil
+	return svc.BindTo, svc.DiscoverAddress, *svc.DebugFlag, nil
 }
 
 // (1) determine what my own address is
-func (svc *DiscoverService) determineServerAddress() error {
+func (svc *discoverService) determineServerAddress() error {
 	if vcapString := os.Getenv("$VCAP_APPLICATION"); vcapString != "" {
 		type VcapData struct {
 			ApplicationID   string `json:"application_id"`
@@ -135,7 +131,7 @@ func (svc *DiscoverService) determineServerAddress() error {
 }
 
 // (2) determine where pz-discover lives
-func (svc *DiscoverService) determineDiscoverAddress() error {
+func (svc *discoverService) determineDiscoverAddress() error {
 	svc.DiscoverAddress = *svc.discoverFlag
 	log.Printf("discoverAddress: %s", svc.DiscoverAddress)
 	return nil
@@ -151,7 +147,7 @@ type discoverData struct {
 	Data interface{} `json:"data"`
 }
 
-func (svc *DiscoverService) registerServiceWithDiscover() error {
+func (svc *discoverService) registerServiceWithDiscover() error {
 	discoverDataDetail := discoverDataDetail{Type: "core-service", Host: svc.serverAddress}
 	discoverData := discoverData{Name: svc.serviceName, Data: discoverDataDetail}
 	data, err := json.Marshal(discoverData)
@@ -160,20 +156,19 @@ func (svc *DiscoverService) registerServiceWithDiscover() error {
 	}
 
 	discoverUrl := fmt.Sprintf("http://%s/api/v1/resources", svc.DiscoverAddress)
-	log.Printf("PUT to: %s", discoverUrl)
-	log.Printf("body: %s", string(data))
+	log.Printf("registering to %s: %s", discoverUrl, string(data))
 	resp, err := Put(discoverUrl, ContentTypeJSON, bytes.NewBuffer(data))
 	if err != nil {
 		return err
 	}
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
-		return errors.New("registry PUT failed: " + resp.Status)
+		return errors.New("registration failed: " + resp.Status)
 	}
 
 	return nil
 }
 
-func (svc *DiscoverService) determineBindAddress() error {
+func (svc *discoverService) determineBindAddress() error {
 	// (4) we have to bind our server to something special, not just serverAddress
 	port := os.Getenv("$PORT")
 	if port != "" {
@@ -184,35 +179,4 @@ func (svc *DiscoverService) determineBindAddress() error {
 	log.Printf("bindTo: %s", svc.BindTo)
 
 	return nil
-}
-
-///////////////////////////////////////////////////////////////
-
-// GetServiceAddress returns the URL of the given service.
-// If the service is not found, a non-nil error is returned.
-func GetServiceAddress(name string) (string, error) {
-
-	target := fmt.Sprintf("%s/%s", registryURL, name)
-
-	resp, err := http.Get(target)
-	if err != nil {
-		return "", err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return "", errors.New(resp.Status)
-	}
-
-	data, err := ReadFrom(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	var m discoverDataDetail
-	err = json.Unmarshal(data, &m)
-	if err != nil {
-		return "", err
-	}
-
-	return "http://" + m.Host, nil
 }

@@ -1,8 +1,6 @@
 package piazza
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -135,36 +133,6 @@ func (mssg *LogMessage) Validate() error {
 	return nil
 }
 
-// Log sends a LogMessage to the logger.
-func Log(service string, address string, severity string, message string) error {
-
-	// TODO: should not fetch this anew every time
-	loggerUrl, err := GetServiceAddress("pz-logger")
-	if err != nil {
-		return err
-	}
-
-	loggerUrl += "/log"
-
-	log.Print("111", loggerUrl)
-
-	mssg := LogMessage{Service: service, Address: address, Severity: severity, Message: message, Time: time.Now().String()}
-	data, err := json.Marshal(mssg)
-	if err != nil {
-		return err
-	}
-
-	resp, err := http.Post(loggerUrl, ContentTypeJSON, bytes.NewBuffer(data))
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return errors.New(resp.Status)
-	}
-
-	return nil
-}
 
 //---------------------------------------------------------------------------
 
