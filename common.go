@@ -1,8 +1,6 @@
 package piazza
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -135,31 +133,6 @@ func (mssg *LogMessage) Validate() error {
 	return nil
 }
 
-// Log sends a LogMessage to the logger.
-func Log(service string, address string, severity string, message string) error {
-
-	address, err := GetServiceAddress("pz-logger")
-	if err != nil {
-		return err
-	}
-
-	mssg := LogMessage{Service: service, Address: address, Severity: severity, Message: message, Time: time.Now().String()}
-	data, err := json.Marshal(mssg)
-	if err != nil {
-		return err
-	}
-
-	resp, err := http.Post(address, ContentTypeJSON, bytes.NewBuffer(data))
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return errors.New(resp.Status)
-	}
-
-	return nil
-}
 
 //---------------------------------------------------------------------------
 
@@ -176,73 +149,4 @@ func ReadFrom(reader io.Reader) ([]byte, error) {
 		return nil, err
 	}
 	return data, err
-}
-
-//---------------------------------------------------------------------------
-
-// singelton
-var registryURL string
-
-type registryItemData struct {
-	Type    string `json:"type"`
-	Address string `json:"address"`
-}
-type registryItem struct {
-	Name string           `json:"name"`
-	Data registryItemData `json:"data"`
-}
-
-// RegistryInit initialies the Discovery service from pz-discovery.
-func RegistryInit(url string) {
-	registryURL = url + "/api/v1/resources"
-}
-
-// RegisterService adds the given service to the discovery system.
-func RegisterService(name string, itemtype string, url string) error {
-
-	m := registryItem{Name: name, Data: registryItemData{Type: itemtype, Address: url}}
-
-	data, err := json.Marshal(m)
-	if err != nil {
-		return err
-	}
-
-	resp, err := Put(registryURL, ContentTypeJSON, bytes.NewBuffer(data))
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
-		return errors.New(resp.Status)
-	}
-
-	return nil
-}
-
-// GetServiceAddress returns the URL of the given service.
-// If the service is not found, a non-nil error is returned.
-func GetServiceAddress(name string) (string, error) {
-
-	target := fmt.Sprintf("%s/%s", registryURL, name)
-
-	resp, err := http.Get(target)
-	if err != nil {
-		return "", err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return "", errors.New(resp.Status)
-	}
-
-	data, err := ReadFrom(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	var m registryItemData
-	err = json.Unmarshal(data, &m)
-	if err != nil {
-		return "", err
-	}
-
-	return m.Address, nil
 }
