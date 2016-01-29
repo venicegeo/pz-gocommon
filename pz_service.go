@@ -48,7 +48,7 @@ func (pz *PzService) postLogMessage(mssg *LogMessage) error {
 		return err
 	}
 
-	resp, err := http.Post("http://"+pz.ServiceAddresses["pz-logger"] +"/log", ContentTypeJSON, bytes.NewBuffer(data))
+	resp, err := http.Post("http://"+pz.ServiceAddresses["pz-logger"] +"/v1/messages", ContentTypeJSON, bytes.NewBuffer(data))
 	if err != nil {
 		log.Printf("pz-logger failed to post request: %v", err)
 		return err
@@ -126,7 +126,7 @@ func (pz *PzService) setServiceAddresses() error {
 
 func (pz *PzService) GetUuid() (string, error) {
 
-	url := "http://" + pz.ServiceAddresses["pz-uuidgen"] + "/uuid"
+	url := "http://" + pz.ServiceAddresses["pz-uuidgen"] + "/v1/uuids"
 
 	resp, err := http.Post(url, "text/plain", nil)
 	if err != nil {
