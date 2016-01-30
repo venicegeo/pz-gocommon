@@ -5,26 +5,26 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"time"
-	"io/ioutil"
 )
 
 type PzService struct {
-	Name            string
-	Address         string // host:port
+	Name             string
+	Address          string            // host:port
 	ServiceAddresses map[string]string // {"pz-uuidgen":"localhost:1234", ...}
-	Debug           bool
-	ElasticSearch   *ElasticSearch
+	Debug            bool
+	ElasticSearch    *ElasticSearch
 }
 
-func NewPzService(name string, serviceAddress string, discoverAddress string, debug bool) (pz *PzService, err error) {
-	pz = &PzService{Name: name, Address: serviceAddress, Debug: debug}
+func NewPzService(config *Config, debug bool) (pz *PzService, err error) {
+	pz = &PzService{Name: config.ServiceName, Address: config.ServerAddress, Debug: debug}
 
 	pz.ServiceAddresses = make(map[string]string)
-	pz.ServiceAddresses["pz-discover"] = discoverAddress
+	pz.ServiceAddresses["pz-discover"] = config.DiscoverAddress
 
 	err = pz.setServiceAddresses()
 	if err != nil {
@@ -48,7 +48,7 @@ func (pz *PzService) postLogMessage(mssg *LogMessage) error {
 		return err
 	}
 
-	resp, err := http.Post("http://"+pz.ServiceAddresses["pz-logger"] +"/v1/messages", ContentTypeJSON, bytes.NewBuffer(data))
+	resp, err := http.Post("http://"+pz.ServiceAddresses["pz-logger"]+"/v1/messages", ContentTypeJSON, bytes.NewBuffer(data))
 	if err != nil {
 		log.Printf("pz-logger failed to post request: %v", err)
 		return err
@@ -113,7 +113,7 @@ func (pz *PzService) setServiceAddresses() error {
 		return err
 	}
 
-	for k,v := range(m) {
+	for k, v := range m {
 		if k == "kafka" {
 			pz.ServiceAddresses[k] = v.Brokers
 		} else {
@@ -179,4 +179,3 @@ func (pz *PzService) WaitForService(name string, msTimeout int) error {
 	}
 	/* notreached */
 }
-

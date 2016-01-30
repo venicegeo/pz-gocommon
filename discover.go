@@ -13,23 +13,21 @@ import (
 
 // (1) determine what my own address is
 //
-//     if $VCAP_APPLICATION is set, then
+//     if -local, then
+//         set serverAddress to "localhost:1234x"
+//     else if $VCAP_APPLICATION is set, then
 //         parse the value as JSON
 //         set serverAddress to the "application_uris" string
 //     else
-//         if "-server server:port" is set, then
-//             set serverAddress to "server:port"
-//         else
-//             set serverAddress to "localhost:12340"   # mpg's dev setting
-//         endif
+//         panic
 //     endif
 //
 // (2) determine where pz-discover lives
 //
-//     if "-discover server:port" is set, then
-//         set discoverAddress to "server:port"
+//     if -local, then
+//         set discoverAddress to "localhost:3000"
 //     else
-//         set discoverAddress to "localhost:12341"   # mpg's dev setting
+//         set discoverAddress to "pz-discover.cf.piazzageo.io"
 //     endif
 //
 // (3) register myself with pz-discover
@@ -46,101 +44,119 @@ import (
 //
 // (4) start server
 //
-//     if $PORT set, then
+//     if -local, then
+//         start server on "localhost:1234x"   # from mpg's dev settings
+//     else if $PORT set, then
 //         start server on ":$PORT"
 //     else
-//         start server on "localhost:12340"   # mpg's dev setting
+//         panic
 //     endif
 
-type discoverService struct {
-	defaultDiscoverAddress string
-	defaultServerAddress   string
-	defaultServiceName     string
-
-	discoverFlag *string
-	serverFlag   *string
-	DebugFlag    *bool
-
-	serverAddress   string
-	serviceName     string
+type Config struct {
+	ServiceName     string
+	ServerAddress   string
+	BindTo          string
 	DiscoverAddress string
-
-	BindTo string
 }
 
-func NewDiscoverService(defaultServiceName string, defaultServerAddress string, defaultDiscoverAddress string) (string, string, bool, error) {
-	var svc discoverService
-	svc.defaultServiceName = defaultServiceName
-	svc.defaultServerAddress = defaultServerAddress
-	svc.defaultDiscoverAddress = defaultDiscoverAddress
+func GetConfig(serviceName string, local bool) (*Config, error) {
 
-	svc.discoverFlag = flag.String("discover", defaultDiscoverAddress, "server:port of pz-discovery")
-	svc.serverFlag = flag.String("server", defaultServerAddress, "server:port of this service")
-	svc.DebugFlag = flag.Bool("debug", false, "use debug mode")
+	var config *Config
+	var err error
 
-	flag.Parse()
-
-	log.Printf("starting: debug=%t", *svc.DebugFlag)
-
-	err := svc.determineServerAddress()
-	if err != nil {
-		return "", "", false, err
-	}
-
-	err = svc.determineDiscoverAddress()
-	if err != nil {
-		return "", "", false, err
-	}
-
-	err = svc.registerServiceWithDiscover()
-	if err != nil {
-		return "", "", false, err
-	}
-
-	err = svc.determineBindAddress()
-	if err != nil {
-		return "", "", false, err
-	}
-
-	return svc.BindTo, svc.DiscoverAddress, *svc.DebugFlag, nil
-}
-
-// (1) determine what my own address is
-func (svc *discoverService) determineServerAddress() error {
-	if vcapString := os.Getenv("$VCAP_APPLICATION"); vcapString != "" {
-		type VcapData struct {
-			ApplicationID   string `json:"application_id"`
-			ApplicationName string `json:"application_name"`
-			ApplicationURIs string `json:"application_uris"`
-		}
-		var vcap VcapData
-		err := json.Unmarshal([]byte(vcapString), &vcap)
-		if err != nil {
-			return err
-		}
-		svc.serverAddress = vcap.ApplicationURIs
-		svc.serviceName = vcap.ApplicationName
+	if local {
+		config = getLocalConfig(serviceName)
 	} else {
-		svc.serverAddress = *svc.serverFlag
-		svc.serviceName = svc.defaultServiceName
+		config, err = getCFConfig(serviceName)
+		if err != nil {
+			return nil, err
+		}
 	}
-	log.Printf("serverAddress: %s", svc.serverAddress)
-	log.Printf("serviceName: %s", svc.serviceName)
 
-	return nil
+	log.Printf("starting: local=%t", true)
+	log.Printf("serverAddress: %s", config.ServerAddress)
+	log.Printf("serviceName: %s", config.ServiceName)
+	log.Printf("discoverAddress: %s", config.DiscoverAddress)
+	log.Printf("bindTo: %s", config.BindTo)
+
+	return config, err
 }
 
-// (2) determine where pz-discover lives
-func (svc *discoverService) determineDiscoverAddress() error {
-	svc.DiscoverAddress = *svc.discoverFlag
-	log.Printf("discoverAddress: %s", svc.DiscoverAddress)
-	return nil
+func IsLocalConfig() bool {
+	localFlag := flag.Bool("local", false, "use localhost ports")
+	flag.Parse()
+	return *localFlag
 }
 
-// (3) register myself with pz-discover
+func getLocalConfig(serviceName string) *Config {
+
+	var localHosts = map[string]string{
+		"pz-logger":   "localhost:12341",
+		"pz-uuidgen":  "localhost:12340",
+		"pz-alerter":  "localhost:12342",
+		"pz-discover": "localhost:3000",
+	}
+
+	config := Config{
+		ServiceName:     serviceName,
+		ServerAddress:   localHosts[serviceName],
+		DiscoverAddress: localHosts["pz-discover"],
+		BindTo:          localHosts[serviceName],
+	}
+
+	return &config
+}
+
+func getCFConfig(serviceName string) (*Config, error) {
+
+	const nonlocalDiscoverHost = "pz-discover.cf.piazzageo.io"
+
+	var config Config
+	var err error
+
+	config.ServiceName, config.ServerAddress, err = determineVcapServerAddress()
+	if err != nil {
+		return nil, err
+	}
+
+	config.DiscoverAddress = nonlocalDiscoverHost
+
+	port := os.Getenv("$PORT")
+	if port == "" {
+		return nil, errors.New("unable to determine bindto address from $PORT")
+	}
+	config.BindTo = ":" + port
+	if err != nil {
+		return nil, err
+	}
+
+	return &config, nil
+}
+
+func determineVcapServerAddress() (serviceName string, serverAddress string, err error) {
+
+	vcapString := os.Getenv("$VCAP_APPLICATION")
+	if vcapString == "" {
+		return "", "", errors.New("unable to determine server address")
+	}
+	type VcapData struct {
+		ApplicationID   string `json:"application_id"`
+		ApplicationName string `json:"application_name"`
+		ApplicationURIs string `json:"application_uris"`
+	}
+	var vcap VcapData
+	err = json.Unmarshal([]byte(vcapString), &vcap)
+	if err != nil {
+		return "", "", err
+	}
+	serviceName = vcap.ApplicationName
+	serverAddress = vcap.ApplicationURIs
+	return serviceName, serverAddress, nil
+}
+
 type discoverDataDetail struct {
-	Type string `json:"type"`
-	Host string `json:"host"`
+	Type    string `json:"type"`
+	Host    string `json:"host,omitempty"`
 	Brokers string `json:"brokers,omitempty"`
 }
 type discoverData struct {
@@ -148,15 +164,15 @@ type discoverData struct {
 	Data interface{} `json:"data"`
 }
 
-func (svc *discoverService) registerServiceWithDiscover() error {
-	discoverDataDetail := discoverDataDetail{Type: "core-service", Host: svc.serverAddress}
-	discoverData := discoverData{Name: svc.serviceName, Data: discoverDataDetail}
-	data, err := json.Marshal(discoverData)
+func (config *Config) RegisterServiceWithDiscover() error {
+	discDataDetail := discoverDataDetail{Type: "core-service", Host: config.ServerAddress}
+	discData := discoverData{Name: config.ServiceName, Data: discDataDetail}
+	data, err := json.Marshal(discData)
 	if err != nil {
 		return err
 	}
 
-	discoverUrl := fmt.Sprintf("http://%s/api/v1/resources", svc.DiscoverAddress)
+	discoverUrl := fmt.Sprintf("http://%s/api/v1/resources", config.DiscoverAddress)
 	log.Printf("registering to %s: %s", discoverUrl, string(data))
 	resp, err := Put(discoverUrl, ContentTypeJSON, bytes.NewBuffer(data))
 	if err != nil {
@@ -165,19 +181,6 @@ func (svc *discoverService) registerServiceWithDiscover() error {
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 		return errors.New("registration failed: " + resp.Status)
 	}
-
-	return nil
-}
-
-func (svc *discoverService) determineBindAddress() error {
-	// (4) we have to bind our server to something special, not just serverAddress
-	port := os.Getenv("$PORT")
-	if port != "" {
-		svc.BindTo = ":" + port
-	} else {
-		svc.BindTo = svc.serverAddress
-	}
-	log.Printf("bindTo: %s", svc.BindTo)
 
 	return nil
 }
