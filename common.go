@@ -5,29 +5,10 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
 )
 
 //---------------------------------------------------------------------------
 
-// An AdminResponse represents the data returned from a call to a service's
-// /admin API.
-type AdminResponse struct {
-	StartTime time.Time             `json:"starttime"`
-	Uuidgen   *AdminResponseUuidgen `json:"uuidgen,omitempty"`
-	Logger    *AdminResponseLogger  `json:"logger,omitempty"`
-}
-
-// AdminResponseUuidgen is the response to pz-uuidgen's /admin call
-type AdminResponseUuidgen struct {
-	NumRequests int `json:"num_requests"`
-	NumUUIDs    int `json:"num_uuids"`
-}
-
-// AdminResponseLogger is the response to pz-logger's /admin call
-type AdminResponseLogger struct {
-	NumMessages int `json:"num_messages"`
-}
 
 //---------------------------------------------------------------------------
 

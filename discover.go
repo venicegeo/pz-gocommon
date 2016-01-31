@@ -53,6 +53,7 @@ import (
 //     endif
 
 type Config struct {
+	Local           bool
 	ServiceName     string
 	ServerAddress   string
 	BindTo          string
@@ -73,11 +74,11 @@ func GetConfig(serviceName string, local bool) (*Config, error) {
 		}
 	}
 
-	log.Printf("starting: local=%t", true)
-	log.Printf("serverAddress: %s", config.ServerAddress)
-	log.Printf("serviceName: %s", config.ServiceName)
-	log.Printf("discoverAddress: %s", config.DiscoverAddress)
-	log.Printf("bindTo: %s", config.BindTo)
+	log.Printf("Config.Local: %t", config.Local)
+	log.Printf("Config.ServerAddress: %s", config.ServerAddress)
+	log.Printf("Config.ServiceName: %s", config.ServiceName)
+	log.Printf("Config.DiscoverAddress: %s", config.DiscoverAddress)
+	log.Printf("Config.BindTo: %s", config.BindTo)
 
 	return config, err
 }
@@ -98,6 +99,7 @@ func getLocalConfig(serviceName string) *Config {
 	}
 
 	config := Config{
+		Local:           true,
 		ServiceName:     serviceName,
 		ServerAddress:   localHosts[serviceName],
 		DiscoverAddress: localHosts["pz-discover"],
@@ -114,6 +116,8 @@ func getCFConfig(serviceName string) (*Config, error) {
 	var config Config
 	var err error
 
+	config.Local = false
+
 	config.ServiceName, config.ServerAddress, err = determineVcapServerAddress()
 	if err != nil {
 		return nil, err
@@ -123,7 +127,7 @@ func getCFConfig(serviceName string) (*Config, error) {
 
 	port := os.Getenv("$PORT")
 	if port == "" {
-		return nil, errors.New("unable to determine bindto address from $PORT")
+		return nil, errors.New("$PORT not found: unable to determine bindto address")
 	}
 	config.BindTo = ":" + port
 	if err != nil {
@@ -137,7 +141,7 @@ func determineVcapServerAddress() (serviceName string, serverAddress string, err
 
 	vcapString := os.Getenv("$VCAP_APPLICATION")
 	if vcapString == "" {
-		return "", "", errors.New("unable to determine server address")
+		return "", "", errors.New("$VCAP_APPLICATION not found: unable to determine server address")
 	}
 	type VcapData struct {
 		ApplicationID   string `json:"application_id"`
@@ -156,8 +160,12 @@ func determineVcapServerAddress() (serviceName string, serverAddress string, err
 
 type discoverDataDetail struct {
 	Type    string `json:"type"`
-	Host    string `json:"host,omitempty"`
-	Brokers string `json:"brokers,omitempty"`
+
+	// TODO: which one of these to use?
+	Host    string `json:"host"`
+	Brokers string `json:"brokers"`
+	Address string `json:"address"`
+	DbUri   string `json:"db-uri"`
 }
 type discoverData struct {
 	Name string      `json:"name"`
