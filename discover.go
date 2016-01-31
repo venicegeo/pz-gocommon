@@ -125,7 +125,7 @@ func getCFConfig(serviceName string) (*Config, error) {
 
 	config.DiscoverAddress = nonlocalDiscoverHost
 
-	port := os.Getenv("$PORT")
+	port := os.Getenv("PORT")
 	if port == "" {
 		return nil, errors.New("$PORT not found: unable to determine bindto address")
 	}
@@ -139,7 +139,7 @@ func getCFConfig(serviceName string) (*Config, error) {
 
 func determineVcapServerAddress() (serviceName string, serverAddress string, err error) {
 
-	vcapString := os.Getenv("$VCAP_APPLICATION")
+	vcapString := os.Getenv("VCAP_APPLICATION")
 	if vcapString == "" {
 		return "", "", errors.New("$VCAP_APPLICATION not found: unable to determine server address")
 	}
