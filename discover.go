@@ -146,7 +146,7 @@ func determineVcapServerAddress() (serviceName string, serverAddress string, err
 	type VcapData struct {
 		ApplicationID   string `json:"application_id"`
 		ApplicationName string `json:"application_name"`
-		ApplicationURIs string `json:"application_uris"`
+		ApplicationURIs []string `json:"application_uris"`
 	}
 	var vcap VcapData
 	err = json.Unmarshal([]byte(vcapString), &vcap)
@@ -154,7 +154,7 @@ func determineVcapServerAddress() (serviceName string, serverAddress string, err
 		return "", "", err
 	}
 	serviceName = vcap.ApplicationName
-	serverAddress = vcap.ApplicationURIs
+	serverAddress = vcap.ApplicationURIs[0]
 	return serviceName, serverAddress, nil
 }
 
