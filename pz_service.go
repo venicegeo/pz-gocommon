@@ -32,10 +32,15 @@ func NewPzService(config *Config, debug bool) (pz *PzService, err error) {
 	}
 
 	pz.ElasticSearch, err = newElasticSearch()
-
 	if err != nil {
 		return nil, err
 	}
+
+	log.Printf("PzService.Name: %s", pz.Name)
+	log.Printf("PzService.Address: %s", pz.Address)
+	log.Printf("PzService.ServiceAddress: %s", pz.ServiceAddresses)
+	log.Printf("PzService.Debug: %t", pz.Debug)
+	log.Printf("PzService.ElasticSearch: %v", pz.ElasticSearch)
 
 	return pz, nil
 }
@@ -114,10 +119,17 @@ func (pz *PzService) setServiceAddresses() error {
 	}
 
 	for k, v := range m {
-		if k == "kafka" {
-			pz.ServiceAddresses[k] = v.Brokers
-		} else {
+		// TODO: use correct one
+		if v.Host != "" {
 			pz.ServiceAddresses[k] = v.Host
+		} else if v.Address != "" {
+			pz.ServiceAddresses[k] = v.Address
+		} else if v.Brokers != "" {
+			pz.ServiceAddresses[k] = v.Brokers
+		} else if v.DbUri != "" {
+			pz.ServiceAddresses[k] = v.DbUri
+		} else {
+			return errors.New(fmt.Sprintf("unable to parse discover record: %v", v))
 		}
 	}
 
