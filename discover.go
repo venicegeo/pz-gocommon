@@ -163,9 +163,9 @@ type discoverDataDetail struct {
 
 	// TODO: which one of these to use?
 	Host    string `json:"host"`
-	Brokers string `json:"brokers"`
-	Address string `json:"address"`
-	DbUri   string `json:"db-uri"`
+	Brokers string `json:"brokers,omitempty"`
+	Address string `json:"address,omitempty"`
+	DbUri   string `json:"db-uri,omitempty"`
 }
 type discoverData struct {
 	Name string      `json:"name"`
