@@ -14,9 +14,9 @@ type Alerter interface {
 	GetFromCondition(id string) (*Condition, error)
 	DeleteOfCondition(id string) error
 
-	GetFromAdminStats() (*UuidGenAdminStats, error)
-	GetFromAdminSettings() (*UuidGenAdminSettings, error)
-	PostToAdminSettings(*UuidGenAdminSettings) error
+	GetFromAdminStats() (*AlerterAdminStats, error)
+	GetFromAdminSettings() (*AlerterAdminSettings, error)
+	PostToAdminSettings(*AlerterAdminSettings) error
 }
 
 type AlerterIdResponse struct {
