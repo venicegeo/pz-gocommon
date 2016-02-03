@@ -1,14 +1,16 @@
 package piazza
 
 import (
+	"fmt"
+	"github.com/gin-gonic/gin"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 )
 
 //---------------------------------------------------------------------------
-
 
 //---------------------------------------------------------------------------
 
@@ -48,7 +50,27 @@ func Delete(url string) (*http.Response, error) {
 
 //---------------------------------------------------------------------------
 
+func HandlePostAdminShutdown(pzService *PzService, c *gin.Context) {
+	type shutdownRequest struct {
+		Reason string `json:"reason"`
+	}
+	var reason shutdownRequest
 
+	err := c.BindJSON(&reason)
+	if err != nil {
+		c.String(http.StatusBadRequest, fmt.Sprintf("%v", err))
+		return
+	}
+	if reason.Reason == "" {
+		c.String(http.StatusBadRequest, "no reason supplied")
+		return
+	}
+	pzService.Log(SeverityFatal, "Shutdown requested: "+reason.Reason)
+
+	// TODO: need a graceful shutdown method
+	// need to ACK to the HTTP caller, then call exit
+	os.Exit(0)
+}
 
 //---------------------------------------------------------------------------
 
