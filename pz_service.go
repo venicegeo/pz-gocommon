@@ -1,14 +1,12 @@
 package piazza
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -45,54 +43,6 @@ func NewPzService(config *Config, debug bool) (pz *PzService, err error) {
 	return pz, nil
 }
 
-func (pz *PzService) postLogMessage(mssg *LogMessage) error {
-
-	data, err := json.Marshal(mssg)
-	if err != nil {
-		log.Printf("pz-logger failed to marshall request: %v", err)
-		return err
-	}
-
-	resp, err := http.Post("http://"+pz.ServiceAddresses["pz-logger"]+"/v1/messages", ContentTypeJSON, bytes.NewBuffer(data))
-	if err != nil {
-		log.Printf("pz-logger failed to post request: %v", err)
-		return err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("pz-logger failed to post request: %v", err)
-		return errors.New(resp.Status)
-	}
-
-	return nil
-}
-
-// Log sends a LogMessage to the logger.
-// TODO: support fmt
-func (pz *PzService) Log(severity string, message string) error {
-
-	mssg := LogMessage{Service: pz.Name, Address: pz.Address, Severity: severity, Message: message, Time: time.Now().String()}
-
-	return pz.postLogMessage(&mssg)
-}
-
-func (pz *PzService) Fatal(err error) {
-	log.Printf("Fatal: %v", err)
-
-	mssg := LogMessage{Service: pz.Name, Address: pz.Address, Severity: SeverityFatal, Message: fmt.Sprintf("%v", err), Time: time.Now().String()}
-	pz.postLogMessage(&mssg)
-
-	os.Exit(1)
-}
-
-func (pz *PzService) Error(text string, err error) error {
-	log.Printf("Error: %v", err)
-
-	s := fmt.Sprintf("%s: %v", text, err)
-
-	mssg := LogMessage{Service: pz.Name, Address: pz.Address, Severity: SeverityError, Message: s, Time: time.Now().String()}
-	return pz.postLogMessage(&mssg)
-}
 
 func (pz *PzService) setServiceAddresses() error {
 
@@ -154,16 +104,19 @@ func (pz *PzService) GetUuid() (string, error) {
 	var data map[string][]string
 	err = json.Unmarshal(body, &data)
 	if err != nil {
-		pz.Error("PzService.GetUuid", err)
+		//pz.Error("PzService.GetUuid", err)
+		log.Printf("PzService.GetUuid: %v", err)
 	}
 
 	uuids, ok := data["data"]
 	if !ok {
-		pz.Error("PzService.GetUuid: returned data has invalid data type", nil)
+		//pz.Error("PzService.GetUuid: returned data has invalid data type", nil)
+		log.Printf("PzService.GetUuid: returned data has invalid data type")
 	}
 
 	if len(uuids) != 1 {
-		pz.Error("PzService.GetUuid: returned array wrong size", nil)
+		//pz.Error("PzService.GetUuid: returned array wrong size", nil)
+		log.Printf("PzService.GetUuid: returned array wrong size")
 	}
 
 	return uuids[0], nil

@@ -65,7 +65,8 @@ func HandlePostAdminShutdown(pzService *PzService, c *gin.Context) {
 		c.String(http.StatusBadRequest, "no reason supplied")
 		return
 	}
-	pzService.Log(SeverityFatal, "Shutdown requested: "+reason.Reason)
+	//pzService.Log(SeverityFatal, "Shutdown requested: "+reason.Reason)
+	log.Fatalf("Shutdown requested: %s", reason.Reason)
 
 	// TODO: need a graceful shutdown method
 	// need to ACK to the HTTP caller, then call exit
