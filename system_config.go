@@ -8,80 +8,44 @@ import (
 	"os"
 )
 
-// (1) determine what my own address is
-//
-//     if -local, then
-//         set serverAddress to "localhost:1234x"
-//     else if $VCAP_APPLICATION is set, then
-//         parse the value as JSON
-//         set serverAddress to the "application_uris" string
-//     else
-//         panic
-//     endif
-//
-// (2) determine where pz-discover lives
-//
-//     if -local, then
-//         set discoverAddress to "localhost:3000"
-//     else
-//         set discoverAddress to "pz-discover.cf.piazzageo.io"
-//     endif
-//
-// (3) register myself with pz-discover
-//
-//     do a POST to discoverAddress:
-//         {
-//             "name": "pz-myname",
-//             "data": {
-//                 "type": "core-service",
-//                 "address": serverAddress,
-//                 # other per-service stuff
-//              }
-//          }
-//
-// (4) start server
-//
-//     if -local, then
-//         start server on "localhost:1234x"   # from mpg's dev settings
-//     else if $PORT set, then
-//         start server on ":$PORT"
-//     else
-//         panic
-//     endif
+type ConfigMode int
 
-type ServiceConfig struct {
-	Local           bool
+const (
+	ConfigModeLocal = iota
+	ConfigModeTest
+	ConfigModeCloud
+)
+
+type SystemConfig struct {
+	Mode            ConfigMode
 	ServiceName     string
 	ServerAddress   string
 	BindTo          string
 	DiscoverAddress string
-	ElasticSearch    *ElasticSearch
 }
 
-func GetConfig(serviceName string, local bool) (*ServiceConfig, error) {
+func NewConfig(serviceName string, configType ConfigMode) (*SystemConfig, error) {
 
-	var config *ServiceConfig
+	var config *SystemConfig
 	var err error
 
-	if local {
+	switch configType {
+	case ConfigModeLocal:
 		config = getLocalConfig(serviceName)
-	} else {
+	case ConfigModeTest:
+		config = getLocalConfig(serviceName)
+	case ConfigModeCloud:
 		config, err = getPCFConfig(serviceName)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	log.Printf("Config.Local: %t", config.Local)
+	log.Printf("Config.Mode: %s", string(config.Mode))
 	log.Printf("Config.ServerAddress: %s", config.ServerAddress)
 	log.Printf("Config.ServiceName: %s", config.ServiceName)
 	log.Printf("Config.DiscoverAddress: %s", config.DiscoverAddress)
 	log.Printf("Config.BindTo: %s", config.BindTo)
-
-	config.ElasticSearch, err = newElasticSearch()
-	if err != nil {
-		return nil, err
-	}
 
 	return config, err
 }
@@ -92,7 +56,7 @@ func IsLocalConfig() bool {
 	return *localFlag
 }
 
-func getLocalConfig(serviceName string) *ServiceConfig {
+func getLocalConfig(serviceName string) *SystemConfig {
 
 	var localHosts = map[string]string{
 		"pz-logger":   "localhost:12341",
@@ -101,8 +65,8 @@ func getLocalConfig(serviceName string) *ServiceConfig {
 		"pz-discover": "localhost:3000",
 	}
 
-	config := ServiceConfig{
-		Local:           true,
+	config := SystemConfig{
+		Mode:            ConfigModeLocal,
 		ServiceName:     serviceName,
 		ServerAddress:   localHosts[serviceName],
 		DiscoverAddress: localHosts["pz-discover"],
@@ -112,14 +76,14 @@ func getLocalConfig(serviceName string) *ServiceConfig {
 	return &config
 }
 
-func getPCFConfig(serviceName string) (*ServiceConfig, error) {
+func getPCFConfig(serviceName string) (*SystemConfig, error) {
 
 	const nonlocalDiscoverHost = "pz-discover.cf.piazzageo.io"
 
-	var config ServiceConfig
+	var config SystemConfig
 	var err error
 
-	config.Local = false
+	config.Mode = ConfigModeCloud
 
 	config.ServiceName, config.ServerAddress, err = determineVcapServerAddress()
 	if err != nil {
@@ -147,8 +111,8 @@ func determineVcapServerAddress() (serviceName string, serverAddress string, err
 		return "", "", errors.New("$VCAP_APPLICATION not found: unable to determine server address")
 	}
 	type VcapData struct {
-		ApplicationID   string `json:"application_id"`
-		ApplicationName string `json:"application_name"`
+		ApplicationID   string   `json:"application_id"`
+		ApplicationName string   `json:"application_name"`
 		ApplicationURIs []string `json:"application_uris"`
 	}
 	var vcap VcapData
