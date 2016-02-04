@@ -33,7 +33,7 @@ func NewConfig(serviceName string, configType ConfigMode) (*SystemConfig, error)
 	case ConfigModeLocal:
 		config = getLocalConfig(serviceName)
 	case ConfigModeTest:
-		config = getLocalConfig(serviceName)
+		config = getTestConfig(serviceName)
 	case ConfigModeCloud:
 		config, err = getPCFConfig(serviceName)
 		if err != nil {
@@ -71,6 +71,19 @@ func getLocalConfig(serviceName string) *SystemConfig {
 		ServerAddress:   localHosts[serviceName],
 		DiscoverAddress: localHosts["pz-discover"],
 		BindTo:          localHosts[serviceName],
+	}
+
+	return &config
+}
+
+func getTestConfig(serviceName string) *SystemConfig {
+
+	config := SystemConfig{
+		Mode:            ConfigModeTest,
+		ServiceName:     serviceName,
+		ServerAddress:   "localhost:12349",
+		DiscoverAddress: "",
+		BindTo:          "localhost:12349",
 	}
 
 	return &config
