@@ -1,13 +1,10 @@
 package piazza
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"flag"
-	"fmt"
 	"log"
-	"net/http"
 	"os"
 )
 
@@ -52,23 +49,24 @@ import (
 //         panic
 //     endif
 
-type Config struct {
+type ServiceConfig struct {
 	Local           bool
 	ServiceName     string
 	ServerAddress   string
 	BindTo          string
 	DiscoverAddress string
+	ElasticSearch    *ElasticSearch
 }
 
-func GetConfig(serviceName string, local bool) (*Config, error) {
+func GetConfig(serviceName string, local bool) (*ServiceConfig, error) {
 
-	var config *Config
+	var config *ServiceConfig
 	var err error
 
 	if local {
 		config = getLocalConfig(serviceName)
 	} else {
-		config, err = getCFConfig(serviceName)
+		config, err = getPCFConfig(serviceName)
 		if err != nil {
 			return nil, err
 		}
@@ -80,6 +78,11 @@ func GetConfig(serviceName string, local bool) (*Config, error) {
 	log.Printf("Config.DiscoverAddress: %s", config.DiscoverAddress)
 	log.Printf("Config.BindTo: %s", config.BindTo)
 
+	config.ElasticSearch, err = newElasticSearch()
+	if err != nil {
+		return nil, err
+	}
+
 	return config, err
 }
 
@@ -89,7 +92,7 @@ func IsLocalConfig() bool {
 	return *localFlag
 }
 
-func getLocalConfig(serviceName string) *Config {
+func getLocalConfig(serviceName string) *ServiceConfig {
 
 	var localHosts = map[string]string{
 		"pz-logger":   "localhost:12341",
@@ -98,7 +101,7 @@ func getLocalConfig(serviceName string) *Config {
 		"pz-discover": "localhost:3000",
 	}
 
-	config := Config{
+	config := ServiceConfig{
 		Local:           true,
 		ServiceName:     serviceName,
 		ServerAddress:   localHosts[serviceName],
@@ -109,11 +112,11 @@ func getLocalConfig(serviceName string) *Config {
 	return &config
 }
 
-func getCFConfig(serviceName string) (*Config, error) {
+func getPCFConfig(serviceName string) (*ServiceConfig, error) {
 
 	const nonlocalDiscoverHost = "pz-discover.cf.piazzageo.io"
 
-	var config Config
+	var config ServiceConfig
 	var err error
 
 	config.Local = false
@@ -156,39 +159,4 @@ func determineVcapServerAddress() (serviceName string, serverAddress string, err
 	serviceName = vcap.ApplicationName
 	serverAddress = vcap.ApplicationURIs[0]
 	return serviceName, serverAddress, nil
-}
-
-type discoverDataDetail struct {
-	Type    string `json:"type"`
-
-	// TODO: which one of these to use?
-	Host    string `json:"host"`
-	Brokers string `json:"brokers,omitempty"`
-	Address string `json:"address,omitempty"`
-	DbUri   string `json:"db-uri,omitempty"`
-}
-type discoverData struct {
-	Name string      `json:"name"`
-	Data interface{} `json:"data"`
-}
-
-func (config *Config) RegisterServiceWithDiscover() error {
-	discDataDetail := discoverDataDetail{Type: "core-service", Host: config.ServerAddress}
-	discData := discoverData{Name: config.ServiceName, Data: discDataDetail}
-	data, err := json.Marshal(discData)
-	if err != nil {
-		return err
-	}
-
-	discoverUrl := fmt.Sprintf("http://%s/api/v1/resources", config.DiscoverAddress)
-	log.Printf("registering to %s: %s", discoverUrl, string(data))
-	resp, err := Put(discoverUrl, ContentTypeJSON, bytes.NewBuffer(data))
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
-		return errors.New("registration failed: " + resp.Status)
-	}
-
-	return nil
 }

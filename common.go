@@ -12,8 +12,6 @@ import (
 
 //---------------------------------------------------------------------------
 
-//---------------------------------------------------------------------------
-
 // ServerLogHandler adds traditional logging support to the http server handlers.
 func ServerLogHandler(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -24,6 +22,9 @@ func ServerLogHandler(handler http.Handler) http.Handler {
 
 // ContentTypeJSON is the http content-type for JSON.
 const ContentTypeJSON = "application/json"
+
+// ContentTypeText is the http content-type for plain text.
+const ContentTypeText = "text/plain"
 
 // Put is because there is no http.Put.
 func Put(url string, contentType string, body io.Reader) (*http.Response, error) {
@@ -50,7 +51,7 @@ func Delete(url string) (*http.Response, error) {
 
 //---------------------------------------------------------------------------
 
-func HandlePostAdminShutdown(pzService *PzService, c *gin.Context) {
+func HandlePostAdminShutdown(c *gin.Context) {
 	type shutdownRequest struct {
 		Reason string `json:"reason"`
 	}
