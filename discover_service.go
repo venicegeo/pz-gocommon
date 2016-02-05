@@ -34,12 +34,17 @@ type DiscoverDataList map[string]DiscoverData
 ///////////////////////////////////////////////////////////////////
 
 type MockDiscoverService struct {
-	config *SystemConfig
-	data   *DiscoverDataList
+	config  *SystemConfig
+	data    *DiscoverDataList
+	Name    string
+	Address string
 }
 
 func NewMockDiscoverService(sys *System) (IDiscoverService, error) {
-	discover := MockDiscoverService{config: sys.Config}
+	var _ IService = new(MockDiscoverService)
+	var _ IDiscoverService = new(MockDiscoverService)
+
+	discover := MockDiscoverService{config: sys.Config, Name: "pz-discover", Address: sys.Config.DiscoverAddress}
 
 	discover.data = &DiscoverDataList{}
 	(*discover.data)[sys.Config.ServiceName] = DiscoverData{Type: "core-service", Host: sys.Config.ServerAddress}
@@ -48,11 +53,11 @@ func NewMockDiscoverService(sys *System) (IDiscoverService, error) {
 }
 
 func (mock *MockDiscoverService) GetName() string {
-	return "pz-discover"
+	return mock.Name
 }
 
 func (mock *MockDiscoverService) GetAddress() string {
-	return "0.0.0.0"
+	return mock.Address
 }
 
 func (mock *MockDiscoverService) GetData(name string) (*DiscoverData, error) {
@@ -61,10 +66,6 @@ func (mock *MockDiscoverService) GetData(name string) (*DiscoverData, error) {
 }
 
 func (mock *MockDiscoverService) RegisterService(name string, data *DiscoverData) error {
-	log.Print("register")
-	log.Print(mock.data)
-	log.Print(name)
-	log.Print(data)
 	(*mock.data)[name] = *data
 	return nil
 }
@@ -77,32 +78,37 @@ func (mock *MockDiscoverService) UnregisterService(name string) error {
 ///////////////////////////////////////////////////////////////////
 
 type PzDiscoverService struct {
-	config *SystemConfig
-	data   *DiscoverDataList
+	config  *SystemConfig
+	data    *DiscoverDataList
+	Name    string
+	Address string
 }
 
 func NewPzDiscoverService(sys *System) (IDiscoverService, error) {
-	discover := PzDiscoverService{config: sys.Config}
+	var _ IService = new(PzDiscoverService)
+	var _ IDiscoverService = new(PzDiscoverService)
 
-	err := sys.WaitForServiceByUrl("http://" + sys.Config.DiscoverAddress + "/health-check", 1000)
+	service := PzDiscoverService{config: sys.Config, Name: "pz-discover", Address: sys.Config.DiscoverAddress}
+
+	err := sys.WaitForService(&service, 1000)
 	if err != nil {
 		return nil, err
 	}
 
-	err = discover.update()
+	err = service.update()
 	if err != nil {
 		return nil, err
 	}
 
-	return &discover, nil
+	return &service, nil
 }
 
-func (*PzDiscoverService) GetName() string {
-	return "pz-discover"
+func (service *PzDiscoverService) GetName() string {
+	return service.Name
 }
 
-func (discover *PzDiscoverService) GetAddress() string {
-	return discover.config.DiscoverAddress
+func (service *PzDiscoverService) GetAddress() string {
+	return service.Address
 }
 
 func (discover *PzDiscoverService) GetData(name string) (*DiscoverData, error) {

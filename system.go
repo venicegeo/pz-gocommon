@@ -62,23 +62,19 @@ func (sys *System) setupDiscover() error {
 	return nil
 }
 
-func (sys *System) WaitForService(name string, msTimeout int) error {
-	data, err := sys.DiscoverService.GetData(name)
-	if err != nil {
-		return err
-	}
+func (sys *System) WaitForService(service IService, msTimeout int) error {
 
 	var url string
-	switch name {
+	switch service.GetName() {
 	case "pz-discover":
-		url = fmt.Sprintf("http://%s/health-check", data.Host)
+		url = fmt.Sprintf("http://%s/health-check", service.GetAddress())
 	default:
-		url = fmt.Sprintf("http://%s", data.Host)
+		url = fmt.Sprintf("http://%s", service.GetAddress())
 	}
-	return sys.WaitForServiceByUrl(url, msTimeout)
+	return sys.waitForServiceByUrl(url, msTimeout)
 }
 
-func (sys *System) WaitForServiceByUrl(url string, msTimeout int) error {
+func (sys *System) waitForServiceByUrl(url string, msTimeout int) error {
 	msTime := 0
 	const msSleep = 50
 
