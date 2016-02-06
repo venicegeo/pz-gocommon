@@ -11,16 +11,17 @@ import (
 )
 
 const (
-	PzDiscover = "pz-discover"
-	PzLogger   = "pz-logger"
-	PzUuidGen  = "pz-uuidgen"
-	PzAlerter  = "pz-alerter"
+	PzDiscover      = "pz-discover"
+	PzLogger        = "pz-logger"
+	PzUuidGen       = "pz-uuidgen"
+	PzAlerter       = "pz-alerter"
+	PzElasticSearch = "elastic-search"
 )
 
 type System struct {
 	Config *Config
 
-	ElasticSearch *ElasticSearch
+	ElasticSearchService *ElasticSearchService
 
 	DiscoverService IDiscoverService
 	Services        map[string]IService
@@ -53,11 +54,12 @@ func NewSystem(config *Config) (*System, error) {
 		return nil, fmt.Errorf("Invalid config mode: %s", sys.Config.mode)
 	}
 
-	svc, err := newElasticSearch()
+	svc, err := newElasticSearchService()
 	if err != nil {
 		return nil, err
 	}
-	sys.ElasticSearch = svc
+	sys.ElasticSearchService = svc
+	sys.Services[PzElasticSearch] = svc
 
 	return sys, nil
 }

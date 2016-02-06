@@ -174,7 +174,7 @@ func (service *PzDiscoverService) RegisterService(svc IService) error {
 	}
 
 	log.Printf("registering to %s: %s", service.url, string(body))
-	resp, err := Put(service.url, ContentTypeJSON, bytes.NewBuffer(body))
+	resp, err := HttpPut(service.url, ContentTypeJSON, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
@@ -188,7 +188,7 @@ func (service *PzDiscoverService) RegisterService(svc IService) error {
 func (service *PzDiscoverService) UnregisterService(name string) error {
 
 	log.Printf("unregistering %s", name)
-	resp, err := Delete(service.url)
+	resp, err := HttpDelete(service.url)
 	if err != nil {
 		return err
 	}
