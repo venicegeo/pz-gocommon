@@ -90,7 +90,7 @@ func NewPzDiscoverService(sys *System) (IDiscoverService, error) {
 
 	service := PzDiscoverService{config: sys.Config, Name: "pz-discover", Address: sys.Config.DiscoverAddress}
 
-	err := sys.WaitForService(&service, 1000)
+	err := sys.WaitForService(service.Name, service.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,9 @@ func (discover *PzDiscoverService) update() error {
 	if err != nil {
 		return err
 	}
-
+	if resp.StatusCode == http.StatusInternalServerError {
+		return fmt.Errorf("%s (is the Discover service running?)", resp.Status)
+	}
 	if resp.StatusCode != http.StatusOK {
 		return errors.New(resp.Status)
 	}
