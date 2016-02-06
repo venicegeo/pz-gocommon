@@ -8,25 +8,24 @@ import (
 	"os"
 )
 
-type ConfigMode int
+type ConfigMode string
 
 const (
-	ConfigModeLocal = iota
-	ConfigModeTest
-	ConfigModeCloud
+	ConfigModeLocal = "local"
+	ConfigModeTest  = "test"
+	ConfigModeCloud = "cloud"
 )
 
-type SystemConfig struct {
-	Mode            ConfigMode
-	ServiceName     string
-	ServerAddress   string
-	BindTo          string
-	DiscoverAddress string
+type Config struct {
+	mode            ConfigMode
+	serviceName     string
+	serviceAddress  string
+	discoverAddress string
 }
 
-func NewConfig(serviceName string, configType ConfigMode) (*SystemConfig, error) {
+func NewConfig(serviceName string, configType ConfigMode) (*Config, error) {
 
-	var config *SystemConfig
+	var config *Config
 	var err error
 
 	switch configType {
@@ -41,13 +40,20 @@ func NewConfig(serviceName string, configType ConfigMode) (*SystemConfig, error)
 		}
 	}
 
-	log.Printf("Config.Mode: %s", string(config.Mode))
-	log.Printf("Config.ServerAddress: %s", config.ServerAddress)
-	log.Printf("Config.ServiceName: %s", config.ServiceName)
-	log.Printf("Config.DiscoverAddress: %s", config.DiscoverAddress)
-	log.Printf("Config.BindTo: %s", config.BindTo)
+	log.Printf("Config.mode: %s", string(config.mode))
+	log.Printf("Config.serviceName: %s", config.GetName())
+	log.Printf("Config.serviceAddress: %s", config.GetAddress())
+	log.Printf("Config.discoverAddress: %s", config.discoverAddress)
 
 	return config, err
+}
+
+func (config Config) GetName() string {
+	return config.serviceName
+}
+
+func (config Config) GetAddress() string {
+	return config.serviceAddress
 }
 
 func IsLocalConfig() bool {
@@ -56,60 +62,58 @@ func IsLocalConfig() bool {
 	return *localFlag
 }
 
-func getLocalConfig(serviceName string) *SystemConfig {
+func getLocalConfig(serviceName string) *Config {
 
 	var localHosts = map[string]string{
-		"pz-logger":   "localhost:12341",
-		"pz-uuidgen":  "localhost:12340",
-		"pz-alerter":  "localhost:12342",
-		"pz-discover": "localhost:3000",
+		PzLogger:   "localhost:12341",
+		PzUuidgen:  "localhost:12340",
+		PzAlerter:  "localhost:12342",
+		PzDiscover: "localhost:3000",
 	}
 
-	config := SystemConfig{
-		Mode:            ConfigModeLocal,
-		ServiceName:     serviceName,
-		ServerAddress:   localHosts[serviceName],
-		DiscoverAddress: localHosts["pz-discover"],
-		BindTo:          localHosts[serviceName],
-	}
-
-	return &config
-}
-
-func getTestConfig(serviceName string) *SystemConfig {
-
-	config := SystemConfig{
-		Mode:            ConfigModeTest,
-		ServiceName:     serviceName,
-		ServerAddress:   "localhost:12349",
-		DiscoverAddress: "",
-		BindTo:          "localhost:12349",
+	config := Config{
+		mode:            ConfigModeLocal,
+		serviceName:     serviceName,
+		serviceAddress:  localHosts[serviceName],
+		discoverAddress: localHosts[PzDiscover],
 	}
 
 	return &config
 }
 
-func getPCFConfig(serviceName string) (*SystemConfig, error) {
+func getTestConfig(serviceName string) *Config {
+
+	config := Config{
+		mode:            ConfigModeTest,
+		serviceName:     serviceName,
+		serviceAddress:  "localhost:0",
+		discoverAddress: "",
+	}
+
+	return &config
+}
+
+func getPCFConfig(serviceName string) (*Config, error) {
 
 	const nonlocalDiscoverHost = "pz-discover.cf.piazzageo.io"
 
-	var config SystemConfig
+	var config Config
 	var err error
 
-	config.Mode = ConfigModeCloud
+	config.mode = ConfigModeCloud
 
-	config.ServiceName, config.ServerAddress, err = determineVcapServerAddress()
+	config.serviceName, config.serviceAddress, err = determineVcapServerAddress()
 	if err != nil {
 		return nil, err
 	}
 
-	config.DiscoverAddress = nonlocalDiscoverHost
+	config.discoverAddress = nonlocalDiscoverHost
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		return nil, errors.New("$PORT not found: unable to determine bindto address")
 	}
-	config.BindTo = ":" + port
+	config.serviceAddress = ":" + port
 	if err != nil {
 		return nil, err
 	}

@@ -20,14 +20,16 @@ func ServerLogHandler(handler http.Handler) http.Handler {
 	})
 }
 
-// ContentTypeJSON is the http content-type for JSON.
-const ContentTypeJSON = "application/json"
+const (
+	// ContentTypeJSON is the http content-type for JSON.
+	ContentTypeJSON = "application/json"
 
-// ContentTypeText is the http content-type for plain text.
-const ContentTypeText = "text/plain"
+	// ContentTypeText is the http content-type for plain text.
+	ContentTypeText = "text/plain"
+)
 
 // Put is because there is no http.Put.
-func Put(url string, contentType string, body io.Reader) (*http.Response, error) {
+func HTTPPut(url string, contentType string, body io.Reader) (*http.Response, error) {
 	req, err := http.NewRequest("PUT", url, body)
 	if err != nil {
 		return nil, err
@@ -39,7 +41,7 @@ func Put(url string, contentType string, body io.Reader) (*http.Response, error)
 }
 
 // Delete is because there is no http.Delete.
-func Delete(url string) (*http.Response, error) {
+func HTTPDelete(url string) (*http.Response, error) {
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		return nil, err

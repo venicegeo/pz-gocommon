@@ -1,93 +1,127 @@
 package piazza
 
 import (
-	"errors"
-	"net/http"
 	"fmt"
+	"github.com/fvbock/endless"
+	"log"
+	"net"
+	"net/http"
 	"time"
 )
 
+const (
+	PzDiscover      = "pz-discover"
+	PzLogger        = "pz-logger"
+	PzUuidgen       = "pz-uuidgen"
+	PzAlerter       = "pz-alerter"
+	PzElasticSearch = "elastic-search"
+)
+
 type System struct {
-	Config          *SystemConfig
+	Config *Config
+
+	ElasticSearchService *ElasticSearchService
 
 	DiscoverService IDiscoverService
-	ElasticSearch   *ElasticSearch
+	Services        map[string]IService
 }
 
-func NewSystem(config* SystemConfig) (*System, error) {
-	//var err error
+const waitTimeout = 1000
+const waitSleep = 100
+const hammerTime = 3
 
-	sys := System{Config: config}
-
-	err := sys.setupDiscover()
-	if err != nil {
-		return nil, err
-	}
-
-	sys.ElasticSearch, err = newElasticSearch()
-	if err != nil {
-		return nil, err
-	}
-
-	return &sys, nil
-}
-
-
-func (sys *System) setupDiscover() error {
+func NewSystem(config *Config) (*System, error) {
 	var err error
 
-	discoverData := &DiscoverData{Type: "core-service", Host: sys.Config.ServerAddress}
+	sys := &System{
+		Config:   config,
+		Services: make(map[string]IService),
+	}
 
-	switch sys.Config.Mode {
-
+	switch sys.Config.mode {
 	case ConfigModeCloud, ConfigModeLocal:
 		sys.DiscoverService, err = NewPzDiscoverService(sys)
 		if err != nil {
-			return err
-		}
-		err = sys.DiscoverService.RegisterService(sys.Config.ServiceName, discoverData)
-		if err != nil {
-			return err
+			return nil, err
 		}
 	case ConfigModeTest:
 		sys.DiscoverService, err = NewMockDiscoverService(sys)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		err = sys.DiscoverService.RegisterService(sys.Config.ServiceName, discoverData)
-		if err != nil {
-			return err
-		}
+	default:
+		return nil, fmt.Errorf("Invalid config mode: %s", sys.Config.mode)
 	}
-	return nil
+
+	svc, err := newElasticSearchService()
+	if err != nil {
+		return nil, err
+	}
+	sys.ElasticSearchService = svc
+	sys.Services[PzElasticSearch] = svc
+
+	return sys, nil
 }
 
-func (sys *System) WaitForService(service IService, msTimeout int) error {
+func (sys *System) StartServer(routes http.Handler) chan error {
+	done := make(chan error)
+
+	ready := make(chan bool)
+
+	endless.DefaultHammerTime = hammerTime * time.Second
+	server := endless.NewServer(sys.Config.GetAddress(), routes)
+	server.BeforeBegin = func(_ string) {
+		sys.Config.serviceAddress = server.EndlessListener.Addr().(*net.TCPAddr).String()
+		ready <- true
+	}
+	go func() {
+		err := server.ListenAndServe()
+		done <- err
+	}()
+
+	<-ready
+
+	err := sys.WaitForService(sys.Config)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = sys.DiscoverService.RegisterService(sys.Config)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("Config.serviceAddress: %s", sys.Config.GetAddress())
+
+	return done
+}
+
+func (sys *System) WaitForService(service IService) error {
 
 	var url string
 	switch service.GetName() {
-	case "pz-discover":
+	case PzDiscover:
 		url = fmt.Sprintf("http://%s/health-check", service.GetAddress())
 	default:
 		url = fmt.Sprintf("http://%s", service.GetAddress())
 	}
-	return sys.waitForServiceByUrl(url, msTimeout)
+	return sys.waitForServiceByURL(service, url)
 }
 
-func (sys *System) waitForServiceByUrl(url string, msTimeout int) error {
+func (sys *System) waitForServiceByURL(service IService, url string) error {
 	msTime := 0
-	const msSleep = 50
 
 	for {
 		resp, err := http.Get(url)
 		if err == nil && resp.StatusCode == http.StatusOK {
+			log.Printf("found service %s", service.GetName())
 			return nil
 		}
-		if msTime == msTimeout {
-			return errors.New(fmt.Sprintf("timed out waiting for service: %s", url))
+		if msTime >= waitTimeout {
+			return fmt.Errorf("timed out waiting for service: %s at %s", service.GetName(), url)
 		}
-		time.Sleep(msSleep * time.Millisecond)
-		msTime += msSleep
+		time.Sleep(waitSleep * time.Millisecond)
+		msTime += waitSleep
 	}
 	/* notreached */
 }

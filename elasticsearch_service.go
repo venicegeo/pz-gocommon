@@ -4,11 +4,14 @@ import (
 	"gopkg.in/olivere/elastic.v3"
 )
 
-type ElasticSearch struct {
+type ElasticSearchService struct {
+	name    string
+	address string
+
 	Client *elastic.Client
 }
 
-func newElasticSearch() (es *ElasticSearch, err error) {
+func newElasticSearchService() (es *ElasticSearchService, err error) {
 	client, err := elastic.NewClient(
 		elastic.SetURL("https://search-venice-es-pjebjkdaueu2gukocyccj4r5m4.us-east-1.es.amazonaws.com"),
 		elastic.SetSniff(false),
@@ -19,10 +22,18 @@ func newElasticSearch() (es *ElasticSearch, err error) {
 		return nil, err
 	}
 
-	return &ElasticSearch{Client: client}, nil
+	return &ElasticSearchService{Client: client, name: PzElasticSearch, address: "...es.amazonaws.com"}, nil
 }
 
-func (es *ElasticSearch) MakeIndex(index string) error {
+func (es *ElasticSearchService) GetName() string {
+	return es.name
+}
+
+func (es *ElasticSearchService) GetAddress() string {
+	return es.address
+}
+
+func (es *ElasticSearchService) MakeIndex(index string) error {
 
 	exists, err := es.Client.IndexExists(index).Do()
 	if err != nil {
@@ -45,7 +56,7 @@ func (es *ElasticSearch) MakeIndex(index string) error {
 }
 
 // TODO: how often should we do this?
-func (es *ElasticSearch) Flush(index string) error {
+func (es *ElasticSearchService) Flush(index string) error {
 	_, err := es.Client.Flush().Index(index).Do()
 	if err != nil {
 		return err
