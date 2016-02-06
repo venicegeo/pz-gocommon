@@ -1,7 +1,6 @@
 package piazza
 
 import (
-	"errors"
 	"fmt"
 	"github.com/fvbock/endless"
 	"log"
@@ -13,7 +12,7 @@ import (
 const (
 	PzDiscover      = "pz-discover"
 	PzLogger        = "pz-logger"
-	PzUuidGen       = "pz-uuidgen"
+	PzUuidgen       = "pz-uuidgen"
 	PzAlerter       = "pz-alerter"
 	PzElasticSearch = "elastic-search"
 )
@@ -106,10 +105,10 @@ func (sys *System) WaitForService(service IService) error {
 	default:
 		url = fmt.Sprintf("http://%s", service.GetAddress())
 	}
-	return sys.waitForServiceByUrl(service, url)
+	return sys.waitForServiceByURL(service, url)
 }
 
-func (sys *System) waitForServiceByUrl(service IService, url string) error {
+func (sys *System) waitForServiceByURL(service IService, url string) error {
 	msTime := 0
 
 	for {
@@ -119,7 +118,7 @@ func (sys *System) waitForServiceByUrl(service IService, url string) error {
 			return nil
 		}
 		if msTime >= waitTimeout {
-			return errors.New(fmt.Sprintf("timed out waiting for service: %s at %s", service.GetName(), url))
+			return fmt.Errorf("timed out waiting for service: %s at %s", service.GetName(), url)
 		}
 		time.Sleep(waitSleep * time.Millisecond)
 		msTime += waitSleep

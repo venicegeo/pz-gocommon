@@ -26,9 +26,7 @@ type DiscoverData struct {
 	Host    string `json:"host,omitempty"`
 	Brokers string `json:"brokers,omitempty"`
 	Address string `json:"address,omitempty"`
-	DbUri   string `json:"db-uri,omitempty"`
-
-	HealthUrl string `json:"db-uri,omitempty"`
+	DbURI   string `json:"db-uri,omitempty"`
 }
 
 type DiscoverDataList map[string]*DiscoverData
@@ -39,7 +37,7 @@ type MockDiscoverService struct {
 	name    string
 	address string
 
-	data    *DiscoverDataList
+	data *DiscoverDataList
 }
 
 func NewMockDiscoverService(sys *System) (IDiscoverService, error) {
@@ -120,8 +118,8 @@ func (service PzDiscoverService) GetAddress() string {
 	return service.address
 }
 
-func (discover *PzDiscoverService) GetDataForService(name string) (*DiscoverData) {
-	return (*discover.data)[name]
+func (service *PzDiscoverService) GetDataForService(name string) *DiscoverData {
+	return (*service.data)[name]
 }
 
 func (service *PzDiscoverService) fetchData() error {
@@ -174,7 +172,7 @@ func (service *PzDiscoverService) RegisterService(svc IService) error {
 	}
 
 	log.Printf("registering to %s: %s", service.url, string(body))
-	resp, err := HttpPut(service.url, ContentTypeJSON, bytes.NewBuffer(body))
+	resp, err := HTTPPut(service.url, ContentTypeJSON, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
@@ -188,7 +186,7 @@ func (service *PzDiscoverService) RegisterService(svc IService) error {
 func (service *PzDiscoverService) UnregisterService(name string) error {
 
 	log.Printf("unregistering %s", name)
-	resp, err := HttpDelete(service.url)
+	resp, err := HTTPDelete(service.url)
 	if err != nil {
 		return err
 	}

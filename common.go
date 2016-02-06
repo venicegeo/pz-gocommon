@@ -29,7 +29,7 @@ const (
 )
 
 // Put is because there is no http.Put.
-func HttpPut(url string, contentType string, body io.Reader) (*http.Response, error) {
+func HTTPPut(url string, contentType string, body io.Reader) (*http.Response, error) {
 	req, err := http.NewRequest("PUT", url, body)
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func HttpPut(url string, contentType string, body io.Reader) (*http.Response, er
 }
 
 // Delete is because there is no http.Delete.
-func HttpDelete(url string) (*http.Response, error) {
+func HTTPDelete(url string) (*http.Response, error) {
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		return nil, err

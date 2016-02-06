@@ -5,7 +5,7 @@ import (
 )
 
 type ElasticSearchService struct {
-	name string
+	name    string
 	address string
 
 	Client *elastic.Client

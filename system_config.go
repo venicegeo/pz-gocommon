@@ -12,7 +12,7 @@ type ConfigMode string
 
 const (
 	ConfigModeLocal = "local"
-	ConfigModeTest = "test"
+	ConfigModeTest  = "test"
 	ConfigModeCloud = "cloud"
 )
 
@@ -66,7 +66,7 @@ func getLocalConfig(serviceName string) *Config {
 
 	var localHosts = map[string]string{
 		PzLogger:   "localhost:12341",
-		PzUuidGen:  "localhost:12340",
+		PzUuidgen:  "localhost:12340",
 		PzAlerter:  "localhost:12342",
 		PzDiscover: "localhost:3000",
 	}
