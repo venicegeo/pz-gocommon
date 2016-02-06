@@ -4,68 +4,62 @@ import (
 	"errors"
 	"fmt"
 	"github.com/fvbock/endless"
+	"log"
 	"net"
 	"net/http"
-	"log"
 	"time"
 )
 
+const (
+	PzDiscover = "pz-discover"
+	PzLogger   = "pz-logger"
+	PzUuidGen  = "pz-uuidgen"
+	PzAlerter  = "pz-alerter"
+)
+
 type System struct {
-	Config *SystemConfig
+	Config *Config
+
+	ElasticSearch *ElasticSearch
 
 	DiscoverService IDiscoverService
-	ElasticSearch   *ElasticSearch
+	Services        map[string]IService
 }
 
-const WaitTimeout = 1000
-const WaitSleep = 100
+const waitTimeout = 1000
+const waitSleep = 100
+const hammerTime = 3
 
-func NewSystem(config *SystemConfig) (*System, error) {
-	//var err error
-
-	sys := System{Config: config}
-
-	err := sys.setupDiscover()
-	if err != nil {
-		return nil, err
-	}
-
-	sys.ElasticSearch, err = newElasticSearch()
-	if err != nil {
-		return nil, err
-	}
-
-	return &sys, nil
-}
-
-func (sys *System) setupDiscover() error {
+func NewSystem(config *Config) (*System, error) {
 	var err error
 
-	switch sys.Config.Mode {
+	sys := &System{
+		Config:   config,
+		Services: make(map[string]IService),
+	}
+
+	switch sys.Config.mode {
 	case ConfigModeCloud, ConfigModeLocal:
 		sys.DiscoverService, err = NewPzDiscoverService(sys)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	case ConfigModeTest:
 		sys.DiscoverService, err = NewMockDiscoverService(sys)
 		if err != nil {
-			return err
+			return nil, err
 		}
+	default:
+		return nil, fmt.Errorf("Invalid config mode: %s", sys.Config.mode)
 	}
 
-	return nil
-}
+	svc, err := newElasticSearch()
+	if err != nil {
+		return nil, err
+	}
+	sys.ElasticSearch = svc
 
-func (sys *System) RegisterService(name string, address string) error {
-	discoverData := &DiscoverData{Type: "core-service", Host: address}
-	sys.DiscoverService.RegisterService(name, discoverData)
-	return nil
-}
-
-func (sys *System) UnregisterService(name string) error {
-	sys.DiscoverService.UnregisterService(name)
-	return nil
+	return sys, nil
 }
 
 func (sys *System) StartServer(routes http.Handler) chan error {
@@ -73,10 +67,10 @@ func (sys *System) StartServer(routes http.Handler) chan error {
 
 	ready := make(chan bool)
 
-	endless.DefaultHammerTime = 3 * time.Second
-	server := endless.NewServer(sys.Config.BindTo, routes)
+	endless.DefaultHammerTime = hammerTime * time.Second
+	server := endless.NewServer(sys.Config.GetAddress(), routes)
 	server.BeforeBegin = func(_ string) {
-		sys.Config.BindTo = server.EndlessListener.Addr().(*net.TCPAddr).String()
+		sys.Config.serviceAddress = server.EndlessListener.Addr().(*net.TCPAddr).String()
 		ready <- true
 	}
 	go func() {
@@ -86,45 +80,47 @@ func (sys *System) StartServer(routes http.Handler) chan error {
 
 	<-ready
 
-	err := sys.WaitForService(sys.Config.ServiceName, sys.Config.BindTo)
+	err := sys.WaitForService(sys.Config)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = sys.RegisterService(sys.Config.ServiceName, sys.Config.BindTo)
+	err = sys.DiscoverService.RegisterService(sys.Config)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Printf("Config.serviceAddress: %s", sys.Config.GetAddress())
 
 	return done
 }
 
-func (sys *System) WaitForService(name string, address string) error {
+func (sys *System) WaitForService(service IService) error {
 
 	var url string
-	switch name {
-	case "pz-discover":
-		url = fmt.Sprintf("http://%s/health-check", address)
+	switch service.GetName() {
+	case PzDiscover:
+		url = fmt.Sprintf("http://%s/health-check", service.GetAddress())
 	default:
-		url = fmt.Sprintf("http://%s", address)
+		url = fmt.Sprintf("http://%s", service.GetAddress())
 	}
-	return sys.waitForServiceByUrl(name, url)
+	return sys.waitForServiceByUrl(service, url)
 }
 
-func (sys *System) waitForServiceByUrl(name string, url string) error {
+func (sys *System) waitForServiceByUrl(service IService, url string) error {
 	msTime := 0
 
 	for {
 		resp, err := http.Get(url)
 		if err == nil && resp.StatusCode == http.StatusOK {
-			log.Printf("found service %s", name)
+			log.Printf("found service %s", service.GetName())
 			return nil
 		}
-		if msTime >= WaitTimeout {
-			return errors.New(fmt.Sprintf("timed out waiting for service: %s at %s", name, url))
+		if msTime >= waitTimeout {
+			return errors.New(fmt.Sprintf("timed out waiting for service: %s at %s", service.GetName(), url))
 		}
-		time.Sleep(WaitSleep * time.Millisecond)
-		msTime += WaitSleep
+		time.Sleep(waitSleep * time.Millisecond)
+		msTime += waitSleep
 	}
 	/* notreached */
 }

@@ -12,8 +12,10 @@ import (
 type IDiscoverService interface {
 	GetName() string
 	GetAddress() string
-	GetData(name string) (*DiscoverData, error)
-	RegisterService(name string, data *DiscoverData) error
+
+	GetDataForService(name string) *DiscoverData
+
+	RegisterService(IService) error
 	UnregisterService(name string) error
 }
 
@@ -29,44 +31,47 @@ type DiscoverData struct {
 	HealthUrl string `json:"db-uri,omitempty"`
 }
 
-type DiscoverDataList map[string]DiscoverData
+type DiscoverDataList map[string]*DiscoverData
 
 ///////////////////////////////////////////////////////////////////
 
 type MockDiscoverService struct {
-	config  *SystemConfig
+	name    string
+	address string
+
 	data    *DiscoverDataList
-	Name    string
-	Address string
 }
 
 func NewMockDiscoverService(sys *System) (IDiscoverService, error) {
 	var _ IService = new(MockDiscoverService)
 	var _ IDiscoverService = new(MockDiscoverService)
 
-	discover := MockDiscoverService{config: sys.Config, Name: "pz-discover", Address: sys.Config.DiscoverAddress}
+	service := MockDiscoverService{name: PzDiscover, address: sys.Config.discoverAddress}
 
-	discover.data = &DiscoverDataList{}
-	(*discover.data)[sys.Config.ServiceName] = DiscoverData{Type: "core-service", Host: sys.Config.ServerAddress}
+	service.data = &DiscoverDataList{}
+	(*service.data)[sys.Config.GetName()] = &DiscoverData{Type: "core-service", Host: sys.Config.GetAddress()}
 
-	return &discover, nil
+	sys.Services[PzDiscover] = service
+
+	return &service, nil
 }
 
-func (mock *MockDiscoverService) GetName() string {
-	return mock.Name
+func (mock MockDiscoverService) GetName() string {
+	return mock.name
 }
 
-func (mock *MockDiscoverService) GetAddress() string {
-	return mock.Address
+func (mock MockDiscoverService) GetAddress() string {
+	return mock.address
 }
 
-func (mock *MockDiscoverService) GetData(name string) (*DiscoverData, error) {
+func (mock *MockDiscoverService) GetDataForService(name string) *DiscoverData {
 	data := (*mock.data)[name]
-	return &data, nil
+	return data
 }
 
-func (mock *MockDiscoverService) RegisterService(name string, data *DiscoverData) error {
-	(*mock.data)[name] = *data
+func (mock *MockDiscoverService) RegisterService(service IService) error {
+	data := &DiscoverData{Type: "core-service", Host: service.GetAddress()}
+	(*mock.data)[service.GetName()] = data
 	return nil
 }
 
@@ -78,52 +83,50 @@ func (mock *MockDiscoverService) UnregisterService(name string) error {
 ///////////////////////////////////////////////////////////////////
 
 type PzDiscoverService struct {
-	config  *SystemConfig
+	name    string
+	address string
 	data    *DiscoverDataList
-	Name    string
-	Address string
+	url     string
 }
 
 func NewPzDiscoverService(sys *System) (IDiscoverService, error) {
 	var _ IService = new(PzDiscoverService)
 	var _ IDiscoverService = new(PzDiscoverService)
 
-	service := PzDiscoverService{config: sys.Config, Name: "pz-discover", Address: sys.Config.DiscoverAddress}
+	service := PzDiscoverService{name: PzDiscover, address: sys.Config.discoverAddress}
 
-	err := sys.WaitForService(service.Name, service.Address)
+	service.url = "http://" + service.GetAddress() + "/api/v1/resources"
+
+	err := sys.WaitForService(service)
 	if err != nil {
 		return nil, err
 	}
 
-	err = service.update()
+	err = service.fetchData()
 	if err != nil {
 		return nil, err
 	}
+
+	sys.Services[PzDiscover] = service
 
 	return &service, nil
 }
 
-func (service *PzDiscoverService) GetName() string {
-	return service.Name
+func (service PzDiscoverService) GetName() string {
+	return service.name
 }
 
-func (service *PzDiscoverService) GetAddress() string {
-	return service.Address
+func (service PzDiscoverService) GetAddress() string {
+	return service.address
 }
 
-func (discover *PzDiscoverService) GetData(name string) (*DiscoverData, error) {
-	v, ok := (*discover.data)[name]
-	if !ok {
-		return nil, errors.New("service not found: " + name)
-	}
-	return &v, nil
+func (discover *PzDiscoverService) GetDataForService(name string) (*DiscoverData) {
+	return (*discover.data)[name]
 }
 
-func (discover *PzDiscoverService) update() error {
+func (service *PzDiscoverService) fetchData() error {
 
-	url := "http://" + discover.GetAddress() + "/api/v1/resources"
-
-	resp, err := http.Get(url)
+	resp, err := http.Get(service.url)
 	if err != nil {
 		return err
 	}
@@ -145,40 +148,33 @@ func (discover *PzDiscoverService) update() error {
 		return err
 	}
 
-	m["pz-discover"] = DiscoverData{
-		Type:      "core-service",
-		Host:      discover.GetAddress(),
-		HealthUrl: fmt.Sprintf("http://%s/api/v1/resources", discover.GetAddress()),
-	}
-
-	for k, v := range m {
-		if v.HealthUrl == "" {
-			v.HealthUrl = fmt.Sprintf("http://%s", v.Host)
-			m[k] = v
+	if m[PzDiscover] == nil {
+		m[PzDiscover] = &DiscoverData{
+			Type: "core-service",
+			Host: service.GetAddress(),
 		}
 	}
 
-	discover.data = &m
+	service.data = &m
 
 	return nil
 }
 
-func (discover *PzDiscoverService) RegisterService(name string, data *DiscoverData) error {
+func (service *PzDiscoverService) RegisterService(svc IService) error {
+	data := &DiscoverData{Type: "core-service", Host: svc.GetAddress()}
 
 	type discoverEntry struct {
 		Name string       `json:"name"`
 		Data DiscoverData `json:"data"`
 	}
-	entry := discoverEntry{Name: name, Data: *data}
+	entry := discoverEntry{Name: svc.GetName(), Data: *data}
 	body, err := json.Marshal(entry)
 	if err != nil {
 		return err
 	}
 
-	url := fmt.Sprintf("http://%s/api/v1/resources", discover.GetAddress())
-
-	log.Printf("registering to %s: %s", url, string(body))
-	resp, err := Put(url, ContentTypeJSON, bytes.NewBuffer(body))
+	log.Printf("registering to %s: %s", service.url, string(body))
+	resp, err := Put(service.url, ContentTypeJSON, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
@@ -189,12 +185,10 @@ func (discover *PzDiscoverService) RegisterService(name string, data *DiscoverDa
 	return nil
 }
 
-func (discover *PzDiscoverService) UnregisterService(name string) error {
-
-	url := fmt.Sprintf("http://%s/api/v1/resources", discover.GetAddress())
+func (service *PzDiscoverService) UnregisterService(name string) error {
 
 	log.Printf("unregistering %s", name)
-	resp, err := Delete(url)
+	resp, err := Delete(service.url)
 	if err != nil {
 		return err
 	}
