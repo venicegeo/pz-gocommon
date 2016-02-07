@@ -21,6 +21,7 @@ type Config struct {
 	serviceName     string
 	serviceAddress  string
 	discoverAddress string
+	bindtoAddress   string
 }
 
 func NewConfig(serviceName string, configType ConfigMode) (*Config, error) {
@@ -44,6 +45,7 @@ func NewConfig(serviceName string, configType ConfigMode) (*Config, error) {
 	log.Printf("Config.serviceName: %s", config.GetName())
 	log.Printf("Config.serviceAddress: %s", config.GetAddress())
 	log.Printf("Config.discoverAddress: %s", config.discoverAddress)
+	log.Printf("Config.bindtoAddress: %s", config.bindtoAddress)
 
 	return config, err
 }
@@ -54,6 +56,10 @@ func (config Config) GetName() string {
 
 func (config Config) GetAddress() string {
 	return config.serviceAddress
+}
+
+func (config Config) GetBindToAddress() string {
+	return config.bindtoAddress
 }
 
 func IsLocalConfig() bool {
@@ -76,6 +82,7 @@ func getLocalConfig(serviceName string) *Config {
 		serviceName:     serviceName,
 		serviceAddress:  localHosts[serviceName],
 		discoverAddress: localHosts[PzDiscover],
+		bindtoAddress:   localHosts[serviceName],
 	}
 
 	return &config
@@ -88,6 +95,7 @@ func getTestConfig(serviceName string) *Config {
 		serviceName:     serviceName,
 		serviceAddress:  "localhost:0",
 		discoverAddress: "",
+		bindtoAddress:   "localhost:0",
 	}
 
 	return &config
@@ -107,16 +115,20 @@ func getPCFConfig(serviceName string) (*Config, error) {
 		return nil, err
 	}
 
+	log.Printf("got config.ServerAddress: %s", config.serviceAddress)
+
 	config.discoverAddress = nonlocalDiscoverHost
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		return nil, errors.New("$PORT not found: unable to determine bindto address")
 	}
-	config.serviceAddress = ":" + port
+	log.Printf("got port: %s", port)
+	config.bindtoAddress = ":" + port
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("got config.bindtoAddress: %s", config.bindtoAddress)
 
 	return &config, nil
 }
