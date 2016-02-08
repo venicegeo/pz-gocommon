@@ -5,7 +5,7 @@ import (
 )
 
 type ElasticSearchService struct {
-	name    string
+	name    ServiceName
 	address string
 
 	Client *elastic.Client
@@ -25,7 +25,7 @@ func newElasticSearchService() (es *ElasticSearchService, err error) {
 	return &ElasticSearchService{Client: client, name: PzElasticSearch, address: "...es.amazonaws.com"}, nil
 }
 
-func (es *ElasticSearchService) GetName() string {
+func (es *ElasticSearchService) GetName() ServiceName {
 	return es.name
 }
 

@@ -9,12 +9,14 @@ import (
 	"time"
 )
 
+type ServiceName string
+
 const (
-	PzDiscover      = "pz-discover"
-	PzLogger        = "pz-logger"
-	PzUuidgen       = "pz-uuidgen"
-	PzAlerter       = "pz-alerter"
-	PzElasticSearch = "elastic-search"
+	PzDiscover      ServiceName = "pz-discover"
+	PzLogger        ServiceName = "pz-logger"
+	PzUuidgen       ServiceName = "pz-uuidgen"
+	PzAlerter       ServiceName = "pz-alerter"
+	PzElasticSearch ServiceName = "elastic-search"
 )
 
 type System struct {
@@ -23,7 +25,7 @@ type System struct {
 	ElasticSearchService *ElasticSearchService
 
 	DiscoverService IDiscoverService
-	Services        map[string]IService
+	Services        map[ServiceName]IService
 }
 
 const waitTimeout = 1000
@@ -35,7 +37,7 @@ func NewSystem(config *Config) (*System, error) {
 
 	sys := &System{
 		Config:   config,
-		Services: make(map[string]IService),
+		Services: make(map[ServiceName]IService),
 	}
 
 	switch sys.Config.mode {
@@ -97,7 +99,7 @@ func (sys *System) StartServer(routes http.Handler) chan error {
 	return done
 }
 
-func (sys *System) WaitForServiceByName(name string, address string) error {
+func (sys *System) WaitForServiceByName(name ServiceName, address string) error {
 
 	var url string
 	switch name {
@@ -113,7 +115,7 @@ func (sys *System) WaitForService(service IService) error {
 	return sys.WaitForServiceByName(service.GetName(), service.GetAddress())
 }
 
-func (sys *System) waitForServiceByURL(name string, url string) error {
+func (sys *System) waitForServiceByURL(name ServiceName, url string) error {
 	msTime := 0
 
 	for {

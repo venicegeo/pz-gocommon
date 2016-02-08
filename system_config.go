@@ -11,20 +11,20 @@ import (
 type ConfigMode string
 
 const (
-	ConfigModeLocal = "local"
-	ConfigModeTest  = "test"
-	ConfigModeCloud = "cloud"
+	ConfigModeLocal ConfigMode = "local"
+	ConfigModeTest  ConfigMode = "test"
+	ConfigModeCloud ConfigMode = "cloud"
 )
 
 type Config struct {
 	mode            ConfigMode
-	serviceName     string
+	serviceName     ServiceName
 	serviceAddress  string
 	discoverAddress string
 	bindtoAddress   string
 }
 
-func NewConfig(serviceName string, configType ConfigMode) (*Config, error) {
+func NewConfig(serviceName ServiceName, configType ConfigMode) (*Config, error) {
 
 	var config *Config
 	var err error
@@ -50,7 +50,7 @@ func NewConfig(serviceName string, configType ConfigMode) (*Config, error) {
 	return config, err
 }
 
-func (config Config) GetName() string {
+func (config Config) GetName() ServiceName {
 	return config.serviceName
 }
 
@@ -68,9 +68,9 @@ func IsLocalConfig() bool {
 	return *localFlag
 }
 
-func getLocalConfig(serviceName string) *Config {
+func getLocalConfig(serviceName ServiceName) *Config {
 
-	var localHosts = map[string]string{
+	var localHosts = map[ServiceName]string{
 		PzLogger:   "localhost:12341",
 		PzUuidgen:  "localhost:12340",
 		PzAlerter:  "localhost:12342",
@@ -88,7 +88,7 @@ func getLocalConfig(serviceName string) *Config {
 	return &config
 }
 
-func getTestConfig(serviceName string) *Config {
+func getTestConfig(serviceName ServiceName) *Config {
 
 	config := Config{
 		mode:            ConfigModeTest,
@@ -101,7 +101,7 @@ func getTestConfig(serviceName string) *Config {
 	return &config
 }
 
-func getPCFConfig(serviceName string) (*Config, error) {
+func getPCFConfig(serviceName ServiceName) (*Config, error) {
 
 	const nonlocalDiscoverHost = "pz-discover.cf.piazzageo.io"
 
@@ -133,7 +133,7 @@ func getPCFConfig(serviceName string) (*Config, error) {
 	return &config, nil
 }
 
-func determineVcapServerAddress() (serviceName string, serverAddress string, err error) {
+func determineVcapServerAddress() (serviceName ServiceName, serverAddress string, err error) {
 
 	vcapString := os.Getenv("VCAP_APPLICATION")
 	if vcapString == "" {
@@ -149,7 +149,7 @@ func determineVcapServerAddress() (serviceName string, serverAddress string, err
 	if err != nil {
 		return "", "", err
 	}
-	serviceName = vcap.ApplicationName
+	serviceName = ServiceName(vcap.ApplicationName)
 	serverAddress = vcap.ApplicationURIs[0]
 	return serviceName, serverAddress, nil
 }

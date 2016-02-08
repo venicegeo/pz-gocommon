@@ -3,6 +3,6 @@ package piazza
 import ()
 
 type IService interface {
-	GetName() string
+	GetName() ServiceName
 	GetAddress() string
 }
