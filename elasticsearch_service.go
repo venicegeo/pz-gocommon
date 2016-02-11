@@ -3,6 +3,9 @@ package piazza
 import (
 	"fmt"
 	"gopkg.in/olivere/elastic.v2"
+	"log"
+	"math/rand"
+	"time"
 )
 
 // TODO (default is "http://127.0.0.1:9200")
@@ -12,10 +15,11 @@ type ElasticSearchService struct {
 	name    ServiceName
 	address string
 
-	Client *elastic.Client
+	indexPrefix string
+	Client      *elastic.Client
 }
 
-func newElasticSearchService() (*ElasticSearchService, error) {
+func newElasticSearchService(testMode bool) (*ElasticSearchService, error) {
 	client, err := elastic.NewClient(
 		elastic.SetURL(elasticsearchUrl),
 		elastic.SetSniff(false),
@@ -27,7 +31,15 @@ func newElasticSearchService() (*ElasticSearchService, error) {
 		return nil, err
 	}
 
-	es := ElasticSearchService{Client: client, name: PzElasticSearch, address: elasticsearchUrl}
+	rand.Seed(int64(time.Now().Nanosecond()))
+	prefix := ""
+	if testMode {
+		n := rand.Intn(0xffff)
+		prefix = fmt.Sprintf("%x", n)
+		log.Printf("Elsasticsearch index prefix: %s", prefix)
+	}
+
+	es := ElasticSearchService{Client: client, name: PzElasticSearch, address: elasticsearchUrl, indexPrefix: prefix}
 	return &es, nil
 }
 
@@ -43,14 +55,18 @@ func (es *ElasticSearchService) Version() (string, error) {
 	return es.Client.ElasticsearchVersion(elasticsearchUrl)
 }
 
+func (es *ElasticSearchService) prefixed(index string) string {
+	return fmt.Sprintf("%s.%s", es.indexPrefix, index)
+}
+
 func (es *ElasticSearchService) IndexExists(index string) (bool, error) {
-	return es.Client.IndexExists(index).Do()
+	return es.Client.IndexExists(es.prefixed(index)).Do()
 }
 
 // if index already exists, does nothing
 func (es *ElasticSearchService) CreateIndex(index string) error {
 
-	ok, err := es.IndexExists(index)
+	ok, err := es.IndexExists(es.prefixed(index))
 	if err != nil {
 		return err
 	}
@@ -58,7 +74,7 @@ func (es *ElasticSearchService) CreateIndex(index string) error {
 		return nil
 	}
 
-	createIndex, err := es.Client.CreateIndex(index).Do()
+	createIndex, err := es.Client.CreateIndex(es.prefixed(index)).Do()
 	if err != nil {
 		return err
 	}
@@ -73,7 +89,7 @@ func (es *ElasticSearchService) CreateIndex(index string) error {
 // if index doesn't already exist, does nothing
 func (es *ElasticSearchService) DeleteIndex(index string) error {
 
-	exists, err := es.Client.IndexExists(index).Do()
+	exists, err := es.Client.IndexExists(es.prefixed(index)).Do()
 	if err != nil {
 		return err
 	}
@@ -81,7 +97,7 @@ func (es *ElasticSearchService) DeleteIndex(index string) error {
 		return nil
 	}
 
-	deleteIndex, err := es.Client.DeleteIndex(index).Do()
+	deleteIndex, err := es.Client.DeleteIndex(es.prefixed(index)).Do()
 	if err != nil {
 		return err
 	}
@@ -93,7 +109,7 @@ func (es *ElasticSearchService) DeleteIndex(index string) error {
 
 // TODO: how often should we do this?
 func (es *ElasticSearchService) FlushIndex(index string) error {
-	_, err := es.Client.Flush().Index(index).Do()
+	_, err := es.Client.Flush().Index(es.prefixed(index)).Do()
 	if err != nil {
 		return err
 	}
@@ -102,7 +118,7 @@ func (es *ElasticSearchService) FlushIndex(index string) error {
 
 func (es *ElasticSearchService) PostData(index string, mapping string, id string, json interface{}) (*elastic.IndexResult, error) {
 	indexResult, err := es.Client.Index().
-		Index(index).
+		Index(es.prefixed(index)).
 		Type(mapping).
 		Id(id).
 		BodyJson(json).
@@ -111,36 +127,34 @@ func (es *ElasticSearchService) PostData(index string, mapping string, id string
 }
 
 func (es *ElasticSearchService) GetById(index string, id string) (*elastic.GetResult, error) {
-	getResult, err := es.Client.Get().Index(index).Id(id).Do()
+	getResult, err := es.Client.Get().Index(es.prefixed(index)).Id(id).Do()
 	return getResult, err
 }
 
 func (es *ElasticSearchService) DeleteById(index string, mapping string, id string) (*elastic.DeleteResult, error) {
 	deleteResult, err := es.Client.Delete().
-		Index(index).
+		Index(es.prefixed(index)).
 		Type(mapping).
 		Id(id).
 		Do()
 	return deleteResult, err
 }
 
-// always sorts by id
 func (es *ElasticSearchService) SearchByMatchAll(index string) (*elastic.SearchResult, error) {
 	searchResult, err := es.Client.Search().
-		Index(index).
+		Index(es.prefixed(index)).
 		Query(elastic.NewMatchAllQuery()).
-		Sort("id", true).
+		//Sort("id", true).
 		Do()
 	return searchResult, err
 }
 
-// always sorts by id
 func (es *ElasticSearchService) SearchByTermQuery(index string, name string, value interface{}) (*elastic.SearchResult, error) {
 	termQuery := elastic.NewTermQuery(name, value)
 	searchResult, err := es.Client.Search().
-		Index(index).
+		Index(es.prefixed(index)).
 		Query(&termQuery).
-		Sort("id", true).
+		//Sort("id", true).
 		Do()
 	return searchResult, err
 }

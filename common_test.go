@@ -40,13 +40,13 @@ func (suite *CommonTester) TestElasticSearch() {
 	assert := assert.New(t)
 
 	index := "testing-index"
-	var tmp Obj
+	var tmp1, tmp2 Obj
 	var err error
 	var src *json.RawMessage
 	var ok bool
 
 	// make our client
-	es, err := newElasticSearchService()
+	es, err := newElasticSearchService(true)
 	assert.NoError(err)
 	assert.NotNil(es)
 
@@ -92,9 +92,9 @@ func (suite *CommonTester) TestElasticSearch() {
 	assert.NoError(err)
 	assert.NotNil(getResult)
 	src = getResult.Source
-	err = json.Unmarshal(*src, &tmp)
+	err = json.Unmarshal(*src, &tmp1)
 	assert.NoError(err)
-	assert.EqualValues("data1", tmp.Data)
+	assert.EqualValues("data1", tmp1.Data)
 
 	// SEARCH for everything
 	searchResult, err := es.SearchByMatchAll(index)
@@ -107,9 +107,9 @@ func (suite *CommonTester) TestElasticSearch() {
 	m := make(map[string]Obj)
 
 	for _, hit := range searchResult.Hits.Hits {
-		err = json.Unmarshal(*hit.Source, &tmp)
+		err = json.Unmarshal(*hit.Source, &tmp1)
 		assert.NoError(err)
-		m[tmp.Id] = tmp
+		m[tmp1.Id] = tmp1
 	}
 
 	assert.Contains(m, "id0")
@@ -124,9 +124,9 @@ func (suite *CommonTester) TestElasticSearch() {
 	assert.NotNil(searchResult.Hits.Hits[0])
 	src = searchResult.Hits.Hits[0].Source
 	assert.NotNil(src)
-	err = json.Unmarshal(*src, &tmp)
+	err = json.Unmarshal(*src, &tmp1)
 	assert.NoError(err)
-	assert.EqualValues("data1", tmp.Data)
+	assert.EqualValues("data1", tmp1.Data)
 
 	// SEARCH fuzzily
 	searchResult, err = es.SearchByTermQuery(index, "tags", "foo")
@@ -137,15 +137,17 @@ func (suite *CommonTester) TestElasticSearch() {
 
 	src = searchResult.Hits.Hits[0].Source
 	assert.NotNil(src)
-	err = json.Unmarshal(*src, &tmp)
+	err = json.Unmarshal(*src, &tmp1)
 	assert.NoError(err)
-	assert.EqualValues("id0", tmp.Id)
 
 	src = searchResult.Hits.Hits[1].Source
 	assert.NotNil(src)
-	err = json.Unmarshal(*src, &tmp)
+	err = json.Unmarshal(*src, &tmp2)
 	assert.NoError(err)
-	assert.EqualValues("id2", tmp.Id)
+
+	ok1 := ("id0" == tmp1.Id && "id2" == tmp2.Id)
+	ok2 := ("id0" == tmp2.Id && "id2" == tmp1.Id)
+	assert.True((ok1 || ok2) && !(ok1 && ok2))
 
 	// DELETE by id
 	_, err = es.DeleteById(index, "Obj", "id2")

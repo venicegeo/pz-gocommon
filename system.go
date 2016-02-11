@@ -40,6 +40,8 @@ func NewSystem(config *Config) (*System, error) {
 		Services: make(map[ServiceName]IService),
 	}
 
+	testMode := false
+
 	switch sys.Config.mode {
 	case ConfigModeCloud, ConfigModeLocal:
 		sys.DiscoverService, err = NewPzDiscoverService(sys)
@@ -47,6 +49,7 @@ func NewSystem(config *Config) (*System, error) {
 			return nil, err
 		}
 	case ConfigModeTest:
+		testMode = true
 		sys.DiscoverService, err = NewMockDiscoverService(sys)
 		if err != nil {
 			return nil, err
@@ -56,7 +59,7 @@ func NewSystem(config *Config) (*System, error) {
 	}
 	sys.Services[PzDiscover] = sys.DiscoverService
 
-	sys.ElasticSearchService, err = newElasticSearchService()
+	sys.ElasticSearchService, err = newElasticSearchService(testMode)
 	if err != nil {
 		return nil, err
 	}
