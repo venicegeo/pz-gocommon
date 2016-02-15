@@ -87,7 +87,7 @@ func getLocalConfig(serviceName ServiceName) *Config {
 	var localHosts = map[ServiceName]string{
 		PzLogger:   "localhost:12341",
 		PzUuidgen:  "localhost:12340",
-		PzAlerter:  "localhost:12342",
+		PzWorkflow:  "localhost:12342",
 		PzDiscover: "localhost:3000",
 	}
 
