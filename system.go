@@ -29,7 +29,7 @@ const (
 	PzDiscover      ServiceName = "pz-discover"
 	PzLogger        ServiceName = "pz-logger"
 	PzUuidgen       ServiceName = "pz-uuidgen"
-	PzAlerter       ServiceName = "pz-alerter"
+	PzWorkflow      ServiceName = "pz-workflow"
 	PzElasticSearch ServiceName = "elastic-search"
 )
 
