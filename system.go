@@ -1,3 +1,17 @@
+// Copyright 2016, RadiantBlue Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package piazza
 
 import (
@@ -9,12 +23,14 @@ import (
 	"time"
 )
 
+type ServiceName string
+
 const (
-	PzDiscover      = "pz-discover"
-	PzLogger        = "pz-logger"
-	PzUuidgen       = "pz-uuidgen"
-	PzAlerter       = "pz-alerter"
-	PzElasticSearch = "elastic-search"
+	PzDiscover      ServiceName = "pz-discover"
+	PzLogger        ServiceName = "pz-logger"
+	PzUuidgen       ServiceName = "pz-uuidgen"
+	PzAlerter       ServiceName = "pz-alerter"
+	PzElasticSearch ServiceName = "elastic-search"
 )
 
 type System struct {
@@ -23,7 +39,7 @@ type System struct {
 	ElasticSearchService *ElasticSearchService
 
 	DiscoverService IDiscoverService
-	Services        map[string]IService
+	Services        map[ServiceName]IService
 }
 
 const waitTimeout = 1000
@@ -35,8 +51,10 @@ func NewSystem(config *Config) (*System, error) {
 
 	sys := &System{
 		Config:   config,
-		Services: make(map[string]IService),
+		Services: make(map[ServiceName]IService),
 	}
+
+	testMode := false
 
 	switch sys.Config.mode {
 	case ConfigModeCloud, ConfigModeLocal:
@@ -45,6 +63,7 @@ func NewSystem(config *Config) (*System, error) {
 			return nil, err
 		}
 	case ConfigModeTest:
+		testMode = true
 		sys.DiscoverService, err = NewMockDiscoverService(sys)
 		if err != nil {
 			return nil, err
@@ -54,7 +73,7 @@ func NewSystem(config *Config) (*System, error) {
 	}
 	sys.Services[PzDiscover] = sys.DiscoverService
 
-	sys.ElasticSearchService, err = newElasticSearchService()
+	sys.ElasticSearchService, err = newElasticSearchService(testMode)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +116,7 @@ func (sys *System) StartServer(routes http.Handler) chan error {
 	return done
 }
 
-func (sys *System) WaitForServiceByName(name string, address string) error {
+func (sys *System) WaitForServiceByName(name ServiceName, address string) error {
 
 	var url string
 	switch name {
@@ -113,7 +132,7 @@ func (sys *System) WaitForService(service IService) error {
 	return sys.WaitForServiceByName(service.GetName(), service.GetAddress())
 }
 
-func (sys *System) waitForServiceByURL(name string, url string) error {
+func (sys *System) waitForServiceByURL(name ServiceName, url string) error {
 	msTime := 0
 
 	for {

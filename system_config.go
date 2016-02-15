@@ -1,3 +1,17 @@
+// Copyright 2016, RadiantBlue Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package piazza
 
 import (
@@ -11,20 +25,20 @@ import (
 type ConfigMode string
 
 const (
-	ConfigModeLocal = "local"
-	ConfigModeTest  = "test"
-	ConfigModeCloud = "cloud"
+	ConfigModeLocal ConfigMode = "local"
+	ConfigModeTest  ConfigMode = "test"
+	ConfigModeCloud ConfigMode = "cloud"
 )
 
 type Config struct {
 	mode            ConfigMode
-	serviceName     string
+	serviceName     ServiceName
 	serviceAddress  string
 	discoverAddress string
 	bindtoAddress   string
 }
 
-func NewConfig(serviceName string, configType ConfigMode) (*Config, error) {
+func NewConfig(serviceName ServiceName, configType ConfigMode) (*Config, error) {
 
 	var config *Config
 	var err error
@@ -50,7 +64,7 @@ func NewConfig(serviceName string, configType ConfigMode) (*Config, error) {
 	return config, err
 }
 
-func (config Config) GetName() string {
+func (config Config) GetName() ServiceName {
 	return config.serviceName
 }
 
@@ -68,9 +82,9 @@ func IsLocalConfig() bool {
 	return *localFlag
 }
 
-func getLocalConfig(serviceName string) *Config {
+func getLocalConfig(serviceName ServiceName) *Config {
 
-	var localHosts = map[string]string{
+	var localHosts = map[ServiceName]string{
 		PzLogger:   "localhost:12341",
 		PzUuidgen:  "localhost:12340",
 		PzAlerter:  "localhost:12342",
@@ -88,7 +102,7 @@ func getLocalConfig(serviceName string) *Config {
 	return &config
 }
 
-func getTestConfig(serviceName string) *Config {
+func getTestConfig(serviceName ServiceName) *Config {
 
 	config := Config{
 		mode:            ConfigModeTest,
@@ -101,7 +115,7 @@ func getTestConfig(serviceName string) *Config {
 	return &config
 }
 
-func getPCFConfig(serviceName string) (*Config, error) {
+func getPCFConfig(serviceName ServiceName) (*Config, error) {
 
 	const nonlocalDiscoverHost = "pz-discover.cf.piazzageo.io"
 
@@ -133,7 +147,7 @@ func getPCFConfig(serviceName string) (*Config, error) {
 	return &config, nil
 }
 
-func determineVcapServerAddress() (serviceName string, serverAddress string, err error) {
+func determineVcapServerAddress() (serviceName ServiceName, serverAddress string, err error) {
 
 	vcapString := os.Getenv("VCAP_APPLICATION")
 	if vcapString == "" {
@@ -149,7 +163,7 @@ func determineVcapServerAddress() (serviceName string, serverAddress string, err
 	if err != nil {
 		return "", "", err
 	}
-	serviceName = vcap.ApplicationName
+	serviceName = ServiceName(vcap.ApplicationName)
 	serverAddress = vcap.ApplicationURIs[0]
 	return serviceName, serverAddress, nil
 }
