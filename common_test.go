@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"testing"
+	"gopkg.in/olivere/elastic.v2"
 )
 
 type CommonTester struct {
@@ -50,6 +51,7 @@ var objs = []Obj{
 }
 
 func (suite *CommonTester) TestElasticSearch() {
+	return
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -169,4 +171,191 @@ func (suite *CommonTester) TestElasticSearch() {
 	getResult, err = es.GetById(index, "id2")
 	assert.NoError(err)
 	assert.False(getResult.Found)
+}
+
+func (suite *CommonTester) TestEsViaSource() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	index0 := "testing-index"
+
+	var tmp1, tmp2 Obj
+	var err error
+	var src *json.RawMessage
+	var ok bool
+
+	var searchResult *elastic.SearchResult
+
+	// make our client
+	es, err := newElasticSearchService(true)
+	assert.NoError(err)
+	assert.NotNil(es)
+
+	index1 := es.prefixed(index0)
+
+	ok, err = es.IndexExists(index0)
+	assert.NoError(err)
+	if ok {
+		err = es.DeleteIndex(index0)
+		assert.NoError(err)
+	}
+
+	// make the index
+	err = es.CreateIndex(index0)
+	assert.NoError(err)
+
+	// populate the index
+	for _, o := range objs {
+		indexResult, err := es.PostData(index0, "Obj", o.Id, o)
+		assert.NoError(err)
+		assert.NotNil(indexResult)
+	}
+
+	// Flush
+	// TODO: needed? how often?
+	err = es.FlushIndex(index0)
+	assert.NoError(err)
+
+	// SEARCH for everything
+	{
+		searchResult, err = es.SearchByMatchAll(index0)
+		assert.NoError(err)
+		assert.NotNil(searchResult)
+
+		assert.Equal(int64(3), searchResult.TotalHits())
+		assert.EqualValues(3, searchResult.Hits.TotalHits)
+
+		m := make(map[string]Obj)
+
+		for _, hit := range searchResult.Hits.Hits {
+			err = json.Unmarshal(*hit.Source, &tmp1)
+			assert.NoError(err)
+			m[tmp1.Id] = tmp1
+		}
+
+		assert.Contains(m, "id0")
+		assert.Contains(m, "id1")
+		assert.Contains(m, "id2")
+	}
+	{
+		str :=
+		`{
+		    "query": {
+			    "match_all": {}
+		    }
+	    }`
+
+		var strobj interface{}
+		err = json.Unmarshal([]byte(str), &strobj)
+		assert.NoError(err)
+
+		//bs, err := json.Marshal(i)
+		//assert.NoError(err)
+
+		searchResult, err = es.Client.Search().Index(index1).Source(strobj).Do()
+		assert.NoError(err)
+		assert.NotNil(searchResult)
+
+		//t.Logf("%#v", searchResult.Hits)
+
+		for _, hit := range searchResult.Hits.Hits {
+			err = json.Unmarshal(*hit.Source, &tmp1)
+			assert.NoError(err)
+			//t.Logf("HIT: %s", tmp1.Id)
+		}
+		assert.EqualValues(3, searchResult.Hits.TotalHits)
+	}
+
+	// SEARCH for a specific one
+	{
+		searchResult, err = es.SearchByTermQuery(index0, "id", "id1")
+		assert.NoError(err)
+		assert.NotNil(searchResult)
+		assert.EqualValues(1, searchResult.Hits.TotalHits)
+		assert.NotNil(searchResult.Hits.Hits[0])
+		src = searchResult.Hits.Hits[0].Source
+		assert.NotNil(src)
+		err = json.Unmarshal(*src, &tmp1)
+		assert.NoError(err)
+		assert.EqualValues("data1", tmp1.Data)
+	}
+	{
+		str :=
+		`{
+		    "query": {
+			    "term": {"id":"id1"}
+		    }
+	    }`
+
+		var strobj interface{}
+		err = json.Unmarshal([]byte(str), &strobj)
+		assert.NoError(err)
+
+		searchResult, err = es.Client.Search().Index(index1).Source(strobj).Do()
+		assert.NoError(err)
+		assert.NotNil(searchResult)
+
+		assert.EqualValues(1, searchResult.Hits.TotalHits)
+		src = searchResult.Hits.Hits[0].Source
+		assert.NotNil(src)
+		err = json.Unmarshal(*src, &tmp1)
+		assert.NoError(err)
+		assert.EqualValues("data1", tmp1.Data)
+	}
+
+	// SEARCH fuzzily
+	{
+		searchResult, err = es.SearchByTermQuery(index0, "tags", "foo")
+		assert.NoError(err)
+		assert.NotNil(searchResult)
+		assert.EqualValues(2, searchResult.Hits.TotalHits)
+		assert.NotNil(searchResult.Hits.Hits[0])
+
+		src = searchResult.Hits.Hits[0].Source
+		assert.NotNil(src)
+		err = json.Unmarshal(*src, &tmp1)
+		assert.NoError(err)
+
+		src = searchResult.Hits.Hits[1].Source
+		assert.NotNil(src)
+		err = json.Unmarshal(*src, &tmp2)
+		assert.NoError(err)
+
+		ok1 := ("id0" == tmp1.Id && "id2" == tmp2.Id)
+		ok2 := ("id0" == tmp2.Id && "id2" == tmp1.Id)
+		assert.True((ok1 || ok2) && !(ok1 && ok2))
+	}
+	{
+		str :=
+		`{
+		    "query": {
+			    "term": {"tags":"foo"}
+		    }
+	    }`
+
+		var strobj interface{}
+		err = json.Unmarshal([]byte(str), &strobj)
+		assert.NoError(err)
+
+		searchResult, err = es.Client.Search().Index(index1).Source(strobj).Do()
+		assert.NoError(err)
+		assert.NotNil(searchResult)
+
+		assert.EqualValues(2, searchResult.Hits.TotalHits)
+		assert.NotNil(searchResult.Hits.Hits[0])
+
+		src = searchResult.Hits.Hits[0].Source
+		assert.NotNil(src)
+		err = json.Unmarshal(*src, &tmp1)
+		assert.NoError(err)
+
+		src = searchResult.Hits.Hits[1].Source
+		assert.NotNil(src)
+		err = json.Unmarshal(*src, &tmp2)
+		assert.NoError(err)
+
+		ok1 := ("id0" == tmp1.Id && "id2" == tmp2.Id)
+		ok2 := ("id0" == tmp2.Id && "id2" == tmp1.Id)
+		assert.True((ok1 || ok2) && !(ok1 && ok2))
+	}
 }
