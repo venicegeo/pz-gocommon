@@ -36,7 +36,7 @@ const (
 type System struct {
 	Config *Config
 
-	ElasticSearchService *ElasticSearchService
+	ElasticSearchService *EsClient
 
 	DiscoverService IDiscoverService
 	Services        map[ServiceName]IService
@@ -73,7 +73,7 @@ func NewSystem(config *Config) (*System, error) {
 	}
 	sys.Services[PzDiscover] = sys.DiscoverService
 
-	sys.ElasticSearchService, err = newElasticSearchService(testMode)
+	sys.ElasticSearchService, err = newEsClient(testMode)
 	if err != nil {
 		return nil, err
 	}
