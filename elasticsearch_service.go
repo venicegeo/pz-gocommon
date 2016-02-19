@@ -20,6 +20,7 @@ import (
 	"math/rand"
 	"time"
 	jsonenc "encoding/json"
+	"strings"
 )
 
 // TODO (default is "http://127.0.0.1:9200")
@@ -51,7 +52,7 @@ func newEsClient(testMode bool) (*EsClient, error) {
 		prefix = fmt.Sprintf("%x", n)
 		//log.Printf("Elsasticsearch index prefix: %s", prefix)
 	}
-	
+
 	es := EsClient{lib: lib, name: PzElasticSearch, address: elasticsearchUrl, indexPrefix: prefix}
 	return &es, nil
 }
@@ -157,11 +158,11 @@ func (es *EsIndexClient) Flush() error {
 
 func (es *EsIndexClient) PostData(mapping string, id string, json interface{}) (*elastic.IndexResult, error) {
 	indexResult, err := es.lib.Index().
-		Index(es.index).
-		Type(mapping).
-		Id(id).
-		BodyJson(json).
-		Do()
+	Index(es.index).
+	Type(mapping).
+	Id(id).
+	BodyJson(json).
+	Do()
 	return indexResult, err
 }
 
@@ -172,29 +173,29 @@ func (es *EsIndexClient) GetById(id string) (*elastic.GetResult, error) {
 
 func (es *EsIndexClient) DeleteById(mapping string, id string) (*elastic.DeleteResult, error) {
 	deleteResult, err := es.lib.Delete().
-		Index(es.index).
-		Type(mapping).
-		Id(id).
-		Do()
+	Index(es.index).
+	Type(mapping).
+	Id(id).
+	Do()
 	return deleteResult, err
 }
 
 func (es *EsIndexClient) SearchByMatchAll() (*elastic.SearchResult, error) {
 	searchResult, err := es.lib.Search().
-		Index(es.index).
-		Query(elastic.NewMatchAllQuery()).
-		//Sort("id", true).
-		Do()
+	Index(es.index).
+	Query(elastic.NewMatchAllQuery()).
+	//Sort("id", true).
+	Do()
 	return searchResult, err
 }
 
 func (es *EsIndexClient) SearchByTermQuery(name string, value interface{}) (*elastic.SearchResult, error) {
 	termQuery := elastic.NewTermQuery(name, value)
 	searchResult, err := es.lib.Search().
-		Index(es.index).
-		Query(&termQuery).
-		//Sort("id", true).
-		Do()
+	Index(es.index).
+	Query(&termQuery).
+	//Sort("id", true).
+	Do()
 	return searchResult, err
 }
 
@@ -209,4 +210,71 @@ func (es *EsIndexClient) SearchRaw(json string) (*elastic.SearchResult, error) {
 	searchResult, err := es.lib.Search().Index(es.index).Source(obj).Do()
 
 	return searchResult, err
+}
+
+func (es *EsIndexClient) SetMapping(typename string, json string) (error) {
+
+	putresp, err := es.lib.PutMapping().Index(es.index).Type(typename).BodyString(json).Do()
+	if err != nil {
+		return fmt.Errorf("expected put mapping to succeed; got: %v", err)
+	}
+	if putresp == nil {
+		return fmt.Errorf("expected put mapping response; got: %v", putresp)
+	}
+	if !putresp.Acknowledged {
+		return fmt.Errorf("expected put mapping ack; got: %v", putresp.Acknowledged)
+	}
+
+	return nil
+}
+
+func (es *EsIndexClient) GetMapping(typename string) (interface{}, error) {
+
+	getresp, err := es.lib.GetMapping().Index(es.index).Type(typename).Do()
+	if err != nil {
+		return nil, fmt.Errorf("expected get mapping to succeed; got: %v", err)
+	}
+	if getresp == nil {
+		return nil, fmt.Errorf("expected get mapping response; got: %v", getresp)
+	}
+	props, ok := getresp[es.index]
+	if !ok {
+		return nil, fmt.Errorf("expected JSON root to be of type map[string]interface{}; got: %#v", props)
+	}
+
+	return props, nil
+}
+
+type MappingElementTypeName string
+
+const (
+	MappingElementTypeString MappingElementTypeName = "string"
+	MappingElementTypeBool MappingElementTypeName = "boolean"
+	MappingElementTypeInteger MappingElementTypeName = "integer"
+	MappingElementTypeDouble MappingElementTypeName = "double"
+	MappingElementTypeDate MappingElementTypeName = "date"
+// float, byte, short, long
+)
+
+func (es *EsIndexClient) ConstructMappingSchema(name string, items map[string]MappingElementTypeName) (string, error) {
+
+	template :=
+	`{
+		"%s":{
+			"properties":{
+				%s
+		    }
+	    }
+    }`
+
+	stuff := make([]string, len(items))
+	i := 0
+	for k, v := range items {
+		stuff[i] = fmt.Sprintf(`"%s": {"type":"%s"}`, k, v)
+		i++
+	}
+
+	json := fmt.Sprintf(template, name, strings.Join(stuff, ","))
+
+	return json, nil
 }

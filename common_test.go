@@ -44,13 +44,30 @@ type Obj struct {
 	Tags string `json:"tags" binding:"required"`
 }
 
+const objMapping =
+`{
+	 "Obj":{
+		"properties":{
+			"id": {
+				"type":"string"
+			},
+			"data": {
+				"type":"string"
+			},
+			"tags": {
+				"type":"string"
+			}
+		}
+	}
+}`
+
 var objs = []Obj{
 	{Id: "id0", Data: "data0", Tags: "foo bar"},
 	{Id: "id1", Data: "data1", Tags: "bar baz"},
 	{Id: "id2", Data: "data2", Tags: "foo"},
 }
 
-func (suite *CommonTester) SetUpIndex() *EsIndexClient {
+func (suite *CommonTester) SetUpIndex(withMapping bool) *EsIndexClient {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -77,6 +94,11 @@ func (suite *CommonTester) SetUpIndex() *EsIndexClient {
 	assert.NoError(err)
 	assert.True(exists)
 
+	if withMapping {
+		err := es.SetMapping("Obj", objMapping)
+		assert.NoError(err)
+	}
+
 	// populate the index
 	for _, o := range objs {
 		indexResult, err := es.PostData("Obj", o.Id, o)
@@ -91,7 +113,6 @@ func (suite *CommonTester) SetUpIndex() *EsIndexClient {
 
 	return es
 }
-
 
 func (suite *CommonTester) TestEsBasics() {
 	t := suite.T()
@@ -115,13 +136,12 @@ func (suite *CommonTester) TestEsOps() {
 	var src *json.RawMessage
 	var searchResult *elastic.SearchResult
 
-	es := suite.SetUpIndex()
+	es := suite.SetUpIndex(false)
 	assert.NotNil(es)
 	defer func() {
 		es.Close()
 		es.Delete()
 	}()
-
 
 	{
 		// GET a specific one
@@ -213,7 +233,7 @@ func (suite *CommonTester) TestEsOpsJson() {
 
 	var searchResult *elastic.SearchResult
 
-	es := suite.SetUpIndex()
+	es := suite.SetUpIndex(false)
 	assert.NotNil(es)
 	defer func() {
 		es.Close()
@@ -291,4 +311,120 @@ func (suite *CommonTester) TestEsOpsJson() {
 		ok2 := ("id0" == tmp2.Id && "id2" == tmp1.Id)
 		assert.True((ok1 || ok2) && !(ok1 && ok2))
 	}
+}
+
+func (suite *CommonTester) TestEsMapping() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	var err error
+
+	es := suite.SetUpIndex(false)
+	assert.NotNil(es)
+	defer func() {
+		es.Close()
+		es.Delete()
+	}()
+
+	mapping :=
+	`{
+		"tweetdoc":{
+			"properties":{
+				"message":{
+					"type":"string",
+					"store":true
+			    }
+		    }
+	    }
+    }`
+
+	err = es.SetMapping("tweetdoc", mapping)
+	assert.NoError(err)
+
+	props, err := es.GetMapping("tweetdoc")
+	assert.NoError(err)
+
+	mappings := props.(map[string]interface{})["mappings"]
+	assert.NotNil(mappings)
+	tweetdoc := mappings.(map[string]interface{})["tweetdoc"]
+	assert.NotNil(tweetdoc)
+	properties := tweetdoc.(map[string]interface{})["properties"]
+	assert.NotNil(properties)
+	message := properties.(map[string]interface{})["message"]
+	assert.NotNil(message)
+	typ := message.(map[string]interface{})["type"].(string)
+	assert.NotNil(typ)
+	store := message.(map[string]interface{})["store"].(bool)
+	assert.NotNil(store)
+
+	assert.EqualValues("string", typ)
+	assert.True(store)
+}
+
+func (suite *CommonTester) TestEsFull() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	var err error
+
+	es := suite.SetUpIndex(true)
+	assert.NotNil(es)
+	defer func() {
+		es.Close()
+		es.Delete()
+	}()
+
+	type NotObj struct {
+		Id   int `json:"id" binding:"required"`
+		Data string `json:"data" binding:"required"`
+		Foo  bool `json:"foo" binding:"required"`
+	}
+	o := NotObj{Id:99, Data:"quick fox", Foo:true}
+
+	indexResult, err := es.PostData("Obj", "88", o)
+	assert.NoError(err)
+	assert.NotNil(indexResult)
+}
+
+func (suite *CommonTester) TestConstructMappingSchema() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	es := suite.SetUpIndex(false)
+	assert.NotNil(es)
+	defer func() {
+		es.Close()
+		es.Delete()
+	}()
+
+	items := make(map[string]MappingElementTypeName)
+
+	items["integer1"] = MappingElementTypeInteger
+	items["integer2"] = MappingElementTypeInteger
+	items["double1"] = MappingElementTypeDouble
+	items["bool1"] = MappingElementTypeBool
+	items["date1"] = MappingElementTypeDate
+
+	jsonstr, err := es.ConstructMappingSchema("MyTestObj", items)
+	assert.NoError(err)
+	assert.NotNil(jsonstr)
+	assert.NotEmpty(jsonstr)
+
+	var iface interface{}
+	err = json.Unmarshal([]byte(jsonstr), &iface)
+	assert.NoError(err)
+
+	byts, err := json.Marshal(iface)
+	assert.NoError(err)
+	assert.NotNil(byts)
+
+	actual := string(byts)
+
+	expected :=
+	`{"MyTestObj":{"properties":{"bool1":{"type":"boolean"},"date1":{"type":"date"},"double1":{"type":"double"},"integer1":{"type":"integer"},"integer2":{"type":"integer"}}}}`
+
+	assert.Equal(expected, actual)
+
+	err = es.SetMapping("MyTestObj", actual)
+	assert.NoError(err)
 }
