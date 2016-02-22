@@ -77,7 +77,7 @@ type EsIndexClient struct {
 	index    string
 }
 
-func newEsIndexClient(es *EsClient, index string) *EsIndexClient {
+func NewEsIndexClient(es *EsClient, index string) *EsIndexClient {
 	indexClient := &EsIndexClient{
 		esClient: es,
 		lib:      es.lib,

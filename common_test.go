@@ -77,7 +77,7 @@ func (suite *CommonTester) SetUpIndex(withMapping bool) *EsIndexClient {
 	assert.NoError(err)
 	assert.NotNil(esBase)
 
-	es := newEsIndexClient(esBase, index)
+	es := NewEsIndexClient(esBase, index)
 	assert.NotNil(esBase)
 
 	ok, err := es.Exists()
