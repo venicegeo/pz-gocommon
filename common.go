@@ -15,6 +15,8 @@
 package piazza
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"io"
@@ -105,4 +107,30 @@ func ReadFrom(reader io.Reader) ([]byte, error) {
 		return nil, err
 	}
 	return data, err
+}
+
+// converts an arbitrary object to a real json string
+func ConvertObjectToJsonString(jsn interface{}, compact bool) (string, error) {
+	var byts []byte
+	var err error
+
+	if compact {
+		byts, err = json.Marshal(jsn)
+	} else {
+		byts, err = json.MarshalIndent(jsn, "", "    ")
+	}
+	if err != nil {
+		return "", err
+	}
+
+	return string(byts), nil
+}
+
+func ConvertJsonToCompactJson(input string) (string, error) {
+	dst := new(bytes.Buffer)
+	err := json.Compact(dst, []byte(input))
+	if err != nil {
+		return "", err
+	}
+	return dst.String(), nil
 }

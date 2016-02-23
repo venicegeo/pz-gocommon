@@ -18,8 +18,8 @@ import (
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"testing"
 	"gopkg.in/olivere/elastic.v2"
+	"testing"
 )
 
 type CommonTester struct {
@@ -44,8 +44,7 @@ type Obj struct {
 	Tags string `json:"tags" binding:"required"`
 }
 
-const objMapping =
-`{
+const objMapping = `{
 	 "Obj":{
 		"properties":{
 			"id": {
@@ -77,42 +76,44 @@ func (suite *CommonTester) SetUpIndex(withMapping bool) *EsIndexClient {
 	assert.NoError(err)
 	assert.NotNil(esBase)
 
-	es := NewEsIndexClient(esBase, index)
+	esi := NewEsIndexClient(esBase, index)
 	assert.NotNil(esBase)
 
-	ok, err := es.Exists()
+	ok, err := esi.Exists()
 	assert.NoError(err)
 	if ok {
-		err = es.Delete()
+		err = esi.Delete()
 		assert.NoError(err)
 	}
 
 	// make the index
-	err = es.Create()
+	err = esi.Create()
 	assert.NoError(err)
-	exists, err := es.Exists()
+	exists, err := esi.Exists()
 	assert.NoError(err)
 	assert.True(exists)
 
 	if withMapping {
-		err := es.SetMapping("Obj", objMapping)
+		err := esi.SetMapping("Obj", objMapping)
 		assert.NoError(err)
 	}
 
 	// populate the index
 	for _, o := range objs {
-		indexResult, err := es.PostData("Obj", o.Id, o)
+		indexResult, err := esi.PostData("Obj", o.Id, o)
 		assert.NoError(err)
 		assert.NotNil(indexResult)
 	}
 
 	// Flush
 	// TODO: needed? how often?
-	err = es.Flush()
+	err = esi.Flush()
 	assert.NoError(err)
 
-	return es
+	return esi
 }
+
+//---------------------------------------------------------------------------
 
 func (suite *CommonTester) TestEsBasics() {
 	t := suite.T()
@@ -136,16 +137,16 @@ func (suite *CommonTester) TestEsOps() {
 	var src *json.RawMessage
 	var searchResult *elastic.SearchResult
 
-	es := suite.SetUpIndex(false)
-	assert.NotNil(es)
+	esi := suite.SetUpIndex(false)
+	assert.NotNil(esi)
 	defer func() {
-		es.Close()
-		es.Delete()
+		esi.Close()
+		esi.Delete()
 	}()
 
 	{
 		// GET a specific one
-		getResult, err := es.GetById("id1")
+		getResult, err := esi.GetById("id1")
 		assert.NoError(err)
 		assert.NotNil(getResult)
 		src = getResult.Source
@@ -156,7 +157,7 @@ func (suite *CommonTester) TestEsOps() {
 
 	{
 		// SEARCH for everything
-		searchResult, err := es.SearchByMatchAll()
+		searchResult, err := esi.SearchByMatchAll()
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -178,7 +179,7 @@ func (suite *CommonTester) TestEsOps() {
 
 	{
 		// SEARCH for a specific one
-		searchResult, err = es.SearchByTermQuery("id", "id1")
+		searchResult, err = esi.SearchByTermQuery("id", "id1")
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 		assert.EqualValues(1, searchResult.Hits.TotalHits)
@@ -192,7 +193,7 @@ func (suite *CommonTester) TestEsOps() {
 
 	{
 		// SEARCH fuzzily
-		searchResult, err = es.SearchByTermQuery("tags", "foo")
+		searchResult, err = esi.SearchByTermQuery("tags", "foo")
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 		assert.EqualValues(2, searchResult.Hits.TotalHits)
@@ -215,9 +216,9 @@ func (suite *CommonTester) TestEsOps() {
 
 	{
 		// DELETE by id
-		_, err = es.DeleteById("Obj", "id2")
+		_, err = esi.DeleteById("Obj", "id2")
 		assert.NoError(err)
-		getResult, err := es.GetById("id2")
+		getResult, err := esi.GetById("id2")
 		assert.NoError(err)
 		assert.False(getResult.Found)
 	}
@@ -233,23 +234,23 @@ func (suite *CommonTester) TestEsOpsJson() {
 
 	var searchResult *elastic.SearchResult
 
-	es := suite.SetUpIndex(false)
-	assert.NotNil(es)
+	esi := suite.SetUpIndex(false)
+	assert.NotNil(esi)
 	defer func() {
-		es.Close()
-		es.Delete()
+		esi.Close()
+		esi.Delete()
 	}()
 
 	// SEARCH for everything
 	{
 		str :=
-		`{
+			`{
 		    "query": {
 			    "match_all": {}
 		    }
 	    }`
 
-		searchResult, err = es.SearchRaw(str)
+		searchResult, err = esi.SearchRaw(str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -263,13 +264,13 @@ func (suite *CommonTester) TestEsOpsJson() {
 	// SEARCH for a specific one
 	{
 		str :=
-		`{
+			`{
 		    "query": {
 			    "term": {"id":"id1"}
 		    }
 	    }`
 
-		searchResult, err = es.SearchRaw(str)
+		searchResult, err = esi.SearchRaw(str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -284,13 +285,13 @@ func (suite *CommonTester) TestEsOpsJson() {
 	// SEARCH fuzzily
 	{
 		str :=
-		`{
+			`{
 		    "query": {
 			    "term": {"tags":"foo"}
 		    }
 	    }`
 
-		searchResult, err = es.SearchRaw(str)
+		searchResult, err = esi.SearchRaw(str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -319,15 +320,15 @@ func (suite *CommonTester) TestEsMapping() {
 
 	var err error
 
-	es := suite.SetUpIndex(false)
-	assert.NotNil(es)
+	esi := suite.SetUpIndex(false)
+	assert.NotNil(esi)
 	defer func() {
-		es.Close()
-		es.Delete()
+		esi.Close()
+		esi.Delete()
 	}()
 
 	mapping :=
-	`{
+		`{
 		"tweetdoc":{
 			"properties":{
 				"message":{
@@ -338,14 +339,12 @@ func (suite *CommonTester) TestEsMapping() {
 	    }
     }`
 
-	err = es.SetMapping("tweetdoc", mapping)
+	err = esi.SetMapping("tweetdoc", mapping)
 	assert.NoError(err)
 
-	props, err := es.GetMapping("tweetdoc")
+	mappings, err := esi.GetMapping("tweetdoc")
 	assert.NoError(err)
 
-	mappings := props.(map[string]interface{})["mappings"]
-	assert.NotNil(mappings)
 	tweetdoc := mappings.(map[string]interface{})["tweetdoc"]
 	assert.NotNil(tweetdoc)
 	properties := tweetdoc.(map[string]interface{})["properties"]
@@ -367,64 +366,64 @@ func (suite *CommonTester) TestEsFull() {
 
 	var err error
 
-	es := suite.SetUpIndex(true)
-	assert.NotNil(es)
+	esi := suite.SetUpIndex(true)
+	assert.NotNil(esi)
 	defer func() {
-		es.Close()
-		es.Delete()
+		esi.Close()
+		esi.Delete()
 	}()
 
 	type NotObj struct {
-		Id   int `json:"id" binding:"required"`
+		Id   int    `json:"id" binding:"required"`
 		Data string `json:"data" binding:"required"`
-		Foo  bool `json:"foo" binding:"required"`
+		Foo  bool   `json:"foo" binding:"required"`
 	}
-	o := NotObj{Id:99, Data:"quick fox", Foo:true}
+	o := NotObj{Id: 99, Data: "quick fox", Foo: true}
 
-	indexResult, err := es.PostData("Obj", "88", o)
+	indexResult, err := esi.PostData("Obj", "88", o)
 	assert.NoError(err)
 	assert.NotNil(indexResult)
 }
 
-func (suite *CommonTester) TestConstructMappingSchema() {
+func (suite *CommonTester) TestMapping() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	es := suite.SetUpIndex(false)
-	assert.NotNil(es)
+	esi := suite.SetUpIndex(false)
+	assert.NotNil(esi)
 	defer func() {
-		es.Close()
-		es.Delete()
+		esi.Close()
+		esi.Delete()
 	}()
 
-	items := make(map[string]MappingElementTypeName)
+	var err error
 
-	items["integer1"] = MappingElementTypeInteger
-	items["integer2"] = MappingElementTypeInteger
-	items["double1"] = MappingElementTypeDouble
-	items["bool1"] = MappingElementTypeBool
-	items["date1"] = MappingElementTypeDate
+	jsn :=
+		`{
+			"MyTestObj": {
+				"properties":{
+					"bool1": {"type": "boolean"},
+					"date1": {"format": "dateOptionalTime", "type": "date"},
+					"double1": {"type": "double"},
+					"integer1": {"type": "integer"},
+					"integer2": {"type": "integer"}
+				}
+			}
+		}`
 
-	jsonstr, err := es.ConstructMappingSchema("MyTestObj", items)
+	jsn, err = ConvertJsonToCompactJson(jsn)
 	assert.NoError(err)
-	assert.NotNil(jsonstr)
-	assert.NotEmpty(jsonstr)
 
-	var iface interface{}
-	err = json.Unmarshal([]byte(jsonstr), &iface)
+	expected := jsn
+
+	err = esi.SetMapping("MyTestObj", jsn)
 	assert.NoError(err)
 
-	byts, err := json.Marshal(iface)
+	mapobj, err := esi.GetMapping("MyTestObj")
 	assert.NoError(err)
-	assert.NotNil(byts)
 
-	actual := string(byts)
-
-	expected :=
-	`{"MyTestObj":{"properties":{"bool1":{"type":"boolean"},"date1":{"type":"date"},"double1":{"type":"double"},"integer1":{"type":"integer"},"integer2":{"type":"integer"}}}}`
+	actual, err := ConvertObjectToJsonString(mapobj, true)
+	assert.NoError(err)
 
 	assert.Equal(expected, actual)
-
-	err = es.SetMapping("MyTestObj", actual)
-	assert.NoError(err)
 }

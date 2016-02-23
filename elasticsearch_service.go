@@ -20,7 +20,6 @@ import (
 	"math/rand"
 	"time"
 	jsonenc "encoding/json"
-	"strings"
 )
 
 // TODO (default is "http://127.0.0.1:9200")
@@ -78,22 +77,22 @@ type EsIndexClient struct {
 }
 
 func NewEsIndexClient(es *EsClient, index string) *EsIndexClient {
-	indexClient := &EsIndexClient{
+	esi := &EsIndexClient{
 		esClient: es,
 		lib:      es.lib,
 		index:    es.indexPrefix + index,
 	}
-	return indexClient
+	return esi
 }
 
-func (es *EsIndexClient) Exists() (bool, error) {
-	return es.lib.IndexExists(es.index).Do()
+func (esi *EsIndexClient) Exists() (bool, error) {
+	return esi.lib.IndexExists(esi.index).Do()
 }
 
 // if index already exists, does nothing
-func (es *EsIndexClient) Create() error {
+func (esi *EsIndexClient) Create() error {
 
-	ok, err := es.Exists()
+	ok, err := esi.Exists()
 	if err != nil {
 		return err
 	}
@@ -101,7 +100,7 @@ func (es *EsIndexClient) Create() error {
 		return nil
 	}
 
-	createIndex, err := es.lib.CreateIndex(es.index).Do()
+	createIndex, err := esi.lib.CreateIndex(esi.index).Do()
 	if err != nil {
 		return err
 	}
@@ -114,9 +113,9 @@ func (es *EsIndexClient) Create() error {
 }
 
 // if index doesn't already exist, does nothing
-func (es *EsIndexClient) Close() error {
+func (esi *EsIndexClient) Close() error {
 
-	closeIndexResponse, err := es.lib.CloseIndex(es.index).Do()
+	closeIndexResponse, err := esi.lib.CloseIndex(esi.index).Do()
 	if err != nil {
 		return err
 	}
@@ -127,9 +126,9 @@ func (es *EsIndexClient) Close() error {
 }
 
 // if index doesn't already exist, does nothing
-func (es *EsIndexClient) Delete() error {
+func (esi *EsIndexClient) Delete() error {
 
-	exists, err := es.lib.IndexExists(es.index).Do()
+	exists, err := esi.lib.IndexExists(esi.index).Do()
 	if err != nil {
 		return err
 	}
@@ -137,7 +136,7 @@ func (es *EsIndexClient) Delete() error {
 		return nil
 	}
 
-	deleteIndex, err := es.lib.DeleteIndex(es.index).Do()
+	deleteIndex, err := esi.lib.DeleteIndex(esi.index).Do()
 	if err != nil {
 		return err
 	}
@@ -148,17 +147,17 @@ func (es *EsIndexClient) Delete() error {
 }
 
 // TODO: how often should we do this?
-func (es *EsIndexClient) Flush() error {
-	_, err := es.lib.Flush().Index(es.index).Do()
+func (esi *EsIndexClient) Flush() error {
+	_, err := esi.lib.Flush().Index(esi.index).Do()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (es *EsIndexClient) PostData(mapping string, id string, json interface{}) (*elastic.IndexResult, error) {
-	indexResult, err := es.lib.Index().
-	Index(es.index).
+func (esi *EsIndexClient) PostData(mapping string, id string, json interface{}) (*elastic.IndexResult, error) {
+	indexResult, err := esi.lib.Index().
+	Index(esi.index).
 	Type(mapping).
 	Id(id).
 	BodyJson(json).
@@ -166,40 +165,40 @@ func (es *EsIndexClient) PostData(mapping string, id string, json interface{}) (
 	return indexResult, err
 }
 
-func (es *EsIndexClient) GetById(id string) (*elastic.GetResult, error) {
-	getResult, err := es.lib.Get().Index(es.index).Id(id).Do()
+func (esi *EsIndexClient) GetById(id string) (*elastic.GetResult, error) {
+	getResult, err := esi.lib.Get().Index(esi.index).Id(id).Do()
 	return getResult, err
 }
 
-func (es *EsIndexClient) DeleteById(mapping string, id string) (*elastic.DeleteResult, error) {
-	deleteResult, err := es.lib.Delete().
-	Index(es.index).
+func (esi *EsIndexClient) DeleteById(mapping string, id string) (*elastic.DeleteResult, error) {
+	deleteResult, err := esi.lib.Delete().
+	Index(esi.index).
 	Type(mapping).
 	Id(id).
 	Do()
 	return deleteResult, err
 }
 
-func (es *EsIndexClient) SearchByMatchAll() (*elastic.SearchResult, error) {
-	searchResult, err := es.lib.Search().
-	Index(es.index).
+func (esi *EsIndexClient) SearchByMatchAll() (*elastic.SearchResult, error) {
+	searchResult, err := esi.lib.Search().
+	Index(esi.index).
 	Query(elastic.NewMatchAllQuery()).
 	//Sort("id", true).
 	Do()
 	return searchResult, err
 }
 
-func (es *EsIndexClient) SearchByTermQuery(name string, value interface{}) (*elastic.SearchResult, error) {
+func (esi *EsIndexClient) SearchByTermQuery(name string, value interface{}) (*elastic.SearchResult, error) {
 	termQuery := elastic.NewTermQuery(name, value)
-	searchResult, err := es.lib.Search().
-	Index(es.index).
+	searchResult, err := esi.lib.Search().
+	Index(esi.index).
 	Query(&termQuery).
 	//Sort("id", true).
 	Do()
 	return searchResult, err
 }
 
-func (es *EsIndexClient) SearchRaw(json string) (*elastic.SearchResult, error) {
+func (esi *EsIndexClient) SearchRaw(json string) (*elastic.SearchResult, error) {
 
 	var obj interface{}
 	err := jsonenc.Unmarshal([]byte(json), &obj)
@@ -207,14 +206,14 @@ func (es *EsIndexClient) SearchRaw(json string) (*elastic.SearchResult, error) {
 		return nil, err
 	}
 
-	searchResult, err := es.lib.Search().Index(es.index).Source(obj).Do()
+	searchResult, err := esi.lib.Search().Index(esi.index).Source(obj).Do()
 
 	return searchResult, err
 }
 
-func (es *EsIndexClient) SetMapping(typename string, json string) (error) {
+func (esi *EsIndexClient) SetMapping(typename string, json string) (error) {
 
-	putresp, err := es.lib.PutMapping().Index(es.index).Type(typename).BodyString(json).Do()
+	putresp, err := esi.lib.PutMapping().Index(esi.index).Type(typename).BodyString(json).Do()
 	if err != nil {
 		return fmt.Errorf("expected put mapping to succeed; got: %v", err)
 	}
@@ -228,53 +227,20 @@ func (es *EsIndexClient) SetMapping(typename string, json string) (error) {
 	return nil
 }
 
-func (es *EsIndexClient) GetMapping(typename string) (interface{}, error) {
+func (esi *EsIndexClient) GetMapping(typename string) (interface{}, error) {
 
-	getresp, err := es.lib.GetMapping().Index(es.index).Type(typename).Do()
+	getresp, err := esi.lib.GetMapping().Index(esi.index).Type(typename).Do()
 	if err != nil {
 		return nil, fmt.Errorf("expected get mapping to succeed; got: %v", err)
 	}
 	if getresp == nil {
 		return nil, fmt.Errorf("expected get mapping response; got: %v", getresp)
 	}
-	props, ok := getresp[es.index]
+	props, ok := getresp[esi.index]
 	if !ok {
 		return nil, fmt.Errorf("expected JSON root to be of type map[string]interface{}; got: %#v", props)
 	}
 
-	return props, nil
-}
-
-type MappingElementTypeName string
-
-const (
-	MappingElementTypeString MappingElementTypeName = "string"
-	MappingElementTypeBool MappingElementTypeName = "boolean"
-	MappingElementTypeInteger MappingElementTypeName = "integer"
-	MappingElementTypeDouble MappingElementTypeName = "double"
-	MappingElementTypeDate MappingElementTypeName = "date"
-// float, byte, short, long
-)
-
-func (es *EsIndexClient) ConstructMappingSchema(name string, items map[string]MappingElementTypeName) (string, error) {
-
-	template :=
-	`{
-		"%s":{
-			"properties":{
-				%s
-		    }
-	    }
-    }`
-
-	stuff := make([]string, len(items))
-	i := 0
-	for k, v := range items {
-		stuff[i] = fmt.Sprintf(`"%s": {"type":"%s"}`, k, v)
-		i++
-	}
-
-	json := fmt.Sprintf(template, name, strings.Join(stuff, ","))
-
-	return json, nil
+	props2 := props.(map[string]interface{})
+	return props2["mappings"], nil
 }
