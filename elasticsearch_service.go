@@ -211,9 +211,9 @@ func (esi *EsIndexClient) SearchRaw(json string) (*elastic.SearchResult, error) 
 	return searchResult, err
 }
 
-func (esi *EsIndexClient) SetMapping(typename string, json string) (error) {
+func (esi *EsIndexClient) SetMapping(typename string, json JsonString) (error) {
 
-	putresp, err := esi.lib.PutMapping().Index(esi.index).Type(typename).BodyString(json).Do()
+	putresp, err := esi.lib.PutMapping().Index(esi.index).Type(typename).BodyString(string(json)).Do()
 	if err != nil {
 		return fmt.Errorf("expected put mapping to succeed; got: %v", err)
 	}

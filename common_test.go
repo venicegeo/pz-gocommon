@@ -327,7 +327,7 @@ func (suite *CommonTester) TestEsMapping() {
 		esi.Delete()
 	}()
 
-	mapping :=
+	var mapping JsonString =
 		`{
 		"tweetdoc":{
 			"properties":{
@@ -398,7 +398,7 @@ func (suite *CommonTester) TestMapping() {
 
 	var err error
 
-	jsn :=
+	var jsn JsonString =
 		`{
 			"MyTestObj": {
 				"properties":{

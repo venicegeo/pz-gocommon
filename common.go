@@ -28,6 +28,10 @@ import (
 
 //---------------------------------------------------------------------------
 
+type JsonString string
+
+//---------------------------------------------------------------------------
+
 // ServerLogHandler adds traditional logging support to the http server handlers.
 func ServerLogHandler(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -110,7 +114,7 @@ func ReadFrom(reader io.Reader) ([]byte, error) {
 }
 
 // converts an arbitrary object to a real json string
-func ConvertObjectToJsonString(jsn interface{}, compact bool) (string, error) {
+func ConvertObjectToJsonString(jsn interface{}, compact bool) (JsonString, error) {
 	var byts []byte
 	var err error
 
@@ -123,14 +127,14 @@ func ConvertObjectToJsonString(jsn interface{}, compact bool) (string, error) {
 		return "", err
 	}
 
-	return string(byts), nil
+	return JsonString(byts), nil
 }
 
-func ConvertJsonToCompactJson(input string) (string, error) {
+func ConvertJsonToCompactJson(input JsonString) (JsonString, error) {
 	dst := new(bytes.Buffer)
 	err := json.Compact(dst, []byte(input))
 	if err != nil {
 		return "", err
 	}
-	return dst.String(), nil
+	return JsonString(dst.String()), nil
 }
