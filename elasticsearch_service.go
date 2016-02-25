@@ -15,11 +15,11 @@
 package piazza
 
 import (
+	jsonenc "encoding/json"
 	"fmt"
 	"gopkg.in/olivere/elastic.v2"
 	"math/rand"
 	"time"
-	jsonenc "encoding/json"
 )
 
 // TODO (default is "http://127.0.0.1:9200")
@@ -157,11 +157,11 @@ func (esi *EsIndexClient) Flush() error {
 
 func (esi *EsIndexClient) PostData(mapping string, id string, json interface{}) (*elastic.IndexResult, error) {
 	indexResult, err := esi.lib.Index().
-	Index(esi.index).
-	Type(mapping).
-	Id(id).
-	BodyJson(json).
-	Do()
+		Index(esi.index).
+		Type(mapping).
+		Id(id).
+		BodyJson(json).
+		Do()
 	return indexResult, err
 }
 
@@ -172,29 +172,29 @@ func (esi *EsIndexClient) GetById(id string) (*elastic.GetResult, error) {
 
 func (esi *EsIndexClient) DeleteById(mapping string, id string) (*elastic.DeleteResult, error) {
 	deleteResult, err := esi.lib.Delete().
-	Index(esi.index).
-	Type(mapping).
-	Id(id).
-	Do()
+		Index(esi.index).
+		Type(mapping).
+		Id(id).
+		Do()
 	return deleteResult, err
 }
 
 func (esi *EsIndexClient) SearchByMatchAll() (*elastic.SearchResult, error) {
 	searchResult, err := esi.lib.Search().
-	Index(esi.index).
-	Query(elastic.NewMatchAllQuery()).
-	//Sort("id", true).
-	Do()
+		Index(esi.index).
+		Query(elastic.NewMatchAllQuery()).
+		//Sort("id", true).
+		Do()
 	return searchResult, err
 }
 
 func (esi *EsIndexClient) SearchByTermQuery(name string, value interface{}) (*elastic.SearchResult, error) {
 	termQuery := elastic.NewTermQuery(name, value)
 	searchResult, err := esi.lib.Search().
-	Index(esi.index).
-	Query(&termQuery).
-	//Sort("id", true).
-	Do()
+		Index(esi.index).
+		Query(&termQuery).
+		//Sort("id", true).
+		Do()
 	return searchResult, err
 }
 
@@ -211,7 +211,7 @@ func (esi *EsIndexClient) SearchRaw(json string) (*elastic.SearchResult, error) 
 	return searchResult, err
 }
 
-func (esi *EsIndexClient) SetMapping(typename string, json JsonString) (error) {
+func (esi *EsIndexClient) SetMapping(typename string, json JsonString) error {
 
 	putresp, err := esi.lib.PutMapping().Index(esi.index).Type(typename).BodyString(string(json)).Do()
 	if err != nil {
@@ -243,4 +243,34 @@ func (esi *EsIndexClient) GetMapping(typename string) (interface{}, error) {
 
 	props2 := props.(map[string]interface{})
 	return props2["mappings"], nil
+}
+
+func (esi *EsIndexClient) AddPercolationQuery(id string, query JsonString) (*elastic.IndexResult, error) {
+
+	indexResponse, err := esi.lib.
+		Index().
+		Index(esi.index).
+		Type(".percolator").
+		Id(id).
+		BodyString(string(query)).
+		Do()
+	if err != nil {
+		return nil, err
+	}
+
+	return indexResponse, nil
+}
+
+func (esi *EsIndexClient) AddPercolationDocument(typename string, doc interface{}) (*elastic.PercolateResponse, error) {
+	percolateResponse, err := esi.lib.
+		Percolate().
+		Index(esi.index).Type(typename).
+		Doc(doc).
+		Pretty(true).
+		Do()
+	if err != nil {
+		return nil, err
+	}
+
+	return percolateResponse, nil
 }

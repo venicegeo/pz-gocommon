@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"os"
 )
 
@@ -137,4 +138,41 @@ func ConvertJsonToCompactJson(input JsonString) (JsonString, error) {
 		return "", err
 	}
 	return JsonString(dst.String()), nil
+}
+
+type MappingElementTypeName string
+
+const (
+	MappingElementTypeString MappingElementTypeName = "string"
+	MappingElementTypeBool MappingElementTypeName = "boolean"
+	MappingElementTypeInteger MappingElementTypeName = "integer"
+	MappingElementTypeDouble MappingElementTypeName = "double"
+	MappingElementTypeDate MappingElementTypeName = "date"
+	MappingElementTypeFloat MappingElementTypeName = "float"
+	MappingElementTypeByte MappingElementTypeName = "byte"
+	MappingElementTypeShort MappingElementTypeName = "short"
+	MappingElementTypeLong MappingElementTypeName = "long"
+)
+
+func ConstructMappingSchema(name string, items map[string]MappingElementTypeName) (JsonString, error) {
+
+	template :=
+	`{
+		"%s":{
+			"properties":{
+				%s
+		    }
+	    }
+    }`
+
+	stuff := make([]string, len(items))
+	i := 0
+	for k, v := range items {
+		stuff[i] = fmt.Sprintf(`"%s": {"type":"%s"}`, k, v)
+		i++
+	}
+
+	json := fmt.Sprintf(template, name, strings.Join(stuff, ","))
+
+	return JsonString(json), nil
 }
