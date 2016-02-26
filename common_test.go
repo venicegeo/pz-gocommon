@@ -19,7 +19,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/olivere/elastic.v2"
+	"sort"
 	"testing"
+	"fmt"
 )
 
 type CommonTester struct {
@@ -535,6 +537,16 @@ func (suite *CommonTester) TestAAAPercolation() {
 	assert.Equal("p2", percolateResponse.Matches[0].Id)
 }
 
+type ById []*elastic.PercolateMatch
+
+func (a ById) Len() int           { return len(a) }
+func (a ById) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ById) Less(i, j int) bool { return a[i].Id < a[j].Id }
+func sortMatches(matches []*elastic.PercolateMatch) []*elastic.PercolateMatch {
+	sort.Sort(ById(matches))
+	return matches
+}
+
 func (suite *CommonTester) TestAAAFullPercolation() {
 	t := suite.T()
 	assert := assert.New(t)
@@ -542,7 +554,6 @@ func (suite *CommonTester) TestAAAFullPercolation() {
 	var esi *EsIndexClient
 	var index = "fullperctest"
 	var err error
-	var jsn JsonString
 
 	defer func() {
 		esi.Close()
@@ -577,130 +588,168 @@ func (suite *CommonTester) TestAAAFullPercolation() {
 		assert.NoError(err)
 	}
 
+	//-----------------------------------------------------------------------
+
+	// add mappings
+	addMappings := func(maps map[string](map[string]MappingElementTypeName)) {
+		for k, v := range maps {
+			jsn, err := ConstructMappingSchema(k, v)
+			assert.NoError(err)
+			assert.NotEmpty(jsn)
+			err = esi.SetMapping(k, jsn)
+			assert.NoError(err)
+		}
+	}
+
+	addQueries := func(queries map[string]JsonString) {
+		for k, v := range queries {
+			_, err = esi.AddPercolationQuery(k, v)
+			assert.NoError(err)
+		}
+	}
+
+	type TestCase struct {
+		typeName string
+		event    interface{}
+		expected []string
+	}
+
+	addEvents := func(tests []TestCase) {
+		for i, t := range tests {
+
+			percolateResponse, err := esi.AddPercolationDocument(t.typeName, t.event)
+			assert.NoError(err)
+
+			assert.EqualValues(len(t.expected), percolateResponse.Total, fmt.Sprintf("for test #%d", i))
+
+			matches := sortMatches(percolateResponse.Matches)
+
+			for i, expected := range t.expected {
+				assert.Equal(esi.index, matches[i].Index)
+				assert.Equal(expected, matches[i].Id)
+			}
+		}
+	}
+
+	//-----------------------------------------------------------------------
+
 	type EventType1 struct {
 		Id  string `json:"id" binding:"required"`
 		Str string `json:"str" binding:"required"`
-		Num int `json:"num" binding:"required"`
+		Num int    `json:"num" binding:"required"`
 	}
 
 	type EventType2 struct {
 		Id  string `json:"id" binding:"required"`
 		Boo bool   `json:"boo" binding:"required"`
-		Num int `json:"num" binding:"required"`
+		Num int    `json:"num" binding:"required"`
 	}
 
-	// add mappings
-	{
-		items1 := make(map[string]MappingElementTypeName)
-		items1["id"] = MappingElementTypeString
-		items1["str"] = MappingElementTypeString
-		items1["num"] = MappingElementTypeInteger
-		jsn, err = ConstructMappingSchema("EventType1", items1)
-		assert.NoError(err)
-		assert.NotEmpty(jsn)
-		err = esi.SetMapping("EventType1", jsn)
-		assert.NoError(err)
-
-		items2 := make(map[string]MappingElementTypeName)
-		items2["id"] = MappingElementTypeString
-		items2["boo"] = MappingElementTypeBool
-		items2["num"] = MappingElementTypeInteger
-		jsn, err = ConstructMappingSchema("EventType2", items2)
-		assert.NoError(err)
-		assert.NotEmpty(jsn)
-		err = esi.SetMapping("EventType2", jsn)
-		assert.NoError(err)
+	maps := map[string](map[string]MappingElementTypeName){
+		"EventType1": map[string]MappingElementTypeName{
+			"id":  MappingElementTypeString,
+			"str": MappingElementTypeString,
+			"num": MappingElementTypeInteger,
+		},
+		"EventType2": map[string]MappingElementTypeName{
+			"id":  MappingElementTypeString,
+			"boo": MappingElementTypeBool,
+			"num": MappingElementTypeInteger,
+		},
 	}
+	addMappings(maps)
 
-	var condition1 JsonString = `{
- 	 	"query": {
-    		"match": {
-      			"str": {
-        			"query": "kitten"
-      			}
-    		}
-  		}
-	}`
+	//-----------------------------------------------------------------------
 
-	var condition2 JsonString = `{
-		"query" : {
-			"match" : {
-				"boo" : true
-			}
-		}
-	}`
-
-	var condition3 JsonString = `{
-		"query" : {
-			"match" : {
-				"num" : 17
-			}
-		}
-	}`
-
-	var condition4 JsonString = `{
-		"query" : {
-			"range" : {
-				"num" : {
-					"lt": 10.0
+	queries := map[string]JsonString{
+		"Q1": `{
+ 	 		"query": {
+				"match": {
+					"str": {
+						"query": "kitten"
+					}
 				}
 			}
-		}
-	}`
+		}`,
+		"Q2": `{
+			"query" : {
+				"match" : {
+					"boo" : true
+				}
+			}
+		}`,
+		"Q3": `{
+			"query" : {
+				"match" : {
+					"num" : 17
+				}
+			}
+		}`,
+		"Q4": `{
+			"query" : {
+				"range" : {
+					"num" : {
+						"lt": 10.0
+					}
+				}
+			}
+		}`,
+		"Q5": `{
+			"query" : {
+				"filtered": {
+					"query": {
+						"match": {
+							"num": 17
+						}
+					},
+					"filter": {
+						"term": {
+							"_type": "EventType2"
+						}
+					}
+				}
+			}
+		}`,
+		"Q6": `{
+			"query" : {
+				"bool": {
+					"must": [
+						{
+							"match" : {
+								"num" : 17
+							}
+						},
+						{
+							"match" : {
+								"_type" : "EventType1"
+							}
+						}
+					]
+				}
+			}
+		}`,
+	}
+	addQueries(queries)
 
-	// add perc queries (conditions)
-	{
-		_, err = esi.AddPercolationQuery("PQ1", condition1)
-		assert.NoError(err)
+	//-----------------------------------------------------------------------
 
-		_, err = esi.AddPercolationQuery("PQ2", condition2)
-		assert.NoError(err)
-
-		_, err = esi.AddPercolationQuery("PQ3", condition3)
-		assert.NoError(err)
-
-		_, err = esi.AddPercolationQuery("PQ4", condition4)
-		assert.NoError(err)
+	tests := []TestCase{
+		TestCase{
+			typeName: "EventType1",
+			event: EventType1{Id: "E1", Str: "kitten", Num: 17},
+			expected: []string{"Q1", "Q3", "Q6"},
+		},
+		TestCase{
+			typeName: "EventType2",
+			event: EventType2{Id: "E2", Boo: true, Num: 17},
+			expected: []string{"Q2", "Q3", "Q5"},
+		},
+		TestCase{
+			typeName: "EventType1",
+			event: EventType1{Id: "E3", Str: "lemur", Num: -31},
+			expected: []string{"Q4"},
+		},
 	}
 
-	orderedMatches := func(matches []*elastic.PercolateMatch) (*elastic.PercolateMatch, *elastic.PercolateMatch) {
-		if matches[0].Id > matches[1].Id {
-			matches[0], matches[1] = matches[1], matches[0]
-		}
-		return matches[0], matches[1]
-	}
-
-	// add perc documents (events)
-	{
-		event1 := EventType1{Id: "E1", Str: "kitten", Num: 17}
-		event2 := EventType2{Id: "E2", Boo: true, Num: 17}
-		event3 := EventType1{Id: "E3", Str: "lemur", Num: -31}
-
-		percolateResponse, err := esi.AddPercolationDocument("EventType1", event1)
-		assert.NoError(err)
-		assert.EqualValues(2, percolateResponse.Total)
-		{
-			match1, match2 := orderedMatches(percolateResponse.Matches)
-			assert.Equal("PQ1", match1.Id)
-			assert.Equal(esi.index, match1.Index)
-			assert.Equal("PQ3", match2.Id)
-			assert.Equal(esi.index, match2.Index)
-		}
-
-		percolateResponse, err = esi.AddPercolationDocument("EventType2", event2)
-		assert.NoError(err)
-		assert.EqualValues(2, percolateResponse.Total)
-		{
-			match1, match2 := orderedMatches(percolateResponse.Matches)
-			assert.Equal("PQ2", match1.Id)
-			assert.Equal(esi.index, match1.Index)
-			assert.Equal("PQ3", match2.Id)
-			assert.Equal(esi.index, match2.Index)
-		}
-
-		percolateResponse, err = esi.AddPercolationDocument("EventType1", event3)
-		assert.NoError(err)
-		assert.EqualValues(1, percolateResponse.Total)
-		assert.Equal("PQ4", percolateResponse.Matches[0].Id)
-	}
+	addEvents(tests)
 }
