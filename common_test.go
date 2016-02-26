@@ -471,7 +471,7 @@ func (suite *CommonTester) TestConstructMappingSchema() {
 	assert.NoError(err)
 }
 
-func (suite *CommonTester) TestAAAPercolation() {
+func (suite *CommonTester) TestPercolation() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -547,7 +547,7 @@ func sortMatches(matches []*elastic.PercolateMatch) []*elastic.PercolateMatch {
 	return matches
 }
 
-func (suite *CommonTester) TestAAAFullPercolation() {
+func (suite *CommonTester) TestFullPercolation() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -590,7 +590,6 @@ func (suite *CommonTester) TestAAAFullPercolation() {
 
 	//-----------------------------------------------------------------------
 
-	// add mappings
 	addMappings := func(maps map[string](map[string]MappingElementTypeName)) {
 		for k, v := range maps {
 			jsn, err := ConstructMappingSchema(k, v)
