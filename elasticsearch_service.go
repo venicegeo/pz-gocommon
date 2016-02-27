@@ -49,7 +49,6 @@ func newEsClient(testMode bool) (*EsClient, error) {
 	if testMode {
 		n := rand.Intn(0xffff)
 		prefix = fmt.Sprintf("%x", n)
-		//log.Printf("Elsasticsearch index prefix: %s", prefix)
 	}
 
 	es := EsClient{lib: lib, name: PzElasticSearch, address: elasticsearchUrl, indexPrefix: prefix}
@@ -159,12 +158,12 @@ func (esi *EsIndexClient) Flush() error {
 	return nil
 }
 
-func (esi *EsIndexClient) PostData(mapping string, id string, jsn interface{}) (*elastic.IndexResult, error) {
+func (esi *EsIndexClient) PostData(mapping string, id string, obj interface{}) (*elastic.IndexResult, error) {
 	indexResult, err := esi.lib.Index().
 		Index(esi.index).
 		Type(mapping).
 		Id(id).
-		BodyJson(jsn).
+		BodyJson(obj).
 		Do()
 	return indexResult, err
 }
@@ -202,7 +201,7 @@ func (esi *EsIndexClient) SearchByTermQuery(name string, value interface{}) (*el
 	return searchResult, err
 }
 
-func (esi *EsIndexClient) SearchRaw(jsn string) (*elastic.SearchResult, error) {
+func (esi *EsIndexClient) SearchByJson(jsn string) (*elastic.SearchResult, error) {
 
 	var obj interface{}
 	err := json.Unmarshal([]byte(jsn), &obj)
