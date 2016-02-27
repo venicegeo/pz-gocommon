@@ -246,11 +246,11 @@ func (suite *CommonTester) TestEsOpsJson() {
 	// SEARCH for everything
 	{
 		str :=
-			`{
-		    "query": {
-			    "match_all": {}
-		    }
-	    }`
+		`{
+	    "query": {
+		    "match_all": {}
+	    }
+    }`
 
 		searchResult, err = esi.SearchRaw(str)
 		assert.NoError(err)
@@ -266,11 +266,11 @@ func (suite *CommonTester) TestEsOpsJson() {
 	// SEARCH for a specific one
 	{
 		str :=
-			`{
-		    "query": {
-			    "term": {"id":"id1"}
-		    }
-	    }`
+		`{
+	    "query": {
+		    "term": {"id":"id1"}
+	    }
+    }`
 
 		searchResult, err = esi.SearchRaw(str)
 		assert.NoError(err)
@@ -287,11 +287,11 @@ func (suite *CommonTester) TestEsOpsJson() {
 	// SEARCH fuzzily
 	{
 		str :=
-			`{
-		    "query": {
-			    "term": {"tags":"foo"}
-		    }
-	    }`
+		`{
+	    "query": {
+		    "term": {"tags":"foo"}
+	    }
+    }`
 
 		searchResult, err = esi.SearchRaw(str)
 		assert.NoError(err)
@@ -463,7 +463,7 @@ func (suite *CommonTester) TestConstructMappingSchema() {
 	actual := string(byts)
 
 	expected :=
-		`{"MyTestObj":{"properties":{"bool1":{"type":"boolean"},"date1":{"type":"date"},"double1":{"type":"double"},"integer1":{"type":"integer"},"integer2":{"type":"integer"}}}}`
+	`{"MyTestObj":{"properties":{"bool1":{"type":"boolean"},"date1":{"type":"date"},"double1":{"type":"double"},"integer1":{"type":"integer"},"integer2":{"type":"integer"}}}}`
 
 	assert.Equal(expected, actual)
 
@@ -539,9 +539,15 @@ func (suite *CommonTester) TestPercolation() {
 
 type ById []*elastic.PercolateMatch
 
-func (a ById) Len() int           { return len(a) }
-func (a ById) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ById) Less(i, j int) bool { return a[i].Id < a[j].Id }
+func (a ById) Len() int {
+	return len(a)
+}
+func (a ById) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+func (a ById) Less(i, j int) bool {
+	return a[i].Id < a[j].Id
+}
 func sortMatches(matches []*elastic.PercolateMatch) []*elastic.PercolateMatch {
 	sort.Sort(ById(matches))
 	return matches
@@ -598,6 +604,9 @@ func (suite *CommonTester) TestFullPercolation() {
 			err = esi.SetMapping(k, jsn)
 			assert.NoError(err)
 		}
+
+		err = esi.Flush()
+		assert.NoError(err)
 	}
 
 	addQueries := func(queries map[string]JsonString) {
@@ -605,6 +614,9 @@ func (suite *CommonTester) TestFullPercolation() {
 			_, err = esi.AddPercolationQuery(k, v)
 			assert.NoError(err)
 		}
+
+		err = esi.Flush()
+		assert.NoError(err)
 	}
 
 	type TestCase struct {

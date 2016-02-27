@@ -15,7 +15,7 @@
 package piazza
 
 import (
-	jsonenc "encoding/json"
+	"encoding/json"
 	"fmt"
 	"gopkg.in/olivere/elastic.v2"
 	"math/rand"
@@ -83,6 +83,10 @@ func NewEsIndexClient(es *EsClient, index string) *EsIndexClient {
 		index:    es.indexPrefix + index,
 	}
 	return esi
+}
+
+func (esi *EsIndexClient) IndexName() string {
+	return esi.index
 }
 
 func (esi *EsIndexClient) Exists() (bool, error) {
@@ -155,12 +159,12 @@ func (esi *EsIndexClient) Flush() error {
 	return nil
 }
 
-func (esi *EsIndexClient) PostData(mapping string, id string, json interface{}) (*elastic.IndexResult, error) {
+func (esi *EsIndexClient) PostData(mapping string, id string, jsn interface{}) (*elastic.IndexResult, error) {
 	indexResult, err := esi.lib.Index().
 		Index(esi.index).
 		Type(mapping).
 		Id(id).
-		BodyJson(json).
+		BodyJson(jsn).
 		Do()
 	return indexResult, err
 }
@@ -198,10 +202,10 @@ func (esi *EsIndexClient) SearchByTermQuery(name string, value interface{}) (*el
 	return searchResult, err
 }
 
-func (esi *EsIndexClient) SearchRaw(json string) (*elastic.SearchResult, error) {
+func (esi *EsIndexClient) SearchRaw(jsn string) (*elastic.SearchResult, error) {
 
 	var obj interface{}
-	err := jsonenc.Unmarshal([]byte(json), &obj)
+	err := json.Unmarshal([]byte(jsn), &obj)
 	if err != nil {
 		return nil, err
 	}
@@ -211,9 +215,9 @@ func (esi *EsIndexClient) SearchRaw(json string) (*elastic.SearchResult, error) 
 	return searchResult, err
 }
 
-func (esi *EsIndexClient) SetMapping(typename string, json JsonString) error {
+func (esi *EsIndexClient) SetMapping(typename string, jsn JsonString) error {
 
-	putresp, err := esi.lib.PutMapping().Index(esi.index).Type(typename).BodyString(string(json)).Do()
+	putresp, err := esi.lib.PutMapping().Index(esi.index).Type(typename).BodyString(string(jsn)).Do()
 	if err != nil {
 		return fmt.Errorf("expected put mapping to succeed; got: %v", err)
 	}
@@ -223,6 +227,8 @@ func (esi *EsIndexClient) SetMapping(typename string, json JsonString) error {
 	if !putresp.Acknowledged {
 		return fmt.Errorf("expected put mapping ack; got: %v", putresp.Acknowledged)
 	}
+
+	esi.GetMapping(typename)
 
 	return nil
 }
@@ -238,10 +244,11 @@ func (esi *EsIndexClient) GetMapping(typename string) (interface{}, error) {
 	}
 	props, ok := getresp[esi.index]
 	if !ok {
-		return nil, fmt.Errorf("expected JSON root to be of type map[string]interface{}; got: %#v", props)
+		return nil, fmt.Errorf("expected JSON root to be of type map[string]interface{}; got: %s -- %#v", esi.index, getresp)
 	}
 
 	props2 := props.(map[string]interface{})
+
 	return props2["mappings"], nil
 }
 
