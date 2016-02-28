@@ -168,8 +168,8 @@ func (esi *EsIndexClient) PostData(mapping string, id string, obj interface{}) (
 	return indexResult, err
 }
 
-func (esi *EsIndexClient) GetById(id string) (*elastic.GetResult, error) {
-	getResult, err := esi.lib.Get().Index(esi.index).Id(id).Do()
+func (esi *EsIndexClient) GetById(mapping string, id string) (*elastic.GetResult, error) {
+	getResult, err := esi.lib.Get().Index(esi.index).Type(mapping).Id(id).Do()
 	return getResult, err
 }
 
@@ -265,6 +265,20 @@ func (esi *EsIndexClient) AddPercolationQuery(id string, query JsonString) (*ela
 	}
 
 	return indexResponse, nil
+}
+
+func (esi *EsIndexClient) DeletePercolationQuery(id string) (*elastic.DeleteResult, error) {
+
+	deleteResult, err := esi.lib.Delete().
+	Index(esi.index).
+	Type(".percolator").
+	Id(id).
+	Do()
+	if err != nil {
+		return nil, err
+	}
+
+	return deleteResult, nil
 }
 
 func (esi *EsIndexClient) AddPercolationDocument(typename string, doc interface{}) (*elastic.PercolateResponse, error) {

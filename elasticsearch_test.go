@@ -142,7 +142,7 @@ func (suite *EsTester) TestEsOps() {
 
 	{
 		// GET a specific one
-		getResult, err := esi.GetById("id1")
+		getResult, err := esi.GetById("Obj", "id1")
 		assert.NoError(err)
 		assert.NotNil(getResult)
 		src = getResult.Source
@@ -214,7 +214,7 @@ func (suite *EsTester) TestEsOps() {
 		// DELETE by id
 		_, err = esi.DeleteById("Obj", "id2")
 		assert.NoError(err)
-		getResult, err := esi.GetById("id2")
+		getResult, err := esi.GetById("Obj", "id2")
 		assert.NoError(err)
 		assert.False(getResult.Found)
 	}
