@@ -15,14 +15,21 @@
 package piazza
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"os"
 )
+
+//---------------------------------------------------------------------------
+
+type JsonString string
 
 //---------------------------------------------------------------------------
 
@@ -105,4 +112,67 @@ func ReadFrom(reader io.Reader) ([]byte, error) {
 		return nil, err
 	}
 	return data, err
+}
+
+// converts an arbitrary object to a real json string
+func ConvertObjectToJsonString(jsn interface{}, compact bool) (JsonString, error) {
+	var byts []byte
+	var err error
+
+	if compact {
+		byts, err = json.Marshal(jsn)
+	} else {
+		byts, err = json.MarshalIndent(jsn, "", "    ")
+	}
+	if err != nil {
+		return "", err
+	}
+
+	return JsonString(byts), nil
+}
+
+func ConvertJsonToCompactJson(input JsonString) (JsonString, error) {
+	dst := new(bytes.Buffer)
+	err := json.Compact(dst, []byte(input))
+	if err != nil {
+		return "", err
+	}
+	return JsonString(dst.String()), nil
+}
+
+type MappingElementTypeName string
+
+const (
+	MappingElementTypeString MappingElementTypeName = "string"
+	MappingElementTypeBool MappingElementTypeName = "boolean"
+	MappingElementTypeInteger MappingElementTypeName = "integer"
+	MappingElementTypeDouble MappingElementTypeName = "double"
+	MappingElementTypeDate MappingElementTypeName = "date"
+	MappingElementTypeFloat MappingElementTypeName = "float"
+	MappingElementTypeByte MappingElementTypeName = "byte"
+	MappingElementTypeShort MappingElementTypeName = "short"
+	MappingElementTypeLong MappingElementTypeName = "long"
+)
+
+func ConstructMappingSchema(name string, items map[string]MappingElementTypeName) (JsonString, error) {
+
+	template :=
+	`{
+		"%s":{
+			"properties":{
+				%s
+		    }
+	    }
+    }`
+
+	stuff := make([]string, len(items))
+	i := 0
+	for k, v := range items {
+		stuff[i] = fmt.Sprintf(`"%s": {"type":"%s"}`, k, v)
+		i++
+	}
+
+	json := fmt.Sprintf(template, name, strings.Join(stuff, ","))
+
+	return JsonString(json), nil
 }
