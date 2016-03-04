@@ -191,6 +191,16 @@ func (esi *EsIndexClient) SearchByMatchAll() (*elastic.SearchResult, error) {
 	return searchResult, err
 }
 
+func (esi *EsIndexClient) SearchByMatchAllWithMapping(mapping string) (*elastic.SearchResult, error) {
+	searchResult, err := esi.lib.Search().
+	Index(esi.index).
+	Type(mapping).
+	Query(elastic.NewMatchAllQuery()).
+	//Sort("id", true).
+	Do()
+	return searchResult, err
+}
+
 func (esi *EsIndexClient) SearchByTermQuery(name string, value interface{}) (*elastic.SearchResult, error) {
 	termQuery := elastic.NewTermQuery(name, value)
 	searchResult, err := esi.lib.Search().
