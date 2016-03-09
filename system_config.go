@@ -86,7 +86,7 @@ func getLocalConfig(serviceName ServiceName) *Config {
 
 	var localHosts = map[ServiceName]string{
 		PzLogger:   "pz-logger.cf.piazzageo.io/",
-		PzUuidgen:  "pz-uuidgen.cf.piazzageo.io/",
+		PzUuidgen:  "localhost:12340",
 		PzWorkflow: "localhost:12342",
 		PzDiscover: "pz-discover.cf.piazzageo.io",
 	}
