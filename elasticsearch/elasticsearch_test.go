@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package piazza
+package elasticsearch
 
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+	"github.com/venicegeo/pz-gocommon"
 	"gopkg.in/olivere/elastic.v2"
-	"sort"
 )
 
 type EsTester struct {
@@ -68,7 +70,7 @@ func (suite *EsTester) SetUpIndex(withMapping bool) *EsIndexClient {
 
 	index := "testing-index"
 
-	esBase, err := newEsClient(true)
+	esBase, err := newElasticsearchClient(nil, true)
 	assert.NoError(err)
 	assert.NotNil(esBase)
 
@@ -115,7 +117,7 @@ func (suite *EsTester) TestEsBasics() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	es, err := newEsClient(true)
+	es, err := newElasticsearchClient(nil, true)
 	assert.NoError(err)
 	assert.NotNil(es)
 
@@ -241,10 +243,10 @@ func (suite *EsTester) TestEsOpsJson() {
 	{
 		str :=
 			`{
-		    "query": {
-			    "match_all": {}
-	        }
-        }`
+		      "query": {
+			        "match_all": {}
+    	        }
+            }`
 
 		searchResult, err = esi.SearchByJson(str)
 		assert.NoError(err)
@@ -261,10 +263,10 @@ func (suite *EsTester) TestEsOpsJson() {
 	{
 		str :=
 			`{
-	        "query": {
-		        "term": {"id":"id1"}
-	        }
-        }`
+    	        "query": {
+	    	        "term": {"id":"id1"}
+	            }
+            }`
 
 		searchResult, err = esi.SearchByJson(str)
 		assert.NoError(err)
@@ -282,10 +284,10 @@ func (suite *EsTester) TestEsOpsJson() {
 	{
 		str :=
 			`{
-	        "query": {
-		        "term": {"tags":"foo"}
-	        }
-        }`
+	            "query": {
+		            "term": {"tags":"foo"}
+	            }
+            }`
 
 		searchResult, err = esi.SearchByJson(str)
 		assert.NoError(err)
@@ -323,18 +325,19 @@ func (suite *EsTester) TestEsMapping() {
 		esi.Delete()
 	}()
 
-	var mapping JsonString = `{
-		"tweetdoc":{
-			"properties":{
-				"message":{
-					"type":"string",
-					"store":true
-			    }
-		    }
-	    }
-    }`
+	mapping :=
+		`{
+		    "tweetdoc":{
+			    "properties":{
+				    "message":{
+					    "type":"string",
+					    "store":true
+    			    }
+	    	    }
+	        }
+        }`
 
-	err = esi.SetMapping("tweetdoc", mapping)
+	err = esi.SetMapping("tweetdoc", piazza.JsonString(mapping))
 	assert.NoError(err)
 
 	mappings, err := esi.GetMapping("tweetdoc")
@@ -393,7 +396,8 @@ func (suite *EsTester) TestMapping() {
 
 	var err error
 
-	var jsn JsonString = `{
+	data :=
+		`{
 			"MyTestObj": {
 				"properties":{
 					"bool1": {"type": "boolean"},
@@ -404,8 +408,8 @@ func (suite *EsTester) TestMapping() {
 				}
 			}
 		}`
-
-	jsn, err = ConvertJsonToCompactJson(jsn)
+	jsn := piazza.JsonString(data)
+	jsn, err = jsn.ToCompactJson()
 	assert.NoError(err)
 
 	expected := jsn
@@ -416,7 +420,7 @@ func (suite *EsTester) TestMapping() {
 	mapobj, err := esi.GetMapping("MyTestObj")
 	assert.NoError(err)
 
-	actual, err := ConvertObjectToJsonString(mapobj, true)
+	actual, err := piazza.ConvertObjectToJsonString(mapobj, true)
 	assert.NoError(err)
 
 	assert.Equal(expected, actual)
@@ -461,7 +465,7 @@ func (suite *EsTester) TestConstructMappingSchema() {
 
 	assert.Equal(expected, actual)
 
-	err = es.SetMapping("MyTestObj", JsonString(actual))
+	err = es.SetMapping("MyTestObj", piazza.JsonString(actual))
 	assert.NoError(err)
 }
 
@@ -485,7 +489,8 @@ func (suite *EsTester) TestPercolation() {
 	err = esi.SetMapping("Event", jsonstr)
 	assert.NoError(err)
 
-	var query1 JsonString = `{
+	query1 :=
+		`{
  	 	"query": {
     		"match": {
       			"tag": {
@@ -494,7 +499,8 @@ func (suite *EsTester) TestPercolation() {
     		}
   		}
 	}`
-	var query2 JsonString = `{
+	query2 :=
+		`{
 		"query" : {
 			"match" : {
 				"tag" : "lemur"
@@ -502,7 +508,7 @@ func (suite *EsTester) TestPercolation() {
 		}
 	}`
 
-	_, err = esi.AddPercolationQuery("p1", query1)
+	_, err = esi.AddPercolationQuery("p1", piazza.JsonString(query1))
 	assert.NoError(err)
 
 	type Event struct {
@@ -522,7 +528,7 @@ func (suite *EsTester) TestPercolation() {
 	assert.NoError(err)
 	assert.EqualValues(0, percolateResponse.Total)
 
-	_, err = esi.AddPercolationQuery("p2", query2)
+	_, err = esi.AddPercolationQuery("p2", piazza.JsonString(query2))
 	assert.NoError(err)
 
 	percolateResponse, err = esi.AddPercolationDocument("Event", event3)
@@ -562,7 +568,7 @@ func (suite *EsTester) TestFullPercolation() {
 
 	// create index
 	{
-		esBase, err := newEsClient(true)
+		esBase, err := newElasticsearchClient(nil, true)
 		assert.NoError(err)
 		assert.NotNil(esBase)
 
@@ -603,7 +609,7 @@ func (suite *EsTester) TestFullPercolation() {
 		assert.NoError(err)
 	}
 
-	addQueries := func(queries map[string]JsonString) {
+	addQueries := func(queries map[string]piazza.JsonString) {
 		for k, v := range queries {
 			_, err = esi.AddPercolationQuery(k, v)
 			assert.NoError(err)
@@ -666,31 +672,34 @@ func (suite *EsTester) TestFullPercolation() {
 
 	//-----------------------------------------------------------------------
 
-	queries := map[string]JsonString{
-		"Q1": `{
- 	 		"query": {
-				"match": {
-					"str": {
-						"query": "kitten"
-					}
-				}
-			}
-		}`,
-		"Q2": `{
+	q1 :=
+		`{
+ 	        "query": {
+		    	"match": {
+			    	"str": {
+				    	"query": "kitten"
+    				}
+	    		}
+		    }
+	    }`
+	q2 :=
+		`{
 			"query" : {
 				"match" : {
 					"boo" : true
 				}
 			}
-		}`,
-		"Q3": `{
+		}`
+	q3 :=
+		`{
 			"query" : {
 				"match" : {
 					"num" : 17
 				}
 			}
-		}`,
-		"Q4": `{
+		}`
+	q4 :=
+		`{
 			"query" : {
 				"range" : {
 					"num" : {
@@ -698,8 +707,9 @@ func (suite *EsTester) TestFullPercolation() {
 					}
 				}
 			}
-		}`,
-		"Q5": `{
+		}`
+	q5 :=
+		`{
 			"query" : {
 				"filtered": {
 					"query": {
@@ -714,25 +724,33 @@ func (suite *EsTester) TestFullPercolation() {
 					}
 				}
 			}
-		}`,
-		"Q6": `{
-			"query" : {
-				"bool": {
-					"must": [
-						{
-							"match" : {
-								"num" : 17
-							}
-						},
-						{
-							"match" : {
-								"_type" : "EventType1"
-							}
+		}`
+	q6 :=
+		`{
+		"query" : {
+			"bool": {
+				"must": [
+					{
+						"match" : {
+							"num" : 17
 						}
-					]
-				}
+					},
+					{
+						"match" : {
+							"_type" : "EventType1"
+						}
+					}
+				]
 			}
-		}`,
+		}
+	}`
+	queries := map[string]piazza.JsonString{
+		"Q1": piazza.JsonString(q1),
+		"Q2": piazza.JsonString(q2),
+		"Q3": piazza.JsonString(q3),
+		"Q4": piazza.JsonString(q4),
+		"Q5": piazza.JsonString(q5),
+		"Q6": piazza.JsonString(q6),
 	}
 	addQueries(queries)
 

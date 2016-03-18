@@ -15,89 +15,11 @@
 package piazza
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"github.com/gin-gonic/gin"
 	"io"
 	"io/ioutil"
-	"log"
-	"net/http"
-	"strings"
-	"os"
 )
-
-//---------------------------------------------------------------------------
 
 type JsonString string
-
-//---------------------------------------------------------------------------
-
-// ServerLogHandler adds traditional logging support to the http server handlers.
-func ServerLogHandler(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
-		handler.ServeHTTP(w, r)
-	})
-}
-
-const (
-	// ContentTypeJSON is the http content-type for JSON.
-	ContentTypeJSON = "application/json"
-
-	// ContentTypeText is the http content-type for plain text.
-	ContentTypeText = "text/plain"
-)
-
-// Put is because there is no http.Put.
-func HTTPPut(url string, contentType string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest("PUT", url, body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", contentType)
-	client := &http.Client{}
-	return client.Do(req)
-}
-
-// Delete is because there is no http.Delete.
-func HTTPDelete(url string) (*http.Response, error) {
-	req, err := http.NewRequest("DELETE", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{}
-	return client.Do(req)
-}
-
-//---------------------------------------------------------------------------
-
-func HandlePostAdminShutdown(c *gin.Context) {
-	type shutdownRequest struct {
-		Reason string `json:"reason"`
-	}
-	var reason shutdownRequest
-
-	err := c.BindJSON(&reason)
-	if err != nil {
-		c.String(http.StatusBadRequest, fmt.Sprintf("%v", err))
-		return
-	}
-	if reason.Reason == "" {
-		c.String(http.StatusBadRequest, "no reason supplied")
-		return
-	}
-	//pzService.Log(SeverityFatal, "Shutdown requested: "+reason.Reason)
-	log.Fatalf("Shutdown requested: %s", reason.Reason)
-
-	// TODO: need a graceful shutdown method
-	// need to ACK to the HTTP caller, then call exit
-	os.Exit(0)
-}
-
-//---------------------------------------------------------------------------
 
 // ReadFrom is a convenience function that returns the bytes taken from a Reader.
 // The reader will be closed if necessary.
@@ -112,67 +34,4 @@ func ReadFrom(reader io.Reader) ([]byte, error) {
 		return nil, err
 	}
 	return data, err
-}
-
-// converts an arbitrary object to a real json string
-func ConvertObjectToJsonString(jsn interface{}, compact bool) (JsonString, error) {
-	var byts []byte
-	var err error
-
-	if compact {
-		byts, err = json.Marshal(jsn)
-	} else {
-		byts, err = json.MarshalIndent(jsn, "", "    ")
-	}
-	if err != nil {
-		return "", err
-	}
-
-	return JsonString(byts), nil
-}
-
-func ConvertJsonToCompactJson(input JsonString) (JsonString, error) {
-	dst := new(bytes.Buffer)
-	err := json.Compact(dst, []byte(input))
-	if err != nil {
-		return "", err
-	}
-	return JsonString(dst.String()), nil
-}
-
-type MappingElementTypeName string
-
-const (
-	MappingElementTypeString MappingElementTypeName = "string"
-	MappingElementTypeBool MappingElementTypeName = "boolean"
-	MappingElementTypeInteger MappingElementTypeName = "integer"
-	MappingElementTypeDouble MappingElementTypeName = "double"
-	MappingElementTypeDate MappingElementTypeName = "date"
-	MappingElementTypeFloat MappingElementTypeName = "float"
-	MappingElementTypeByte MappingElementTypeName = "byte"
-	MappingElementTypeShort MappingElementTypeName = "short"
-	MappingElementTypeLong MappingElementTypeName = "long"
-)
-
-func ConstructMappingSchema(name string, items map[string]MappingElementTypeName) (JsonString, error) {
-
-	template :=
-	`{
-		"%s":{
-			"properties":{
-				%s
-		    }
-	    }
-    }`
-
-	stuff := make([]string, len(items))
-	i := 0
-	for k, v := range items {
-		stuff[i] = fmt.Sprintf(`"%s": {"type":"%s"}`, k, v)
-		i++
-	}
-
-	json := fmt.Sprintf(template, name, strings.Join(stuff, ","))
-
-	return JsonString(json), nil
 }

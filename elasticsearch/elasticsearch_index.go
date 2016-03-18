@@ -12,70 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package piazza
+package elasticsearch
 
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/venicegeo/pz-gocommon"
+
 	"gopkg.in/olivere/elastic.v2"
-	"math/rand"
-	"time"
 )
 
-// TODO (default is "http://127.0.0.1:9200")
-const elasticsearchUrl = "https://search-venice-es-pjebjkdaueu2gukocyccj4r5m4.us-east-1.es.amazonaws.com"
-
-type EsClient struct {
-	name        ServiceName
-	address     string
-	indexPrefix string
-	lib         *elastic.Client
-}
-
-func newEsClient(testMode bool) (*EsClient, error) {
-	lib, err := elastic.NewClient(
-		elastic.SetURL(elasticsearchUrl),
-		elastic.SetSniff(false),
-		elastic.SetMaxRetries(5),
-		//elastic.SetErrorLog(log.New(os.Stderr, "ELASTIC ", log.LstdFlags)), // TODO
-		//elastic.SetInfoLog(log.New(os.Stdout, "", log.LstdFlags)),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	rand.Seed(int64(time.Now().Nanosecond()))
-	prefix := ""
-	if testMode {
-		n := rand.Intn(0xffff)
-		prefix = fmt.Sprintf("%x", n)
-	}
-
-	es := EsClient{lib: lib, name: PzElasticSearch, address: elasticsearchUrl, indexPrefix: prefix}
-	return &es, nil
-}
-
-func (es *EsClient) GetName() ServiceName {
-	return es.name
-}
-
-func (es *EsClient) GetAddress() string {
-	return es.address
-}
-
-func (es *EsClient) Version() (string, error) {
-	return es.lib.ElasticsearchVersion(elasticsearchUrl)
-}
-
-///////////////////////////////////////////////////
-
 type EsIndexClient struct {
-	esClient *EsClient
+	esClient *ElasticsearchClient
 	lib      *elastic.Client
 	index    string
 }
 
-func NewEsIndexClient(es *EsClient, index string) *EsIndexClient {
+func NewEsIndexClient(es *ElasticsearchClient, index string) *EsIndexClient {
 	esi := &EsIndexClient{
 		esClient: es,
 		lib:      es.lib,
@@ -193,11 +147,11 @@ func (esi *EsIndexClient) SearchByMatchAll() (*elastic.SearchResult, error) {
 
 func (esi *EsIndexClient) SearchByMatchAllWithMapping(mapping string) (*elastic.SearchResult, error) {
 	searchResult, err := esi.lib.Search().
-	Index(esi.index).
-	Type(mapping).
-	Query(elastic.NewMatchAllQuery()).
-	//Sort("id", true).
-	Do()
+		Index(esi.index).
+		Type(mapping).
+		Query(elastic.NewMatchAllQuery()).
+		//Sort("id", true).
+		Do()
 	return searchResult, err
 }
 
@@ -224,7 +178,7 @@ func (esi *EsIndexClient) SearchByJson(jsn string) (*elastic.SearchResult, error
 	return searchResult, err
 }
 
-func (esi *EsIndexClient) SetMapping(typename string, jsn JsonString) error {
+func (esi *EsIndexClient) SetMapping(typename string, jsn piazza.JsonString) error {
 
 	putresp, err := esi.lib.PutMapping().Index(esi.index).Type(typename).BodyString(string(jsn)).Do()
 	if err != nil {
@@ -261,7 +215,7 @@ func (esi *EsIndexClient) GetMapping(typename string) (interface{}, error) {
 	return props2["mappings"], nil
 }
 
-func (esi *EsIndexClient) AddPercolationQuery(id string, query JsonString) (*elastic.IndexResult, error) {
+func (esi *EsIndexClient) AddPercolationQuery(id string, query piazza.JsonString) (*elastic.IndexResult, error) {
 
 	indexResponse, err := esi.lib.
 		Index().
@@ -280,10 +234,10 @@ func (esi *EsIndexClient) AddPercolationQuery(id string, query JsonString) (*ela
 func (esi *EsIndexClient) DeletePercolationQuery(id string) (*elastic.DeleteResult, error) {
 
 	deleteResult, err := esi.lib.Delete().
-	Index(esi.index).
-	Type(".percolator").
-	Id(id).
-	Do()
+		Index(esi.index).
+		Type(".percolator").
+		Id(id).
+		Do()
 	if err != nil {
 		return nil, err
 	}

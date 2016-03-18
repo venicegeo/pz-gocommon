@@ -15,13 +15,19 @@
 package piazza
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"testing"
 )
 
 type CommonTester struct {
 	suite.Suite
+}
+
+func TestRunSuite(t *testing.T) {
+	s1 := new(CommonTester)
+	suite.Run(t, s1)
 }
 
 func (suite *CommonTester) SetupSuite() {
@@ -29,14 +35,6 @@ func (suite *CommonTester) SetupSuite() {
 }
 
 func (suite *CommonTester) TearDownSuite() {
-}
-
-func TestRunSuite(t *testing.T) {
-	s1 := new(CommonTester)
-	suite.Run(t, s1)
-
-	s2 := new(EsTester)
-	suite.Run(t, s2)
 }
 
 func (suite *CommonTester) TestNop() {

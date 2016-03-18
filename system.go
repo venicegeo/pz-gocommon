@@ -16,11 +16,12 @@ package piazza
 
 import (
 	"fmt"
-	"github.com/fvbock/endless"
 	"log"
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/fvbock/endless"
 )
 
 type ServiceName string
@@ -35,8 +36,6 @@ const (
 
 type System struct {
 	Config *Config
-
-	ElasticSearchService *EsClient
 
 	DiscoverService IDiscoverService
 	Services        map[ServiceName]IService
@@ -54,8 +53,6 @@ func NewSystem(config *Config) (*System, error) {
 		Services: make(map[ServiceName]IService),
 	}
 
-	testMode := false
-
 	switch sys.Config.mode {
 	case ConfigModeCloud, ConfigModeLocal:
 		sys.DiscoverService, err = NewPzDiscoverService(sys)
@@ -63,7 +60,6 @@ func NewSystem(config *Config) (*System, error) {
 			return nil, err
 		}
 	case ConfigModeTest:
-		testMode = true
 		sys.DiscoverService, err = NewMockDiscoverService(sys)
 		if err != nil {
 			return nil, err
@@ -72,12 +68,6 @@ func NewSystem(config *Config) (*System, error) {
 		return nil, fmt.Errorf("Invalid config mode: %s", sys.Config.mode)
 	}
 	sys.Services[PzDiscover] = sys.DiscoverService
-
-	sys.ElasticSearchService, err = newEsClient(testMode)
-	if err != nil {
-		return nil, err
-	}
-	sys.Services[PzElasticSearch] = sys.ElasticSearchService
 
 	return sys, nil
 }
