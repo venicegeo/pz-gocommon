@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -34,6 +35,11 @@ func (suite *EsTester) SetupSuite() {
 }
 
 func (suite *EsTester) TearDownSuite() {
+}
+
+func TestRunSuite(t *testing.T) {
+	s1 := new(EsTester)
+	suite.Run(t, s1)
 }
 
 type Obj struct {
@@ -64,17 +70,17 @@ var objs = []Obj{
 	{Id: "id2", Data: "data2", Tags: "foo"},
 }
 
-func (suite *EsTester) SetUpIndex(withMapping bool) *EsIndexClient {
+func (suite *EsTester) SetUpIndex() *ElasticsearchIndex {
 	t := suite.T()
 	assert := assert.New(t)
 
 	index := "testing-index"
 
-	esBase, err := newElasticsearchClient(nil, true)
+	esBase, err := NewElasticsearchClient(nil, true)
 	assert.NoError(err)
 	assert.NotNil(esBase)
 
-	esi := NewEsIndexClient(esBase, index)
+	esi := NewElasticsearchIndex(esBase, index)
 	assert.NotNil(esi)
 
 	ok, err := esi.Exists()
@@ -91,10 +97,8 @@ func (suite *EsTester) SetUpIndex(withMapping bool) *EsIndexClient {
 	assert.NoError(err)
 	assert.True(exists)
 
-	if withMapping {
-		err := esi.SetMapping("Obj", objMapping)
-		assert.NoError(err)
-	}
+	err = esi.SetMapping("Obj", objMapping)
+	assert.NoError(err)
 
 	// populate the index
 	for _, o := range objs {
@@ -117,7 +121,7 @@ func (suite *EsTester) TestEsBasics() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	es, err := newElasticsearchClient(nil, true)
+	es, err := NewElasticsearchClient(nil, true)
 	assert.NoError(err)
 	assert.NotNil(es)
 
@@ -135,7 +139,7 @@ func (suite *EsTester) TestEsOps() {
 	var src *json.RawMessage
 	var searchResult *elastic.SearchResult
 
-	esi := suite.SetUpIndex(false)
+	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
 	defer func() {
 		esi.Close()
@@ -222,7 +226,7 @@ func (suite *EsTester) TestEsOps() {
 	}
 }
 
-func (suite *EsTester) TestEsOpsJson() {
+func (suite *EsTester) TestAAAEsOpsJson() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -232,7 +236,7 @@ func (suite *EsTester) TestEsOpsJson() {
 
 	var searchResult *elastic.SearchResult
 
-	esi := suite.SetUpIndex(false)
+	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
 	defer func() {
 		esi.Close()
@@ -318,7 +322,7 @@ func (suite *EsTester) TestEsMapping() {
 
 	var err error
 
-	esi := suite.SetUpIndex(false)
+	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
 	defer func() {
 		esi.Close()
@@ -364,7 +368,7 @@ func (suite *EsTester) TestEsFull() {
 
 	var err error
 
-	esi := suite.SetUpIndex(true)
+	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
 	defer func() {
 		esi.Close()
@@ -387,7 +391,7 @@ func (suite *EsTester) TestMapping() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	esi := suite.SetUpIndex(false)
+	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
 	defer func() {
 		esi.Close()
@@ -430,7 +434,7 @@ func (suite *EsTester) TestConstructMappingSchema() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	es := suite.SetUpIndex(false)
+	es := suite.SetUpIndex()
 	assert.NotNil(es)
 	defer func() {
 		es.Close()
@@ -473,7 +477,7 @@ func (suite *EsTester) TestPercolation() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	esi := suite.SetUpIndex(false)
+	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
 	defer func() {
 		esi.Close()
@@ -557,7 +561,7 @@ func (suite *EsTester) TestFullPercolation() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	var esi *EsIndexClient
+	var esi *ElasticsearchIndex
 	var index = "fullperctest"
 	var err error
 
@@ -568,11 +572,11 @@ func (suite *EsTester) TestFullPercolation() {
 
 	// create index
 	{
-		esBase, err := newElasticsearchClient(nil, true)
+		esBase, err := NewElasticsearchClient(nil, true)
 		assert.NoError(err)
 		assert.NotNil(esBase)
 
-		esi = NewEsIndexClient(esBase, index)
+		esi = NewElasticsearchIndex(esBase, index)
 		assert.NotNil(esi)
 
 		exists, err := esi.Exists()

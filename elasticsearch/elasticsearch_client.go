@@ -33,7 +33,7 @@ type ElasticsearchClient struct {
 	lib         *elastic.Client
 }
 
-func newElasticsearchClient(sys *piazza.System, testMode bool) (*ElasticsearchClient, error) {
+func NewElasticsearchClient(sys *piazza.System, testMode bool) (*ElasticsearchClient, error) {
 
 	lib, err := elastic.NewClient(
 		elastic.SetURL(elasticsearchUrl),
