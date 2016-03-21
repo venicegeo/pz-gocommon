@@ -117,7 +117,7 @@ func (suite *EsTester) SetUpIndex() *ElasticsearchIndex {
 
 //---------------------------------------------------------------------------
 
-func (suite *EsTester) TestEsBasics() {
+func (suite *EsTester) TestClient() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -130,7 +130,7 @@ func (suite *EsTester) TestEsBasics() {
 	assert.Contains("1.5.2", version)
 }
 
-func (suite *EsTester) TestEsOps() {
+func (suite *EsTester) TestAAAOperations() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -159,7 +159,7 @@ func (suite *EsTester) TestEsOps() {
 
 	{
 		// SEARCH for everything
-		searchResult, err := esi.SearchByMatchAll()
+		searchResult, err := esi.FilterByMatchAll("Obj")
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -181,7 +181,7 @@ func (suite *EsTester) TestEsOps() {
 
 	{
 		// SEARCH for a specific one
-		searchResult, err = esi.SearchByTermQuery("id", "id1")
+		searchResult, err = esi.FilterByTermQuery("Obj", "id", "id1")
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 		assert.EqualValues(1, searchResult.Hits.TotalHits)
@@ -195,7 +195,7 @@ func (suite *EsTester) TestEsOps() {
 
 	{
 		// SEARCH fuzzily
-		searchResult, err = esi.SearchByTermQuery("tags", "foo")
+		searchResult, err = esi.FilterByTermQuery("Obj", "tags", "foo")
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 		assert.EqualValues(2, searchResult.Hits.TotalHits)
@@ -226,7 +226,7 @@ func (suite *EsTester) TestEsOps() {
 	}
 }
 
-func (suite *EsTester) TestAAAEsOpsJson() {
+func (suite *EsTester) TestJsonOperations() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -252,7 +252,7 @@ func (suite *EsTester) TestAAAEsOpsJson() {
     	        }
             }`
 
-		searchResult, err = esi.SearchByJson(str)
+		searchResult, err = esi.SearchByJson("Obj", str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -272,7 +272,7 @@ func (suite *EsTester) TestAAAEsOpsJson() {
 	            }
             }`
 
-		searchResult, err = esi.SearchByJson(str)
+		searchResult, err = esi.SearchByJson("Obj", str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -293,7 +293,7 @@ func (suite *EsTester) TestAAAEsOpsJson() {
 	            }
             }`
 
-		searchResult, err = esi.SearchByJson(str)
+		searchResult, err = esi.SearchByJson("Obj", str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -316,7 +316,7 @@ func (suite *EsTester) TestAAAEsOpsJson() {
 	}
 }
 
-func (suite *EsTester) TestEsMapping() {
+func (suite *EsTester) TestMapping() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -362,7 +362,7 @@ func (suite *EsTester) TestEsMapping() {
 	assert.True(store)
 }
 
-func (suite *EsTester) TestEsFull() {
+func (suite *EsTester) TestFull() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -387,7 +387,7 @@ func (suite *EsTester) TestEsFull() {
 	assert.NotNil(indexResult)
 }
 
-func (suite *EsTester) TestMapping() {
+func (suite *EsTester) TestSetMapping() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -430,7 +430,7 @@ func (suite *EsTester) TestMapping() {
 	assert.Equal(expected, actual)
 }
 
-func (suite *EsTester) TestConstructMappingSchema() {
+func (suite *EsTester) TestConstructMapping() {
 	t := suite.T()
 	assert := assert.New(t)
 

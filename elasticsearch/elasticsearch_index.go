@@ -136,36 +136,31 @@ func (esi *ElasticsearchIndex) DeleteById(mapping string, id string) (*elastic.D
 	return deleteResult, err
 }
 
-func (esi *ElasticsearchIndex) SearchByMatchAll() (*elastic.SearchResult, error) {
-	searchResult, err := esi.lib.Search().
-		Index(esi.index).
-		Query(elastic.NewMatchAllQuery()).
-		//Sort("id", true).
-		Do()
-	return searchResult, err
-}
-
-func (esi *ElasticsearchIndex) SearchByMatchAllWithMapping(mapping string) (*elastic.SearchResult, error) {
+func (esi *ElasticsearchIndex) FilterByMatchAll(mapping string) (*elastic.SearchResult, error) {
+	//q := elastic.NewBoolFilter()
+	//q.Must(elastic.NewTermFilter("a", 1))
+	q := elastic.NewMatchAllFilter()
 	searchResult, err := esi.lib.Search().
 		Index(esi.index).
 		Type(mapping).
-		Query(elastic.NewMatchAllQuery()).
+		Query(q).
 		//Sort("id", true).
 		Do()
 	return searchResult, err
 }
 
-func (esi *ElasticsearchIndex) SearchByTermQuery(name string, value interface{}) (*elastic.SearchResult, error) {
-	termQuery := elastic.NewTermQuery(name, value)
+func (esi *ElasticsearchIndex) FilterByTermQuery(mapping string, name string, value interface{}) (*elastic.SearchResult, error) {
+	termQuery := elastic.NewTermFilter(name, value)
 	searchResult, err := esi.lib.Search().
 		Index(esi.index).
+		Type(mapping).
 		Query(&termQuery).
 		//Sort("id", true).
 		Do()
 	return searchResult, err
 }
 
-func (esi *ElasticsearchIndex) SearchByJson(jsn string) (*elastic.SearchResult, error) {
+func (esi *ElasticsearchIndex) SearchByJson(mapping string, jsn string) (*elastic.SearchResult, error) {
 
 	var obj interface{}
 	err := json.Unmarshal([]byte(jsn), &obj)
@@ -173,7 +168,10 @@ func (esi *ElasticsearchIndex) SearchByJson(jsn string) (*elastic.SearchResult, 
 		return nil, err
 	}
 
-	searchResult, err := esi.lib.Search().Index(esi.index).Source(obj).Do()
+	searchResult, err := esi.lib.Search().
+		Index(esi.index).
+		Type(mapping).
+		Source(obj).Do()
 
 	return searchResult, err
 }
