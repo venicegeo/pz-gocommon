@@ -432,6 +432,12 @@ func (suite *EsTester) TestSetMapping() {
 	assert.NoError(err)
 
 	assert.Equal(expected, actual)
+
+	mappings, err := esi.GetIndexTypes()
+	assert.NoError(err)
+	assert.Len(mappings, 2)
+	assert.True((mappings[0] == "Obj" && mappings[1] == "MyTestObj") ||
+		(mappings[1] == "Obj" && mappings[0] == "MyTestObj"))
 }
 
 func (suite *EsTester) TestConstructMapping() {

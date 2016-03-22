@@ -194,6 +194,25 @@ func (esi *ElasticsearchIndex) SetMapping(typename string, jsn piazza.JsonString
 	return nil
 }
 
+func (esi *ElasticsearchIndex) GetIndexTypes() ([]string, error) {
+
+	getresp, err := esi.lib.IndexGet().Feature("_mappings").Index(esi.index).Do()
+	if err != nil {
+		return nil, err
+	}
+
+	mappings := (*getresp[esi.index]).Mappings
+	result := make([]string, len(mappings))
+
+	i := 0
+	for k, _ := range mappings {
+		result[i] = k
+		i++
+	}
+
+	return result, nil
+}
+
 func (esi *ElasticsearchIndex) GetMapping(typename string) (interface{}, error) {
 
 	getresp, err := esi.lib.GetMapping().Index(esi.index).Type(typename).Do()
