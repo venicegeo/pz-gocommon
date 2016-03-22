@@ -70,6 +70,8 @@ var objs = []Obj{
 	{Id: "id2", Data: "data2", Tags: "foo"},
 }
 
+const mapping = "Obj"
+
 func (suite *EsTester) SetUpIndex() *ElasticsearchIndex {
 	t := suite.T()
 	assert := assert.New(t)
@@ -97,12 +99,14 @@ func (suite *EsTester) SetUpIndex() *ElasticsearchIndex {
 	assert.NoError(err)
 	assert.True(exists)
 
-	err = esi.SetMapping("Obj", objMapping)
-	assert.NoError(err)
+	if mapping != "" {
+		err = esi.SetMapping(mapping, objMapping)
+		assert.NoError(err)
+	}
 
 	// populate the index
 	for _, o := range objs {
-		indexResult, err := esi.PostData("Obj", o.Id, o)
+		indexResult, err := esi.PostData(mapping, o.Id, o)
 		assert.NoError(err)
 		assert.NotNil(indexResult)
 	}
@@ -148,7 +152,7 @@ func (suite *EsTester) TestAAAOperations() {
 
 	{
 		// GET a specific one
-		getResult, err := esi.GetById("Obj", "id1")
+		getResult, err := esi.GetById(mapping, "id1")
 		assert.NoError(err)
 		assert.NotNil(getResult)
 		src = getResult.Source
@@ -159,7 +163,7 @@ func (suite *EsTester) TestAAAOperations() {
 
 	{
 		// SEARCH for everything
-		searchResult, err := esi.FilterByMatchAll("Obj")
+		searchResult, err := esi.FilterByMatchAll(mapping)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -181,7 +185,7 @@ func (suite *EsTester) TestAAAOperations() {
 
 	{
 		// SEARCH for a specific one
-		searchResult, err = esi.FilterByTermQuery("Obj", "id", "id1")
+		searchResult, err = esi.FilterByTermQuery(mapping, "id", "id1")
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 		assert.EqualValues(1, searchResult.Hits.TotalHits)
@@ -195,7 +199,7 @@ func (suite *EsTester) TestAAAOperations() {
 
 	{
 		// SEARCH fuzzily
-		searchResult, err = esi.FilterByTermQuery("Obj", "tags", "foo")
+		searchResult, err = esi.FilterByTermQuery(mapping, "tags", "foo")
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 		assert.EqualValues(2, searchResult.Hits.TotalHits)
@@ -218,9 +222,9 @@ func (suite *EsTester) TestAAAOperations() {
 
 	{
 		// DELETE by id
-		_, err = esi.DeleteById("Obj", "id2")
+		_, err = esi.DeleteById(mapping, "id2")
 		assert.NoError(err)
-		getResult, err := esi.GetById("Obj", "id2")
+		getResult, err := esi.GetById(mapping, "id2")
 		assert.NoError(err)
 		assert.False(getResult.Found)
 	}
@@ -252,7 +256,7 @@ func (suite *EsTester) TestJsonOperations() {
     	        }
             }`
 
-		searchResult, err = esi.SearchByJson("Obj", str)
+		searchResult, err = esi.SearchByJson(mapping, str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -272,7 +276,7 @@ func (suite *EsTester) TestJsonOperations() {
 	            }
             }`
 
-		searchResult, err = esi.SearchByJson("Obj", str)
+		searchResult, err = esi.SearchByJson(mapping, str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -293,7 +297,7 @@ func (suite *EsTester) TestJsonOperations() {
 	            }
             }`
 
-		searchResult, err = esi.SearchByJson("Obj", str)
+		searchResult, err = esi.SearchByJson(mapping, str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -382,7 +386,7 @@ func (suite *EsTester) TestFull() {
 	}
 	o := NotObj{Id: 99, Data: "quick fox", Foo: true}
 
-	indexResult, err := esi.PostData("Obj", "88", o)
+	indexResult, err := esi.PostData(mapping, "88", o)
 	assert.NoError(err)
 	assert.NotNil(indexResult)
 }
