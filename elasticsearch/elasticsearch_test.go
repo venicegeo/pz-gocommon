@@ -134,7 +134,7 @@ func (suite *EsTester) TestClient() {
 	assert.Contains("1.5.2", version)
 }
 
-func (suite *EsTester) TestAAAOperations() {
+func (suite *EsTester) TestOperations() {
 	t := suite.T()
 	assert := assert.New(t)
 
