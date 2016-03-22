@@ -12,15 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package piazza
+package elasticsearch
 
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+	"github.com/venicegeo/pz-gocommon"
 	"gopkg.in/olivere/elastic.v2"
-	"sort"
 )
 
 type EsTester struct {
@@ -32,6 +35,11 @@ func (suite *EsTester) SetupSuite() {
 }
 
 func (suite *EsTester) TearDownSuite() {
+}
+
+func TestRunSuite(t *testing.T) {
+	s1 := new(EsTester)
+	suite.Run(t, s1)
 }
 
 type Obj struct {
@@ -62,17 +70,19 @@ var objs = []Obj{
 	{Id: "id2", Data: "data2", Tags: "foo"},
 }
 
-func (suite *EsTester) SetUpIndex(withMapping bool) *EsIndexClient {
+const mapping = "Obj"
+
+func (suite *EsTester) SetUpIndex() *ElasticsearchIndex {
 	t := suite.T()
 	assert := assert.New(t)
 
 	index := "testing-index"
 
-	esBase, err := newEsClient(true)
+	esBase, err := NewElasticsearchClient(nil, true)
 	assert.NoError(err)
 	assert.NotNil(esBase)
 
-	esi := NewEsIndexClient(esBase, index)
+	esi := NewElasticsearchIndex(esBase, index)
 	assert.NotNil(esi)
 
 	ok, err := esi.Exists()
@@ -89,14 +99,14 @@ func (suite *EsTester) SetUpIndex(withMapping bool) *EsIndexClient {
 	assert.NoError(err)
 	assert.True(exists)
 
-	if withMapping {
-		err := esi.SetMapping("Obj", objMapping)
+	if mapping != "" {
+		err = esi.SetMapping(mapping, objMapping)
 		assert.NoError(err)
 	}
 
 	// populate the index
 	for _, o := range objs {
-		indexResult, err := esi.PostData("Obj", o.Id, o)
+		indexResult, err := esi.PostData(mapping, o.Id, o)
 		assert.NoError(err)
 		assert.NotNil(indexResult)
 	}
@@ -111,11 +121,11 @@ func (suite *EsTester) SetUpIndex(withMapping bool) *EsIndexClient {
 
 //---------------------------------------------------------------------------
 
-func (suite *EsTester) TestEsBasics() {
+func (suite *EsTester) TestClient() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	es, err := newEsClient(true)
+	es, err := NewElasticsearchClient(nil, true)
 	assert.NoError(err)
 	assert.NotNil(es)
 
@@ -124,7 +134,7 @@ func (suite *EsTester) TestEsBasics() {
 	assert.Contains("1.5.2", version)
 }
 
-func (suite *EsTester) TestEsOps() {
+func (suite *EsTester) TestOperations() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -133,7 +143,7 @@ func (suite *EsTester) TestEsOps() {
 	var src *json.RawMessage
 	var searchResult *elastic.SearchResult
 
-	esi := suite.SetUpIndex(false)
+	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
 	defer func() {
 		esi.Close()
@@ -142,7 +152,7 @@ func (suite *EsTester) TestEsOps() {
 
 	{
 		// GET a specific one
-		getResult, err := esi.GetById("Obj", "id1")
+		getResult, err := esi.GetById(mapping, "id1")
 		assert.NoError(err)
 		assert.NotNil(getResult)
 		src = getResult.Source
@@ -153,7 +163,7 @@ func (suite *EsTester) TestEsOps() {
 
 	{
 		// SEARCH for everything
-		searchResult, err := esi.SearchByMatchAll()
+		searchResult, err := esi.FilterByMatchAll(mapping)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -175,7 +185,7 @@ func (suite *EsTester) TestEsOps() {
 
 	{
 		// SEARCH for a specific one
-		searchResult, err = esi.SearchByTermQuery("id", "id1")
+		searchResult, err = esi.FilterByTermQuery(mapping, "id", "id1")
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 		assert.EqualValues(1, searchResult.Hits.TotalHits)
@@ -189,7 +199,7 @@ func (suite *EsTester) TestEsOps() {
 
 	{
 		// SEARCH fuzzily
-		searchResult, err = esi.SearchByTermQuery("tags", "foo")
+		searchResult, err = esi.FilterByTermQuery(mapping, "tags", "foo")
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 		assert.EqualValues(2, searchResult.Hits.TotalHits)
@@ -212,15 +222,15 @@ func (suite *EsTester) TestEsOps() {
 
 	{
 		// DELETE by id
-		_, err = esi.DeleteById("Obj", "id2")
+		_, err = esi.DeleteById(mapping, "id2")
 		assert.NoError(err)
-		getResult, err := esi.GetById("Obj", "id2")
+		getResult, err := esi.GetById(mapping, "id2")
 		assert.NoError(err)
 		assert.False(getResult.Found)
 	}
 }
 
-func (suite *EsTester) TestEsOpsJson() {
+func (suite *EsTester) TestJsonOperations() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -230,7 +240,7 @@ func (suite *EsTester) TestEsOpsJson() {
 
 	var searchResult *elastic.SearchResult
 
-	esi := suite.SetUpIndex(false)
+	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
 	defer func() {
 		esi.Close()
@@ -241,12 +251,12 @@ func (suite *EsTester) TestEsOpsJson() {
 	{
 		str :=
 			`{
-		    "query": {
-			    "match_all": {}
-	        }
-        }`
+		      "query": {
+			        "match_all": {}
+    	        }
+            }`
 
-		searchResult, err = esi.SearchByJson(str)
+		searchResult, err = esi.SearchByJson(mapping, str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -261,12 +271,12 @@ func (suite *EsTester) TestEsOpsJson() {
 	{
 		str :=
 			`{
-	        "query": {
-		        "term": {"id":"id1"}
-	        }
-        }`
+    	        "query": {
+	    	        "term": {"id":"id1"}
+	            }
+            }`
 
-		searchResult, err = esi.SearchByJson(str)
+		searchResult, err = esi.SearchByJson(mapping, str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -282,12 +292,12 @@ func (suite *EsTester) TestEsOpsJson() {
 	{
 		str :=
 			`{
-	        "query": {
-		        "term": {"tags":"foo"}
-	        }
-        }`
+	            "query": {
+		            "term": {"tags":"foo"}
+	            }
+            }`
 
-		searchResult, err = esi.SearchByJson(str)
+		searchResult, err = esi.SearchByJson(mapping, str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -310,31 +320,32 @@ func (suite *EsTester) TestEsOpsJson() {
 	}
 }
 
-func (suite *EsTester) TestEsMapping() {
+func (suite *EsTester) TestMapping() {
 	t := suite.T()
 	assert := assert.New(t)
 
 	var err error
 
-	esi := suite.SetUpIndex(false)
+	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
 	defer func() {
 		esi.Close()
 		esi.Delete()
 	}()
 
-	var mapping JsonString = `{
-		"tweetdoc":{
-			"properties":{
-				"message":{
-					"type":"string",
-					"store":true
-			    }
-		    }
-	    }
-    }`
+	mapping :=
+		`{
+		    "tweetdoc":{
+			    "properties":{
+				    "message":{
+					    "type":"string",
+					    "store":true
+    			    }
+	    	    }
+	        }
+        }`
 
-	err = esi.SetMapping("tweetdoc", mapping)
+	err = esi.SetMapping("tweetdoc", piazza.JsonString(mapping))
 	assert.NoError(err)
 
 	mappings, err := esi.GetMapping("tweetdoc")
@@ -355,13 +366,13 @@ func (suite *EsTester) TestEsMapping() {
 	assert.True(store)
 }
 
-func (suite *EsTester) TestEsFull() {
+func (suite *EsTester) TestFull() {
 	t := suite.T()
 	assert := assert.New(t)
 
 	var err error
 
-	esi := suite.SetUpIndex(true)
+	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
 	defer func() {
 		esi.Close()
@@ -375,16 +386,16 @@ func (suite *EsTester) TestEsFull() {
 	}
 	o := NotObj{Id: 99, Data: "quick fox", Foo: true}
 
-	indexResult, err := esi.PostData("Obj", "88", o)
+	indexResult, err := esi.PostData(mapping, "88", o)
 	assert.NoError(err)
 	assert.NotNil(indexResult)
 }
 
-func (suite *EsTester) TestMapping() {
+func (suite *EsTester) TestSetMapping() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	esi := suite.SetUpIndex(false)
+	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
 	defer func() {
 		esi.Close()
@@ -393,7 +404,8 @@ func (suite *EsTester) TestMapping() {
 
 	var err error
 
-	var jsn JsonString = `{
+	data :=
+		`{
 			"MyTestObj": {
 				"properties":{
 					"bool1": {"type": "boolean"},
@@ -404,8 +416,8 @@ func (suite *EsTester) TestMapping() {
 				}
 			}
 		}`
-
-	jsn, err = ConvertJsonToCompactJson(jsn)
+	jsn := piazza.JsonString(data)
+	jsn, err = jsn.ToCompactJson()
 	assert.NoError(err)
 
 	expected := jsn
@@ -416,17 +428,17 @@ func (suite *EsTester) TestMapping() {
 	mapobj, err := esi.GetMapping("MyTestObj")
 	assert.NoError(err)
 
-	actual, err := ConvertObjectToJsonString(mapobj, true)
+	actual, err := piazza.ConvertObjectToJsonString(mapobj, true)
 	assert.NoError(err)
 
 	assert.Equal(expected, actual)
 }
 
-func (suite *EsTester) TestConstructMappingSchema() {
+func (suite *EsTester) TestConstructMapping() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	es := suite.SetUpIndex(false)
+	es := suite.SetUpIndex()
 	assert.NotNil(es)
 	defer func() {
 		es.Close()
@@ -461,7 +473,7 @@ func (suite *EsTester) TestConstructMappingSchema() {
 
 	assert.Equal(expected, actual)
 
-	err = es.SetMapping("MyTestObj", JsonString(actual))
+	err = es.SetMapping("MyTestObj", piazza.JsonString(actual))
 	assert.NoError(err)
 }
 
@@ -469,7 +481,7 @@ func (suite *EsTester) TestPercolation() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	esi := suite.SetUpIndex(false)
+	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
 	defer func() {
 		esi.Close()
@@ -485,7 +497,8 @@ func (suite *EsTester) TestPercolation() {
 	err = esi.SetMapping("Event", jsonstr)
 	assert.NoError(err)
 
-	var query1 JsonString = `{
+	query1 :=
+		`{
  	 	"query": {
     		"match": {
       			"tag": {
@@ -494,7 +507,8 @@ func (suite *EsTester) TestPercolation() {
     		}
   		}
 	}`
-	var query2 JsonString = `{
+	query2 :=
+		`{
 		"query" : {
 			"match" : {
 				"tag" : "lemur"
@@ -502,7 +516,7 @@ func (suite *EsTester) TestPercolation() {
 		}
 	}`
 
-	_, err = esi.AddPercolationQuery("p1", query1)
+	_, err = esi.AddPercolationQuery("p1", piazza.JsonString(query1))
 	assert.NoError(err)
 
 	type Event struct {
@@ -522,7 +536,7 @@ func (suite *EsTester) TestPercolation() {
 	assert.NoError(err)
 	assert.EqualValues(0, percolateResponse.Total)
 
-	_, err = esi.AddPercolationQuery("p2", query2)
+	_, err = esi.AddPercolationQuery("p2", piazza.JsonString(query2))
 	assert.NoError(err)
 
 	percolateResponse, err = esi.AddPercolationDocument("Event", event3)
@@ -551,7 +565,7 @@ func (suite *EsTester) TestFullPercolation() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	var esi *EsIndexClient
+	var esi *ElasticsearchIndex
 	var index = "fullperctest"
 	var err error
 
@@ -562,11 +576,11 @@ func (suite *EsTester) TestFullPercolation() {
 
 	// create index
 	{
-		esBase, err := newEsClient(true)
+		esBase, err := NewElasticsearchClient(nil, true)
 		assert.NoError(err)
 		assert.NotNil(esBase)
 
-		esi = NewEsIndexClient(esBase, index)
+		esi = NewElasticsearchIndex(esBase, index)
 		assert.NotNil(esi)
 
 		exists, err := esi.Exists()
@@ -603,7 +617,7 @@ func (suite *EsTester) TestFullPercolation() {
 		assert.NoError(err)
 	}
 
-	addQueries := func(queries map[string]JsonString) {
+	addQueries := func(queries map[string]piazza.JsonString) {
 		for k, v := range queries {
 			_, err = esi.AddPercolationQuery(k, v)
 			assert.NoError(err)
@@ -666,31 +680,34 @@ func (suite *EsTester) TestFullPercolation() {
 
 	//-----------------------------------------------------------------------
 
-	queries := map[string]JsonString{
-		"Q1": `{
- 	 		"query": {
-				"match": {
-					"str": {
-						"query": "kitten"
-					}
-				}
-			}
-		}`,
-		"Q2": `{
+	q1 :=
+		`{
+ 	        "query": {
+		    	"match": {
+			    	"str": {
+				    	"query": "kitten"
+    				}
+	    		}
+		    }
+	    }`
+	q2 :=
+		`{
 			"query" : {
 				"match" : {
 					"boo" : true
 				}
 			}
-		}`,
-		"Q3": `{
+		}`
+	q3 :=
+		`{
 			"query" : {
 				"match" : {
 					"num" : 17
 				}
 			}
-		}`,
-		"Q4": `{
+		}`
+	q4 :=
+		`{
 			"query" : {
 				"range" : {
 					"num" : {
@@ -698,8 +715,9 @@ func (suite *EsTester) TestFullPercolation() {
 					}
 				}
 			}
-		}`,
-		"Q5": `{
+		}`
+	q5 :=
+		`{
 			"query" : {
 				"filtered": {
 					"query": {
@@ -714,25 +732,33 @@ func (suite *EsTester) TestFullPercolation() {
 					}
 				}
 			}
-		}`,
-		"Q6": `{
-			"query" : {
-				"bool": {
-					"must": [
-						{
-							"match" : {
-								"num" : 17
-							}
-						},
-						{
-							"match" : {
-								"_type" : "EventType1"
-							}
+		}`
+	q6 :=
+		`{
+		"query" : {
+			"bool": {
+				"must": [
+					{
+						"match" : {
+							"num" : 17
 						}
-					]
-				}
+					},
+					{
+						"match" : {
+							"_type" : "EventType1"
+						}
+					}
+				]
 			}
-		}`,
+		}
+	}`
+	queries := map[string]piazza.JsonString{
+		"Q1": piazza.JsonString(q1),
+		"Q2": piazza.JsonString(q2),
+		"Q3": piazza.JsonString(q3),
+		"Q4": piazza.JsonString(q4),
+		"Q5": piazza.JsonString(q5),
+		"Q6": piazza.JsonString(q6),
 	}
 	addQueries(queries)
 

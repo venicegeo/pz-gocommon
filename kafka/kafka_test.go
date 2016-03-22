@@ -15,16 +15,14 @@
 package piazza
 
 import (
-	//"bytes"
-	//"errors"
 	"fmt"
-	//"github.com/mpgerlek/piazza-simulator/piazza"
-	//"io/ioutil"
 	"testing"
 	"time"
 )
 
 const kafkaHost = "localhost:9092"
+
+var OffsetNewest int64
 
 var kafka *Kafka
 
