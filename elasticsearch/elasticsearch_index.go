@@ -23,31 +23,31 @@ import (
 	"gopkg.in/olivere/elastic.v2"
 )
 
-type ElasticsearchIndex struct {
-	esClient *ElasticsearchClient
+type Index struct {
+	esClient *Client
 	lib      *elastic.Client
 	index    string
 }
 
-func NewElasticsearchIndex(es *ElasticsearchClient, index string) *ElasticsearchIndex {
-	esi := &ElasticsearchIndex{
+func NewIndex(es *Client, index string) *Index {
+	esi := &Index{
 		esClient: es,
 		lib:      es.lib,
-		index:    es.indexPrefix + index,
+		index:    index + es.indexSuffix,
 	}
 	return esi
 }
 
-func (esi *ElasticsearchIndex) IndexName() string {
+func (esi *Index) IndexName() string {
 	return esi.index
 }
 
-func (esi *ElasticsearchIndex) Exists() (bool, error) {
+func (esi *Index) Exists() (bool, error) {
 	return esi.lib.IndexExists(esi.index).Do()
 }
 
 // if index already exists, does nothing
-func (esi *ElasticsearchIndex) Create() error {
+func (esi *Index) Create() error {
 
 	ok, err := esi.Exists()
 	if err != nil {
@@ -70,7 +70,7 @@ func (esi *ElasticsearchIndex) Create() error {
 }
 
 // if index doesn't already exist, does nothing
-func (esi *ElasticsearchIndex) Close() error {
+func (esi *Index) Close() error {
 
 	closeIndexResponse, err := esi.lib.CloseIndex(esi.index).Do()
 	if err != nil {
@@ -83,7 +83,7 @@ func (esi *ElasticsearchIndex) Close() error {
 }
 
 // if index doesn't already exist, does nothing
-func (esi *ElasticsearchIndex) Delete() error {
+func (esi *Index) Delete() error {
 
 	exists, err := esi.lib.IndexExists(esi.index).Do()
 	if err != nil {
@@ -104,7 +104,7 @@ func (esi *ElasticsearchIndex) Delete() error {
 }
 
 // TODO: how often should we do this?
-func (esi *ElasticsearchIndex) Flush() error {
+func (esi *Index) Flush() error {
 	_, err := esi.lib.Flush().Index(esi.index).Do()
 	if err != nil {
 		return err
@@ -112,7 +112,7 @@ func (esi *ElasticsearchIndex) Flush() error {
 	return nil
 }
 
-func (esi *ElasticsearchIndex) PostData(mapping string, id string, obj interface{}) (*elastic.IndexResult, error) {
+func (esi *Index) PostData(mapping string, id string, obj interface{}) (*elastic.IndexResult, error) {
 	indexResult, err := esi.lib.Index().
 		Index(esi.index).
 		Type(mapping).
@@ -122,12 +122,12 @@ func (esi *ElasticsearchIndex) PostData(mapping string, id string, obj interface
 	return indexResult, err
 }
 
-func (esi *ElasticsearchIndex) GetById(mapping string, id string) (*elastic.GetResult, error) {
+func (esi *Index) GetByID(mapping string, id string) (*elastic.GetResult, error) {
 	getResult, err := esi.lib.Get().Index(esi.index).Type(mapping).Id(id).Do()
 	return getResult, err
 }
 
-func (esi *ElasticsearchIndex) DeleteById(mapping string, id string) (*elastic.DeleteResult, error) {
+func (esi *Index) DeleteByID(mapping string, id string) (*elastic.DeleteResult, error) {
 	deleteResult, err := esi.lib.Delete().
 		Index(esi.index).
 		Type(mapping).
@@ -136,7 +136,7 @@ func (esi *ElasticsearchIndex) DeleteById(mapping string, id string) (*elastic.D
 	return deleteResult, err
 }
 
-func (esi *ElasticsearchIndex) FilterByMatchAll(mapping string) (*elastic.SearchResult, error) {
+func (esi *Index) FilterByMatchAll(mapping string) (*elastic.SearchResult, error) {
 	//q := elastic.NewBoolFilter()
 	//q.Must(elastic.NewTermFilter("a", 1))
 	q := elastic.NewMatchAllFilter()
@@ -149,7 +149,7 @@ func (esi *ElasticsearchIndex) FilterByMatchAll(mapping string) (*elastic.Search
 	return searchResult, err
 }
 
-func (esi *ElasticsearchIndex) FilterByTermQuery(mapping string, name string, value interface{}) (*elastic.SearchResult, error) {
+func (esi *Index) FilterByTermQuery(mapping string, name string, value interface{}) (*elastic.SearchResult, error) {
 	termQuery := elastic.NewTermFilter(name, value)
 	searchResult, err := esi.lib.Search().
 		Index(esi.index).
@@ -160,7 +160,7 @@ func (esi *ElasticsearchIndex) FilterByTermQuery(mapping string, name string, va
 	return searchResult, err
 }
 
-func (esi *ElasticsearchIndex) SearchByJson(mapping string, jsn string) (*elastic.SearchResult, error) {
+func (esi *Index) SearchByJSON(mapping string, jsn string) (*elastic.SearchResult, error) {
 
 	var obj interface{}
 	err := json.Unmarshal([]byte(jsn), &obj)
@@ -176,7 +176,7 @@ func (esi *ElasticsearchIndex) SearchByJson(mapping string, jsn string) (*elasti
 	return searchResult, err
 }
 
-func (esi *ElasticsearchIndex) SetMapping(typename string, jsn piazza.JsonString) error {
+func (esi *Index) SetMapping(typename string, jsn piazza.JsonString) error {
 
 	putresp, err := esi.lib.PutMapping().Index(esi.index).Type(typename).BodyString(string(jsn)).Do()
 	if err != nil {
@@ -194,7 +194,7 @@ func (esi *ElasticsearchIndex) SetMapping(typename string, jsn piazza.JsonString
 	return nil
 }
 
-func (esi *ElasticsearchIndex) GetIndexTypes() ([]string, error) {
+func (esi *Index) GetIndexTypes() ([]string, error) {
 
 	getresp, err := esi.lib.IndexGet().Feature("_mappings").Index(esi.index).Do()
 	if err != nil {
@@ -205,7 +205,7 @@ func (esi *ElasticsearchIndex) GetIndexTypes() ([]string, error) {
 	result := make([]string, len(mappings))
 
 	i := 0
-	for k, _ := range mappings {
+	for k := range mappings {
 		result[i] = k
 		i++
 	}
@@ -213,7 +213,7 @@ func (esi *ElasticsearchIndex) GetIndexTypes() ([]string, error) {
 	return result, nil
 }
 
-func (esi *ElasticsearchIndex) GetMapping(typename string) (interface{}, error) {
+func (esi *Index) GetMapping(typename string) (interface{}, error) {
 
 	getresp, err := esi.lib.GetMapping().Index(esi.index).Type(typename).Do()
 	if err != nil {
@@ -232,7 +232,7 @@ func (esi *ElasticsearchIndex) GetMapping(typename string) (interface{}, error) 
 	return props2["mappings"], nil
 }
 
-func (esi *ElasticsearchIndex) AddPercolationQuery(id string, query piazza.JsonString) (*elastic.IndexResult, error) {
+func (esi *Index) AddPercolationQuery(id string, query piazza.JsonString) (*elastic.IndexResult, error) {
 
 	indexResponse, err := esi.lib.
 		Index().
@@ -248,7 +248,7 @@ func (esi *ElasticsearchIndex) AddPercolationQuery(id string, query piazza.JsonS
 	return indexResponse, nil
 }
 
-func (esi *ElasticsearchIndex) DeletePercolationQuery(id string) (*elastic.DeleteResult, error) {
+func (esi *Index) DeletePercolationQuery(id string) (*elastic.DeleteResult, error) {
 
 	deleteResult, err := esi.lib.Delete().
 		Index(esi.index).
@@ -262,7 +262,7 @@ func (esi *ElasticsearchIndex) DeletePercolationQuery(id string) (*elastic.Delet
 	return deleteResult, nil
 }
 
-func (esi *ElasticsearchIndex) AddPercolationDocument(typename string, doc interface{}) (*elastic.PercolateResponse, error) {
+func (esi *Index) AddPercolationDocument(typename string, doc interface{}) (*elastic.PercolateResponse, error) {
 	percolateResponse, err := esi.lib.
 		Percolate().
 		Index(esi.index).Type(typename).
