@@ -17,7 +17,9 @@ package elasticsearch
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -76,28 +78,24 @@ func (suite *EsTester) SetUpIndex() *Index {
 	t := suite.T()
 	assert := assert.New(t)
 
-	index := "testing-index"
-
 	esBase, err := NewClient(nil, true)
 	assert.NoError(err)
 	assert.NotNil(esBase)
 
-	esi := NewIndex(esBase, index)
+	esi := NewIndex(esBase, "estest")
 	assert.NotNil(esi)
 
-	ok, err := esi.Exists()
-	assert.NoError(err)
-	if ok {
-		err = esi.Delete()
-		assert.NoError(err)
-	}
+	err = esi.Delete()
+	//assert.NoError(err)
+
+	ok := esi.IndexExists()
+	assert.False(ok)
 
 	// make the index
 	err = esi.Create()
 	assert.NoError(err)
-	exists, err := esi.Exists()
-	assert.NoError(err)
-	assert.True(exists)
+	ok = esi.IndexExists()
+	assert.True(ok)
 
 	if mapping != "" {
 		err = esi.SetMapping(mapping, objMapping)
@@ -121,6 +119,37 @@ func (suite *EsTester) SetUpIndex() *Index {
 
 //---------------------------------------------------------------------------
 
+func deleteOldIndexes(es *elastic.Client) {
+	s, err := es.IndexNames()
+	if err != nil {
+		panic(err)
+	}
+	log.Printf("%d indexes", len(s))
+
+	del := func(nam string) {
+		ret, err := es.DeleteIndex(nam).Do()
+		if err != nil {
+			log.Printf("%s: %s", nam, err.Error())
+		} else {
+			log.Printf("%s: %t", nam, ret.Acknowledged)
+		}
+	}
+
+	for _, v := range s {
+		if strings.HasPrefix(v, "alerts.") ||
+			strings.HasPrefix(v, "triggers") ||
+			strings.HasPrefix(v, "events") ||
+			strings.HasPrefix(v, "eventtypes") ||
+			strings.HasPrefix(v, "estest.") {
+			del(v)
+		} else {
+			log.Printf("Skipping %s", v)
+		}
+	}
+
+	panic(999)
+}
+
 func (suite *EsTester) Test01Client() {
 	t := suite.T()
 	assert := assert.New(t)
@@ -132,6 +161,8 @@ func (suite *EsTester) Test01Client() {
 	version, err := es.Version()
 	assert.NoError(err)
 	assert.Contains("1.5.2", version)
+
+	//deleteOldIndexes(es.lib)
 }
 
 func (suite *EsTester) Test02SimplePost() {
@@ -249,9 +280,8 @@ func (suite *EsTester) Test03Operations() {
 		// DELETE by id
 		_, err = esi.DeleteByID(mapping, "id2")
 		assert.NoError(err)
-		getResult, err := esi.GetByID(mapping, "id2")
-		assert.NoError(err)
-		assert.False(getResult.Found)
+		_, err := esi.GetByID(mapping, "id2")
+		assert.Error(err)
 	}
 }
 
@@ -433,7 +463,7 @@ func (suite *EsTester) Test06SetMapping() {
 
 	assert.Equal(expected, actual)
 
-	mappings, err := esi.GetIndexTypes()
+	mappings, err := esi.GetTypes()
 	assert.NoError(err)
 	assert.Len(mappings, 2)
 	assert.True((mappings[0] == "Obj" && mappings[1] == "MyTestObj") ||
@@ -567,7 +597,7 @@ func sortMatches(matches []*elastic.PercolateMatch) []*elastic.PercolateMatch {
 	return matches
 }
 
-func (suite *EsTester) TestFullPercolation() {
+func (suite *EsTester) Test09FullPercolation() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -589,17 +619,12 @@ func (suite *EsTester) TestFullPercolation() {
 		esi = NewIndex(esBase, index)
 		assert.NotNil(esi)
 
-		exists, err := esi.Exists()
-		assert.NoError(err)
-		assert.False(exists)
-
 		// make the index
 		err = esi.Create()
 		assert.NoError(err)
 
-		exists, err = esi.Exists()
-		assert.NoError(err)
-		assert.True(exists)
+		ok := esi.IndexExists()
+		assert.True(ok)
 	}
 
 	// flush
