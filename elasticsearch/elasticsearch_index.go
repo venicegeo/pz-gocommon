@@ -16,6 +16,7 @@ package elasticsearch
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/venicegeo/pz-gocommon"
@@ -42,19 +43,46 @@ func (esi *Index) IndexName() string {
 	return esi.index
 }
 
-func (esi *Index) Exists() (bool, error) {
-	return esi.lib.IndexExists(esi.index).Do()
+func (esi *Index) IndexExists() bool {
+	ok, err := esi.lib.IndexExists(esi.index).Do()
+	if err != nil {
+		return false
+	}
+	return ok
+}
+
+func (esi *Index) TypeExists(typ string) bool {
+	ok := esi.IndexExists()
+	if !ok {
+		return false
+	}
+
+	ok, err := esi.lib.TypeExists().Index(esi.index).Type(typ).Do()
+	if err != nil {
+		return false
+	}
+	return ok
+}
+
+func (esi *Index) ItemExists(typ string, id string) bool {
+	ok := esi.TypeExists(typ)
+	if !ok {
+		return false
+	}
+
+	ok, err := esi.lib.Exists().Index(esi.index).Type(typ).Id(id).Do()
+	if err != nil {
+		return false
+	}
+	return ok
 }
 
 // if index already exists, does nothing
 func (esi *Index) Create() error {
 
-	ok, err := esi.Exists()
-	if err != nil {
-		return err
-	}
+	ok := esi.IndexExists()
 	if ok {
-		return nil
+		return errors.New(fmt.Sprintf("Index %s already exists", esi.index))
 	}
 
 	createIndex, err := esi.lib.CreateIndex(esi.index).Do()
@@ -72,31 +100,34 @@ func (esi *Index) Create() error {
 // if index doesn't already exist, does nothing
 func (esi *Index) Close() error {
 
-	closeIndexResponse, err := esi.lib.CloseIndex(esi.index).Do()
+	// TODO: the caller should enforce this instead
+	ok := esi.IndexExists()
+	if !ok {
+		return errors.New(fmt.Sprintf("Index %s does not already exist", esi.index))
+	}
+
+	_, err := esi.lib.CloseIndex(esi.index).Do()
 	if err != nil {
 		return err
 	}
-	if !closeIndexResponse.Acknowledged {
-		return fmt.Errorf("Elasticsearch: close index not acknowledged!")
-	}
+
 	return nil
 }
 
 // if index doesn't already exist, does nothing
 func (esi *Index) Delete() error {
 
-	exists, err := esi.lib.IndexExists(esi.index).Do()
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return nil
+	ok := esi.IndexExists()
+	if !ok {
+		return errors.New(fmt.Sprintf("Index %s does not exist", esi.index))
 	}
 
 	deleteIndex, err := esi.lib.DeleteIndex(esi.index).Do()
 	if err != nil {
 		return err
 	}
+
+	// TODO: is this check needed? should it also be on Create(), etc?
 	if !deleteIndex.Acknowledged {
 		return fmt.Errorf("Elasticsearch: delete index not acknowledged!")
 	}
@@ -105,62 +136,112 @@ func (esi *Index) Delete() error {
 
 // TODO: how often should we do this?
 func (esi *Index) Flush() error {
+	// TODO: the caller should enforce this instead
+	ok := esi.IndexExists()
+	if !ok {
+		return errors.New(fmt.Sprintf("Index %s does not exist", esi.index))
+	}
+
 	_, err := esi.lib.Flush().Index(esi.index).Do()
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
-func (esi *Index) PostData(mapping string, id string, obj interface{}) (*elastic.IndexResult, error) {
+func (esi *Index) PostData(typ string, id string, obj interface{}) (*elastic.IndexResult, error) {
+	/*ok := esi.IndexExists()
+	if !ok {
+		log.Printf("Index %s does not exist", esi.index)
+		return nil, errors.New(fmt.Sprintf("Index %s does not exist", esi.index))
+	}
+	ok = esi.TypeExists(typ)
+	if !ok {
+		log.Printf("Index %s or type %s does not exist", esi.index, typ)
+		return nil, errors.New(fmt.Sprintf("Index %s or type %s does not exist", esi.index, typ))
+	}*/
+
 	indexResult, err := esi.lib.Index().
 		Index(esi.index).
-		Type(mapping).
+		Type(typ).
 		Id(id).
 		BodyJson(obj).
 		Do()
+
 	return indexResult, err
 }
 
-func (esi *Index) GetByID(mapping string, id string) (*elastic.GetResult, error) {
-	getResult, err := esi.lib.Get().Index(esi.index).Type(mapping).Id(id).Do()
+func (esi *Index) GetByID(typ string, id string) (*elastic.GetResult, error) {
+	// TODO: the caller should enforce this instead (here and elsewhere)
+	ok := esi.ItemExists(typ, id)
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Item %s in index %s and type %s does not exist", id, esi.index, typ))
+	}
+
+	getResult, err := esi.lib.Get().Index(esi.index).Type(typ).Id(id).Do()
 	return getResult, err
 }
 
-func (esi *Index) DeleteByID(mapping string, id string) (*elastic.DeleteResult, error) {
+func (esi *Index) DeleteByID(typ string, id string) (*elastic.DeleteResult, error) {
+	ok := esi.ItemExists(typ, id)
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Item %s in index %s and type %s does not exist", id, esi.index, typ))
+	}
+
 	deleteResult, err := esi.lib.Delete().
 		Index(esi.index).
-		Type(mapping).
+		Type(typ).
 		Id(id).
 		Do()
 	return deleteResult, err
 }
 
-func (esi *Index) FilterByMatchAll(mapping string) (*elastic.SearchResult, error) {
+func (esi *Index) FilterByMatchAll(typ string) (*elastic.SearchResult, error) {
 	//q := elastic.NewBoolFilter()
 	//q.Must(elastic.NewTermFilter("a", 1))
+
+	// TODO: the caller should enforce this instead
+	ok := esi.TypeExists(typ)
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Type %s in index %s does not exist", typ, esi.index))
+	}
+
 	q := elastic.NewMatchAllFilter()
 	searchResult, err := esi.lib.Search().
 		Index(esi.index).
-		Type(mapping).
+		Type(typ).
 		Query(q).
 		//Sort("id", true).
 		Do()
 	return searchResult, err
 }
 
-func (esi *Index) FilterByTermQuery(mapping string, name string, value interface{}) (*elastic.SearchResult, error) {
+func (esi *Index) FilterByTermQuery(typ string, name string, value interface{}) (*elastic.SearchResult, error) {
+
+	// TODO: the caller should enforce this instead
+	ok := esi.TypeExists(typ)
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Type %s in index %s does not exist", typ, esi.index))
+	}
+
 	termQuery := elastic.NewTermFilter(name, value)
 	searchResult, err := esi.lib.Search().
 		Index(esi.index).
-		Type(mapping).
+		Type(typ).
 		Query(&termQuery).
 		//Sort("id", true).
 		Do()
 	return searchResult, err
 }
 
-func (esi *Index) SearchByJSON(mapping string, jsn string) (*elastic.SearchResult, error) {
+func (esi *Index) SearchByJSON(typ string, jsn string) (*elastic.SearchResult, error) {
+
+	// TODO: the caller should enforce this instead
+	ok := esi.TypeExists(typ)
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Type %s in index %s does not exist", typ, esi.index))
+	}
 
 	var obj interface{}
 	err := json.Unmarshal([]byte(jsn), &obj)
@@ -170,13 +251,18 @@ func (esi *Index) SearchByJSON(mapping string, jsn string) (*elastic.SearchResul
 
 	searchResult, err := esi.lib.Search().
 		Index(esi.index).
-		Type(mapping).
+		Type(typ).
 		Source(obj).Do()
 
 	return searchResult, err
 }
 
 func (esi *Index) SetMapping(typename string, jsn piazza.JsonString) error {
+
+	ok := esi.IndexExists()
+	if !ok {
+		return errors.New(fmt.Sprintf("Index %s does not exist", esi.index))
+	}
 
 	putresp, err := esi.lib.PutMapping().Index(esi.index).Type(typename).BodyString(string(jsn)).Do()
 	if err != nil {
@@ -189,23 +275,26 @@ func (esi *Index) SetMapping(typename string, jsn piazza.JsonString) error {
 		return fmt.Errorf("expected put mapping ack; got: %v", putresp.Acknowledged)
 	}
 
-	esi.GetMapping(typename)
-
 	return nil
 }
 
-func (esi *Index) GetIndexTypes() ([]string, error) {
+func (esi *Index) GetTypes() ([]string, error) {
+
+	ok := esi.IndexExists()
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Index %s does not exist", esi.index))
+	}
 
 	getresp, err := esi.lib.IndexGet().Feature("_mappings").Index(esi.index).Do()
 	if err != nil {
 		return nil, err
 	}
 
-	mappings := (*getresp[esi.index]).Mappings
-	result := make([]string, len(mappings))
+	typs := (*getresp[esi.index]).Mappings
+	result := make([]string, len(typs))
 
 	i := 0
-	for k := range mappings {
+	for k := range typs {
 		result[i] = k
 		i++
 	}
@@ -213,9 +302,14 @@ func (esi *Index) GetIndexTypes() ([]string, error) {
 	return result, nil
 }
 
-func (esi *Index) GetMapping(typename string) (interface{}, error) {
+func (esi *Index) GetMapping(typ string) (interface{}, error) {
 
-	getresp, err := esi.lib.GetMapping().Index(esi.index).Type(typename).Do()
+	ok := esi.TypeExists(typ)
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Type %s in index %s does not exist", typ, esi.index))
+	}
+
+	getresp, err := esi.lib.GetMapping().Index(esi.index).Type(typ).Do()
 	if err != nil {
 		return nil, fmt.Errorf("expected get mapping to succeed; got: %v", err)
 	}
@@ -234,6 +328,11 @@ func (esi *Index) GetMapping(typename string) (interface{}, error) {
 
 func (esi *Index) AddPercolationQuery(id string, query piazza.JsonString) (*elastic.IndexResult, error) {
 
+	ok := esi.IndexExists()
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Index %s does not exist", esi.index))
+	}
+
 	indexResponse, err := esi.lib.
 		Index().
 		Index(esi.index).
@@ -249,6 +348,11 @@ func (esi *Index) AddPercolationQuery(id string, query piazza.JsonString) (*elas
 }
 
 func (esi *Index) DeletePercolationQuery(id string) (*elastic.DeleteResult, error) {
+	typ := ".percolator"
+	ok := esi.ItemExists(typ, id)
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Item %s in index %s and type %s does not exist", id, esi.index, typ))
+	}
 
 	deleteResult, err := esi.lib.Delete().
 		Index(esi.index).
@@ -262,12 +366,18 @@ func (esi *Index) DeletePercolationQuery(id string) (*elastic.DeleteResult, erro
 	return deleteResult, nil
 }
 
-func (esi *Index) AddPercolationDocument(typename string, doc interface{}) (*elastic.PercolateResponse, error) {
+func (esi *Index) AddPercolationDocument(typ string, doc interface{}) (*elastic.PercolateResponse, error) {
+	ok := esi.TypeExists(typ)
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Type %s in index %s does not exist", typ, esi.index))
+	}
+
 	percolateResponse, err := esi.lib.
 		Percolate().
-		Index(esi.index).Type(typename).
+		Index(esi.index).
+		Type(typ).
 		Doc(doc).
-		Pretty(true).
+		//Pretty(true).
 		Do()
 	if err != nil {
 		return nil, err

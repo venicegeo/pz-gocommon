@@ -53,7 +53,7 @@ func NewClient(sys *piazza.System, testMode bool) (*Client, error) {
 	suffix := ""
 	if testMode {
 		n := rand.Intn(0xffffffff)
-		suffix = fmt.Sprintf(".test.%x", n)
+		suffix = fmt.Sprintf(".%x", n)
 	}
 
 	es := Client{lib: lib, name: piazza.PzElasticSearch, address: elasticsearchURL, indexSuffix: suffix}
