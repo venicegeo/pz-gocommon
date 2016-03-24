@@ -62,9 +62,9 @@ func NewMockDiscoverService(sys *System) (IDiscoverService, error) {
 	m := make(map[ServiceName]*DiscoverData)
 
 	service := MockDiscoverService{
-		name: PzDiscover,
+		name:    PzDiscover,
 		address: sys.Config.discoverAddress,
-		data: m,
+		data:    m,
 	}
 
 	return &service, nil
@@ -111,9 +111,9 @@ func NewPzDiscoverService(sys *System) (IDiscoverService, error) {
 	var _ IDiscoverService = new(PzDiscoverService)
 
 	service := PzDiscoverService{
-		name: PzDiscover,
+		name:    PzDiscover,
 		address: sys.Config.discoverAddress,
-		url: "http://" + sys.Config.discoverAddress + "/api/v1/resources",
+		url:     "http://" + sys.Config.discoverAddress + "/api/v1/resources",
 	}
 
 	err := sys.WaitForService(service)
@@ -176,7 +176,7 @@ func (service *PzDiscoverService) RegisterServiceByName(name ServiceName, addres
 	data := &DiscoverData{Type: "core-service", Host: address}
 
 	type discoverEntry struct {
-		Name ServiceName       `json:"name"`
+		Name ServiceName  `json:"name"`
 		Data DiscoverData `json:"data"`
 	}
 	entry := discoverEntry{Name: name, Data: *data}

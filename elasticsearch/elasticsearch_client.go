@@ -24,19 +24,23 @@ import (
 	"gopkg.in/olivere/elastic.v2"
 )
 
-const elasticsearchUrl = "https://search-venice-es-pjebjkdaueu2gukocyccj4r5m4.us-east-1.es.amazonaws.com"
+const elasticsearchURL = "https://search-venice-es-pjebjkdaueu2gukocyccj4r5m4.us-east-1.es.amazonaws.com"
 
-type ElasticsearchClient struct {
+type Client struct {
 	name        piazza.ServiceName
 	address     string
-	indexPrefix string
+	indexSuffix string
 	lib         *elastic.Client
 }
 
-func NewElasticsearchClient(sys *piazza.System, testMode bool) (*ElasticsearchClient, error) {
+func init() {
+	rand.Seed(int64(time.Now().Nanosecond()))
+}
+
+func NewClient(sys *piazza.System, testMode bool) (*Client, error) {
 
 	lib, err := elastic.NewClient(
-		elastic.SetURL(elasticsearchUrl),
+		elastic.SetURL(elasticsearchURL),
 		elastic.SetSniff(false),
 		elastic.SetMaxRetries(5),
 		//elastic.SetErrorLog(log.New(os.Stderr, "ELASTIC ", log.LstdFlags)), // TODO
@@ -46,14 +50,13 @@ func NewElasticsearchClient(sys *piazza.System, testMode bool) (*ElasticsearchCl
 		return nil, err
 	}
 
-	rand.Seed(int64(time.Now().Nanosecond()))
-	prefix := ""
+	suffix := ""
 	if testMode {
-		n := rand.Intn(0xffff)
-		prefix = fmt.Sprintf("%x", n)
+		n := rand.Intn(0xffffffff)
+		suffix = fmt.Sprintf(".test.%x", n)
 	}
 
-	es := ElasticsearchClient{lib: lib, name: piazza.PzElasticSearch, address: elasticsearchUrl, indexPrefix: prefix}
+	es := Client{lib: lib, name: piazza.PzElasticSearch, address: elasticsearchURL, indexSuffix: suffix}
 
 	if sys != nil {
 		sys.Services[piazza.PzElasticSearch] = es
@@ -62,14 +65,14 @@ func NewElasticsearchClient(sys *piazza.System, testMode bool) (*ElasticsearchCl
 	return &es, nil
 }
 
-func (es ElasticsearchClient) GetName() piazza.ServiceName {
+func (es Client) GetName() piazza.ServiceName {
 	return es.name
 }
 
-func (es ElasticsearchClient) GetAddress() string {
+func (es Client) GetAddress() string {
 	return es.address
 }
 
-func (es ElasticsearchClient) Version() (string, error) {
-	return es.lib.ElasticsearchVersion(elasticsearchUrl)
+func (es Client) Version() (string, error) {
+	return es.lib.ElasticsearchVersion(elasticsearchURL)
 }

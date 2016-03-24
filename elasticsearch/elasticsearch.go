@@ -37,8 +37,7 @@ const (
 
 func ConstructMappingSchema(name string, items map[string]MappingElementTypeName) (piazza.JsonString, error) {
 
-	template :=
-		`{
+	const template string = `{
 		"%s":{
 			"properties":{
 				%s

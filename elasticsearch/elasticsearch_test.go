@@ -43,7 +43,7 @@ func TestRunSuite(t *testing.T) {
 }
 
 type Obj struct {
-	Id   string `json:"id" binding:"required"`
+	ID   string `json:"id" binding:"required"`
 	Data string `json:"data" binding:"required"`
 	Tags string `json:"tags" binding:"required"`
 }
@@ -65,24 +65,24 @@ const objMapping = `{
 }`
 
 var objs = []Obj{
-	{Id: "id0", Data: "data0", Tags: "foo bar"},
-	{Id: "id1", Data: "data1", Tags: "bar baz"},
-	{Id: "id2", Data: "data2", Tags: "foo"},
+	{ID: "id0", Data: "data0", Tags: "foo bar"},
+	{ID: "id1", Data: "data1", Tags: "bar baz"},
+	{ID: "id2", Data: "data2", Tags: "foo"},
 }
 
 const mapping = "Obj"
 
-func (suite *EsTester) SetUpIndex() *ElasticsearchIndex {
+func (suite *EsTester) SetUpIndex() *Index {
 	t := suite.T()
 	assert := assert.New(t)
 
 	index := "testing-index"
 
-	esBase, err := NewElasticsearchClient(nil, true)
+	esBase, err := NewClient(nil, true)
 	assert.NoError(err)
 	assert.NotNil(esBase)
 
-	esi := NewElasticsearchIndex(esBase, index)
+	esi := NewIndex(esBase, index)
 	assert.NotNil(esi)
 
 	ok, err := esi.Exists()
@@ -106,7 +106,7 @@ func (suite *EsTester) SetUpIndex() *ElasticsearchIndex {
 
 	// populate the index
 	for _, o := range objs {
-		indexResult, err := esi.PostData(mapping, o.Id, o)
+		indexResult, err := esi.PostData(mapping, o.ID, o)
 		assert.NoError(err)
 		assert.NotNil(indexResult)
 	}
@@ -121,11 +121,11 @@ func (suite *EsTester) SetUpIndex() *ElasticsearchIndex {
 
 //---------------------------------------------------------------------------
 
-func (suite *EsTester) TestClient() {
+func (suite *EsTester) Test01Client() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	es, err := NewElasticsearchClient(nil, true)
+	es, err := NewClient(nil, true)
 	assert.NoError(err)
 	assert.NotNil(es)
 
@@ -134,7 +134,32 @@ func (suite *EsTester) TestClient() {
 	assert.Contains("1.5.2", version)
 }
 
-func (suite *EsTester) TestOperations() {
+func (suite *EsTester) Test02SimplePost() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	var err error
+
+	esi := suite.SetUpIndex()
+	assert.NotNil(esi)
+	defer func() {
+		esi.Close()
+		esi.Delete()
+	}()
+
+	type NotObj struct {
+		ID   int    `json:"id" binding:"required"`
+		Data string `json:"data" binding:"required"`
+		Foo  bool   `json:"foo" binding:"required"`
+	}
+	o := NotObj{ID: 99, Data: "quick fox", Foo: true}
+
+	indexResult, err := esi.PostData(mapping, "88", o)
+	assert.NoError(err)
+	assert.NotNil(indexResult)
+}
+
+func (suite *EsTester) Test03Operations() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -152,7 +177,7 @@ func (suite *EsTester) TestOperations() {
 
 	{
 		// GET a specific one
-		getResult, err := esi.GetById(mapping, "id1")
+		getResult, err := esi.GetByID(mapping, "id1")
 		assert.NoError(err)
 		assert.NotNil(getResult)
 		src = getResult.Source
@@ -175,7 +200,7 @@ func (suite *EsTester) TestOperations() {
 		for _, hit := range searchResult.Hits.Hits {
 			err = json.Unmarshal(*hit.Source, &tmp1)
 			assert.NoError(err)
-			m[tmp1.Id] = tmp1
+			m[tmp1.ID] = tmp1
 		}
 
 		assert.Contains(m, "id0")
@@ -215,22 +240,22 @@ func (suite *EsTester) TestOperations() {
 		err = json.Unmarshal(*src, &tmp2)
 		assert.NoError(err)
 
-		ok1 := ("id0" == tmp1.Id && "id2" == tmp2.Id)
-		ok2 := ("id0" == tmp2.Id && "id2" == tmp1.Id)
+		ok1 := ("id0" == tmp1.ID && "id2" == tmp2.ID)
+		ok2 := ("id0" == tmp2.ID && "id2" == tmp1.ID)
 		assert.True((ok1 || ok2) && !(ok1 && ok2))
 	}
 
 	{
 		// DELETE by id
-		_, err = esi.DeleteById(mapping, "id2")
+		_, err = esi.DeleteByID(mapping, "id2")
 		assert.NoError(err)
-		getResult, err := esi.GetById(mapping, "id2")
+		getResult, err := esi.GetByID(mapping, "id2")
 		assert.NoError(err)
 		assert.False(getResult.Found)
 	}
 }
 
-func (suite *EsTester) TestJsonOperations() {
+func (suite *EsTester) Test04JsonOperations() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -256,7 +281,7 @@ func (suite *EsTester) TestJsonOperations() {
     	        }
             }`
 
-		searchResult, err = esi.SearchByJson(mapping, str)
+		searchResult, err = esi.SearchByJSON(mapping, str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -276,7 +301,7 @@ func (suite *EsTester) TestJsonOperations() {
 	            }
             }`
 
-		searchResult, err = esi.SearchByJson(mapping, str)
+		searchResult, err = esi.SearchByJSON(mapping, str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -297,7 +322,7 @@ func (suite *EsTester) TestJsonOperations() {
 	            }
             }`
 
-		searchResult, err = esi.SearchByJson(mapping, str)
+		searchResult, err = esi.SearchByJSON(mapping, str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -314,13 +339,13 @@ func (suite *EsTester) TestJsonOperations() {
 		err = json.Unmarshal(*src, &tmp2)
 		assert.NoError(err)
 
-		ok1 := ("id0" == tmp1.Id && "id2" == tmp2.Id)
-		ok2 := ("id0" == tmp2.Id && "id2" == tmp1.Id)
+		ok1 := ("id0" == tmp1.ID && "id2" == tmp2.ID)
+		ok2 := ("id0" == tmp2.ID && "id2" == tmp1.ID)
 		assert.True((ok1 || ok2) && !(ok1 && ok2))
 	}
 }
 
-func (suite *EsTester) TestMapping() {
+func (suite *EsTester) Test05Mapping() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -366,32 +391,7 @@ func (suite *EsTester) TestMapping() {
 	assert.True(store)
 }
 
-func (suite *EsTester) TestFull() {
-	t := suite.T()
-	assert := assert.New(t)
-
-	var err error
-
-	esi := suite.SetUpIndex()
-	assert.NotNil(esi)
-	defer func() {
-		esi.Close()
-		esi.Delete()
-	}()
-
-	type NotObj struct {
-		Id   int    `json:"id" binding:"required"`
-		Data string `json:"data" binding:"required"`
-		Foo  bool   `json:"foo" binding:"required"`
-	}
-	o := NotObj{Id: 99, Data: "quick fox", Foo: true}
-
-	indexResult, err := esi.PostData(mapping, "88", o)
-	assert.NoError(err)
-	assert.NotNil(indexResult)
-}
-
-func (suite *EsTester) TestSetMapping() {
+func (suite *EsTester) Test06SetMapping() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -440,7 +440,7 @@ func (suite *EsTester) TestSetMapping() {
 		(mappings[1] == "Obj" && mappings[0] == "MyTestObj"))
 }
 
-func (suite *EsTester) TestConstructMapping() {
+func (suite *EsTester) Test07ConstructMapping() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -483,7 +483,7 @@ func (suite *EsTester) TestConstructMapping() {
 	assert.NoError(err)
 }
 
-func (suite *EsTester) TestPercolation() {
+func (suite *EsTester) Test08Percolation() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -526,12 +526,12 @@ func (suite *EsTester) TestPercolation() {
 	assert.NoError(err)
 
 	type Event struct {
-		Id  string `json:"id" binding:"required"`
+		ID  string `json:"id" binding:"required"`
 		Tag string `json:"tag" binding:"required"`
 	}
-	event1 := Event{Id: "id1", Tag: "kitten"}
-	event2 := Event{Id: "id2", Tag: "cat"}
-	event3 := Event{Id: "id3", Tag: "lemur"}
+	event1 := Event{ID: "id1", Tag: "kitten"}
+	event2 := Event{ID: "id2", Tag: "cat"}
+	event3 := Event{ID: "id3", Tag: "lemur"}
 
 	percolateResponse, err := esi.AddPercolationDocument("Event", event1)
 	assert.NoError(err)
@@ -551,19 +551,19 @@ func (suite *EsTester) TestPercolation() {
 	assert.Equal("p2", percolateResponse.Matches[0].Id)
 }
 
-type ById []*elastic.PercolateMatch
+type ByID []*elastic.PercolateMatch
 
-func (a ById) Len() int {
+func (a ByID) Len() int {
 	return len(a)
 }
-func (a ById) Swap(i, j int) {
+func (a ByID) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
-func (a ById) Less(i, j int) bool {
+func (a ByID) Less(i, j int) bool {
 	return a[i].Id < a[j].Id
 }
 func sortMatches(matches []*elastic.PercolateMatch) []*elastic.PercolateMatch {
-	sort.Sort(ById(matches))
+	sort.Sort(ByID(matches))
 	return matches
 }
 
@@ -571,7 +571,7 @@ func (suite *EsTester) TestFullPercolation() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	var esi *ElasticsearchIndex
+	var esi *Index
 	var index = "fullperctest"
 	var err error
 
@@ -582,11 +582,11 @@ func (suite *EsTester) TestFullPercolation() {
 
 	// create index
 	{
-		esBase, err := NewElasticsearchClient(nil, true)
+		esBase, err := NewClient(nil, true)
 		assert.NoError(err)
 		assert.NotNil(esBase)
 
-		esi = NewElasticsearchIndex(esBase, index)
+		esi = NewIndex(esBase, index)
 		assert.NotNil(esi)
 
 		exists, err := esi.Exists()
@@ -659,13 +659,13 @@ func (suite *EsTester) TestFullPercolation() {
 	//-----------------------------------------------------------------------
 
 	type EventType1 struct {
-		Id  string `json:"id" binding:"required"`
+		ID  string `json:"id" binding:"required"`
 		Str string `json:"str" binding:"required"`
 		Num int    `json:"num" binding:"required"`
 	}
 
 	type EventType2 struct {
-		Id  string `json:"id" binding:"required"`
+		ID  string `json:"id" binding:"required"`
 		Boo bool   `json:"boo" binding:"required"`
 		Num int    `json:"num" binding:"required"`
 	}
@@ -773,17 +773,17 @@ func (suite *EsTester) TestFullPercolation() {
 	tests := []TestCase{
 		TestCase{
 			typeName: "EventType1",
-			event:    EventType1{Id: "E1", Str: "kitten", Num: 17},
+			event:    EventType1{ID: "E1", Str: "kitten", Num: 17},
 			expected: []string{"Q1", "Q3", "Q6"},
 		},
 		TestCase{
 			typeName: "EventType2",
-			event:    EventType2{Id: "E2", Boo: true, Num: 17},
+			event:    EventType2{ID: "E2", Boo: true, Num: 17},
 			expected: []string{"Q2", "Q3", "Q5"},
 		},
 		TestCase{
 			typeName: "EventType1",
-			event:    EventType1{Id: "E3", Str: "lemur", Num: -31},
+			event:    EventType1{ID: "E3", Str: "lemur", Num: -31},
 			expected: []string{"Q4"},
 		},
 	}
