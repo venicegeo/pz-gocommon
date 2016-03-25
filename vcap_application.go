@@ -17,6 +17,7 @@ package piazza
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"os"
 )
 
@@ -36,6 +37,8 @@ func NewVcapApplication() (*VcapApplication, error) {
 		return nil, nil
 	}
 
+	log.Printf("VCAP_APPLICATION:\n%s", str)
+
 	vcap := &VcapApplication{}
 
 	err := json.Unmarshal([]byte(str), vcap)
@@ -50,6 +53,8 @@ func NewVcapApplication() (*VcapApplication, error) {
 	if str == "" {
 		return nil, errors.New("Unable to read $PORT for PCF deployment")
 	}
+
+	log.Printf("PORT: %s", port)
 
 	vcap.BindToPort = ":" + port
 

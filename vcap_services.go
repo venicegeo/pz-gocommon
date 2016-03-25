@@ -14,11 +14,24 @@
 
 package piazza
 
+import (
+	"log"
+	"os"
+)
+
 type VcapServices struct {
 	Map map[ServiceName]string
 }
 
 func NewVcapServices() (*VcapServices, error) {
-	vcap := &VcapServices{Map: make(map[ServiceName]string)}
+
+	str := os.Getenv("VCAP_APPLICATION")
+	if str == "" {
+		return nil, nil
+	}
+
+	log.Printf("VCAP_SERVICES:\n%s", str)
+
+	vcap := &VcapServices{Map: make(ServicesMap)}
 	return vcap, nil
 }

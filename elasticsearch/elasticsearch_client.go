@@ -40,7 +40,7 @@ func init() {
 }
 
 // NewClient returns an initialized Client object.
-func NewClient(sys *piazza.System, testMode bool) (*Client, error) {
+func NewClient(sys *piazza.SystemConfig, testMode bool) (*Client, error) {
 
 	lib, err := elastic.NewClient(
 		elastic.SetURL(elasticsearchURL),
@@ -62,7 +62,7 @@ func NewClient(sys *piazza.System, testMode bool) (*Client, error) {
 	es := Client{lib: lib, name: piazza.PzElasticSearch, address: elasticsearchURL, indexSuffix: suffix}
 
 	if sys != nil {
-		sys.Services[piazza.PzElasticSearch] = es
+		sys.Endpoints[piazza.PzElasticSearch] = elasticsearchURL
 	}
 
 	return &es, nil

@@ -23,11 +23,12 @@ import (
 
 type CommonTester struct {
 	suite.Suite
+	sys *SystemConfig
 }
 
 func TestRunSuite(t *testing.T) {
-	s1 := new(CommonTester)
-	suite.Run(t, s1)
+	s := &CommonTester{}
+	suite.Run(t, s)
 }
 
 func (suite *CommonTester) SetupSuite() {
@@ -42,4 +43,14 @@ func (suite *CommonTester) TestNop() {
 	assert := assert.New(t)
 
 	assert.True(!false)
+}
+
+func (suite *CommonTester) TestSystemConfig() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	endpoints := &ServicesMap{}
+
+	_, err := NewSystemConfig(PzTest, endpoints)
+	assert.NoError(err)
 }

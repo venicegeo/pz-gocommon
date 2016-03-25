@@ -16,9 +16,8 @@ package piazza
 
 import "log"
 
-type ServiceName string
-
 const (
+	PzTest          ServiceName = "PZ-TEST"
 	PzDiscover      ServiceName = "pz-discover"
 	PzLogger        ServiceName = "pz-logger"
 	PzUuidgen       ServiceName = "pz-uuidgen"
@@ -26,22 +25,26 @@ const (
 	PzElasticSearch ServiceName = "elasticsearch"
 )
 
+type ServiceName string
+
+type ServicesMap map[ServiceName]string
+
 type SystemConfig struct {
 	Name      ServiceName
 	Address   string
 	BindTo    string
-	Endpoints map[ServiceName]string // name -> address
+	Endpoints ServicesMap
 
 	vcapApplication *VcapApplication
 	vcapServices    *VcapServices
 }
 
-func NewSystemConfig(serviceName ServiceName, endpointOverrides *map[ServiceName]string) (*SystemConfig, error) {
+func NewSystemConfig(serviceName ServiceName, endpointOverrides *ServicesMap) (*SystemConfig, error) {
 	var err error
 
 	sys := &SystemConfig{
 		Name:      serviceName,
-		Endpoints: make(map[ServiceName]string),
+		Endpoints: make(ServicesMap),
 	}
 
 	// get information on our own service
