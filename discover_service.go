@@ -14,6 +14,7 @@
 
 package piazza
 
+/**
 import (
 	"bytes"
 	"encoding/json"
@@ -210,3 +211,4 @@ func (service *PzDiscoverService) UnregisterService(name ServiceName) error {
 
 	return nil
 }
+**/

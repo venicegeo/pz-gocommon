@@ -20,9 +20,12 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"time"
 
+	"github.com/fvbock/endless"
 	"github.com/gin-gonic/gin"
 )
 
@@ -113,4 +116,59 @@ func (input JsonString) ToCompactJson() (JsonString, error) {
 		return "", err
 	}
 	return JsonString(dst.String()), nil
+}
+
+//---------------------------------------------------------------------------
+
+const waitTimeout = 1000
+const waitSleep = 100
+const hammerTime = 3
+
+func (sys *SystemConfig) StartServer(routes http.Handler) chan error {
+	done := make(chan error)
+
+	ready := make(chan bool)
+
+	endless.DefaultHammerTime = hammerTime * time.Second
+	server := endless.NewServer(sys.BindTo, routes)
+	server.BeforeBegin = func(_ string) {
+		sys.BindTo = server.EndlessListener.Addr().(*net.TCPAddr).String()
+		ready <- true
+	}
+	go func() {
+		err := server.ListenAndServe()
+		done <- err
+	}()
+
+	<-ready
+
+	err := WaitForService(sys.Name, sys.BindTo)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("SystemConfig.Address: %s", sys.Address)
+	log.Printf("SystemConfig.BindTo: %s", sys.BindTo)
+
+	return done
+}
+
+func WaitForService(name ServiceName, address string) error {
+	url := fmt.Sprintf("http://%s", address)
+
+	msTime := 0
+
+	for {
+		resp, err := http.Get(url)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			log.Printf("found service %s", name)
+			return nil
+		}
+		if msTime >= waitTimeout {
+			return fmt.Errorf("timed out waiting for service: %s at %s", name, url)
+		}
+		time.Sleep(waitSleep * time.Millisecond)
+		msTime += waitSleep
+	}
+	/* notreached */
 }

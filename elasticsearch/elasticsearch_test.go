@@ -30,6 +30,7 @@ import (
 
 type EsTester struct {
 	suite.Suite
+	sys *piazza.SystemConfig
 }
 
 func (suite *EsTester) SetupSuite() {
@@ -78,7 +79,18 @@ func (suite *EsTester) SetUpIndex() *Index {
 	t := suite.T()
 	assert := assert.New(t)
 
-	esBase, err := NewClient(nil, true)
+	endpoints := &piazza.ServicesMap{
+		piazza.PzElasticSearch: "https://search-venice-es-pjebjkdaueu2gukocyccj4r5m4.us-east-1.es.amazonaws.com",
+	}
+
+	sys, err := piazza.NewSystemConfig(piazza.PzTest, endpoints)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	suite.sys = sys
+
+	esBase, err := NewClient(suite.sys, true)
 	assert.NoError(err)
 	assert.NotNil(esBase)
 

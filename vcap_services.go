@@ -15,42 +15,23 @@
 package piazza
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
+	"log"
+	"os"
 )
 
-type CommonTester struct {
-	suite.Suite
-	sys *SystemConfig
+type VcapServices struct {
+	Map map[ServiceName]string
 }
 
-func TestRunSuite(t *testing.T) {
-	s := &CommonTester{}
-	suite.Run(t, s)
-}
+func NewVcapServices() (*VcapServices, error) {
 
-func (suite *CommonTester) SetupSuite() {
-	//t := suite.T()
-}
+	str := os.Getenv("VCAP_APPLICATION")
+	if str == "" {
+		return nil, nil
+	}
 
-func (suite *CommonTester) TearDownSuite() {
-}
+	log.Printf("VCAP_SERVICES:\n%s", str)
 
-func (suite *CommonTester) TestNop() {
-	t := suite.T()
-	assert := assert.New(t)
-
-	assert.True(!false)
-}
-
-func (suite *CommonTester) TestSystemConfig() {
-	t := suite.T()
-	assert := assert.New(t)
-
-	endpoints := &ServicesMap{}
-
-	_, err := NewSystemConfig(PzTest, endpoints)
-	assert.NoError(err)
+	vcap := &VcapServices{Map: make(ServicesMap)}
+	return vcap, nil
 }
