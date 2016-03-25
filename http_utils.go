@@ -147,8 +147,11 @@ func (sys *SystemConfig) StartServer(routes http.Handler) chan error {
 		log.Fatal(err)
 	}
 
+	log.Printf("SystemConfig.Name: %s", sys.Name)
 	log.Printf("SystemConfig.Address: %s", sys.Address)
 	log.Printf("SystemConfig.BindTo: %s", sys.BindTo)
+
+	sys.Endpoints[sys.Name] = sys.BindTo
 
 	return done
 }
