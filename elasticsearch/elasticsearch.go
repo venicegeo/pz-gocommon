@@ -21,8 +21,10 @@ import (
 	"github.com/venicegeo/pz-gocommon"
 )
 
+// MappingElementTypeName is just an alias for a string.
 type MappingElementTypeName string
 
+// Constants representing the supported data types for the Event parameters.
 const (
 	MappingElementTypeString  MappingElementTypeName = "string"
 	MappingElementTypeBool    MappingElementTypeName = "boolean"
@@ -35,6 +37,8 @@ const (
 	MappingElementTypeLong    MappingElementTypeName = "long"
 )
 
+// ConstructMappingSchema takes a map of parameter names to datatypes and
+// returns the corresponding ES DSL for it.
 func ConstructMappingSchema(name string, items map[string]MappingElementTypeName) (piazza.JsonString, error) {
 
 	const template string = `{
