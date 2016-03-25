@@ -14,156 +14,86 @@
 
 package piazza
 
-import (
-	"encoding/json"
-	"errors"
-	"flag"
-	"log"
-	"os"
-)
+import "log"
 
-type ConfigMode string
+type ServiceName string
 
 const (
-	ConfigModeLocal ConfigMode = "local"
-	ConfigModeTest  ConfigMode = "test"
-	ConfigModeCloud ConfigMode = "cloud"
+	PzDiscover      ServiceName = "pz-discover"
+	PzLogger        ServiceName = "pz-logger"
+	PzUuidgen       ServiceName = "pz-uuidgen"
+	PzWorkflow      ServiceName = "pz-workflow"
+	PzElasticSearch ServiceName = "elasticsearch"
 )
 
-type Config struct {
-	mode            ConfigMode
-	serviceName     ServiceName
-	serviceAddress  string
-	discoverAddress string
-	bindtoAddress   string
+type SystemConfig struct {
+	Name      ServiceName
+	Address   string
+	BindTo    string
+	Endpoints map[ServiceName]string // name -> address
+
+	vcapApplication *VcapApplication
+	vcapServices    *VcapServices
 }
 
-func NewConfig(serviceName ServiceName, configType ConfigMode) (*Config, error) {
-
-	var config *Config
+func NewSystemConfig(serviceName ServiceName, endpointOverrides *map[ServiceName]string) (*SystemConfig, error) {
 	var err error
 
-	switch configType {
-	case ConfigModeLocal:
-		config = getLocalConfig(serviceName)
-	case ConfigModeTest:
-		config = getTestConfig(serviceName)
-	case ConfigModeCloud:
-		config, err = getPCFConfig(serviceName)
-		if err != nil {
-			return nil, err
+	sys := &SystemConfig{
+		Name:      serviceName,
+		Endpoints: make(map[ServiceName]string),
+	}
+
+	// get information on our own service
+	sys.vcapApplication, err = NewVcapApplication()
+	if err != nil {
+		return nil, err
+	}
+	if sys.vcapApplication == nil {
+		// no VCAP present, so we'll assume we're in testing mode runing locally
+		sys.Address = "localhost:0"
+		sys.BindTo = "localhost:0"
+	} else {
+		sys.Address = sys.vcapApplication.Address
+		sys.BindTo = sys.vcapApplication.BindToPort
+	}
+
+	// initialize the endpoints list with the VCAP data
+	sys.vcapServices, err = NewVcapServices()
+	if err != nil {
+		return nil, err
+	}
+	if sys.vcapServices != nil {
+		for k, v := range sys.vcapServices.Map {
+			sys.Endpoints[k] = v
 		}
 	}
 
-	log.Printf("Config.mode: %s", string(config.mode))
-	log.Printf("Config.serviceName: %s", config.GetName())
-	log.Printf("Config.serviceAddress: %s", config.GetAddress())
-	log.Printf("Config.discoverAddress: %s", config.discoverAddress)
-	log.Printf("Config.bindtoAddress: %s", config.bindtoAddress)
+	// override/extend endpoints list with whatever the caller supplied for us
+	if endpointOverrides != nil {
+		for k, v := range *endpointOverrides {
+			if v != "" {
+				sys.Endpoints[k] = v
+			} else {
+				sys.Endpoints[k] = string(k) + ".cf.piazzageo.io"
+			}
+		}
+	}
 
-	return config, err
+	return sys, nil
 }
 
-func (config Config) GetName() ServiceName {
-	return config.serviceName
+func (sys *SystemConfig) String() string {
+	log.Printf("SystemConfig.Name: %s", sys.Name)
+	log.Printf("SystemConfig.eAddress: %s", sys.Address)
+	log.Printf("SystemConfig.BindTo: %s", sys.BindTo)
+	return "-config-"
 }
 
-func (config Config) GetAddress() string {
-	return config.serviceAddress
-}
-
-func (config Config) GetBindToAddress() string {
-	return config.bindtoAddress
-}
-
+/*
 func IsLocalConfig() bool {
 	localFlag := flag.Bool("local", false, "use localhost ports")
 	flag.Parse()
 	return *localFlag
 }
-
-func getLocalConfig(serviceName ServiceName) *Config {
-
-	var localHosts = map[ServiceName]string{
-		PzLogger:   "pz-logger.cf.piazzageo.io/",
-		PzUuidgen:  "localhost:12340",
-		PzWorkflow: "localhost:12342",
-		PzDiscover: "pz-discover.cf.piazzageo.io",
-	}
-
-	config := Config{
-		mode:            ConfigModeLocal,
-		serviceName:     serviceName,
-		serviceAddress:  localHosts[serviceName],
-		discoverAddress: localHosts[PzDiscover],
-		bindtoAddress:   localHosts[serviceName],
-	}
-
-	return &config
-}
-
-func getTestConfig(serviceName ServiceName) *Config {
-
-	config := Config{
-		mode:            ConfigModeTest,
-		serviceName:     serviceName,
-		serviceAddress:  "localhost:0",
-		discoverAddress: "",
-		bindtoAddress:   "localhost:0",
-	}
-
-	return &config
-}
-
-func getPCFConfig(serviceName ServiceName) (*Config, error) {
-
-	const nonlocalDiscoverHost = "pz-discover.cf.piazzageo.io"
-
-	var config Config
-	var err error
-
-	config.mode = ConfigModeCloud
-
-	config.serviceName, config.serviceAddress, err = determineVcapServerAddress()
-	if err != nil {
-		return nil, err
-	}
-
-	log.Printf("got config.ServerAddress: %s", config.serviceAddress)
-
-	config.discoverAddress = nonlocalDiscoverHost
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		return nil, errors.New("$PORT not found: unable to determine bindto address")
-	}
-	log.Printf("got port: %s", port)
-	config.bindtoAddress = ":" + port
-	if err != nil {
-		return nil, err
-	}
-	log.Printf("got config.bindtoAddress: %s", config.bindtoAddress)
-
-	return &config, nil
-}
-
-func determineVcapServerAddress() (serviceName ServiceName, serverAddress string, err error) {
-
-	vcapString := os.Getenv("VCAP_APPLICATION")
-	if vcapString == "" {
-		return "", "", errors.New("$VCAP_APPLICATION not found: unable to determine server address")
-	}
-	type VcapData struct {
-		ApplicationID   string   `json:"application_id"`
-		ApplicationName string   `json:"application_name"`
-		ApplicationURIs []string `json:"application_uris"`
-	}
-	var vcap VcapData
-	err = json.Unmarshal([]byte(vcapString), &vcap)
-	if err != nil {
-		return "", "", err
-	}
-	serviceName = ServiceName(vcap.ApplicationName)
-	serverAddress = vcap.ApplicationURIs[0]
-	return serviceName, serverAddress, nil
-}
+*/

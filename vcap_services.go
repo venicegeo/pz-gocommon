@@ -13,3 +13,12 @@
 // limitations under the License.
 
 package piazza
+
+type VcapServices struct {
+	Map map[ServiceName]string
+}
+
+func NewVcapServices() (*VcapServices, error) {
+	vcap := &VcapServices{Map: make(map[ServiceName]string)}
+	return vcap, nil
+}
