@@ -26,6 +26,8 @@ import (
 
 const elasticsearchURL = "https://search-venice-es-pjebjkdaueu2gukocyccj4r5m4.us-east-1.es.amazonaws.com"
 
+// Client is the object that provides access to Elasticsearch. It implements
+// the IService interface.
 type Client struct {
 	name        piazza.ServiceName
 	address     string
@@ -37,6 +39,7 @@ func init() {
 	rand.Seed(int64(time.Now().Nanosecond()))
 }
 
+// NewClient returns an initialized Client object.
 func NewClient(sys *piazza.System, testMode bool) (*Client, error) {
 
 	lib, err := elastic.NewClient(
@@ -65,14 +68,17 @@ func NewClient(sys *piazza.System, testMode bool) (*Client, error) {
 	return &es, nil
 }
 
+// GetName returns the name of the service.
 func (es Client) GetName() piazza.ServiceName {
 	return es.name
 }
 
+// GetAddress returns the IP address (and port) of this service.
 func (es Client) GetAddress() string {
 	return es.address
 }
 
+// Version returns the version of Elasticsearch as a string, e.g. "1.5.2".
 func (es Client) Version() (string, error) {
 	return es.lib.ElasticsearchVersion(elasticsearchURL)
 }
