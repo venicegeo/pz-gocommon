@@ -25,21 +25,29 @@ const (
 	PzElasticSearch ServiceName = "elasticsearch"
 )
 
+// TODO: this should be derived from VCAP_APPLICATION?
+const defaultDomain = ".stage.geointservices.io"
+
 type ServiceName string
 
 type ServicesMap map[ServiceName]string
 
 type SystemConfig struct {
-	Name      ServiceName
-	Address   string
-	BindTo    string
+	// our own service
+	Name    ServiceName
+	Address string
+	BindTo  string
+
+	// our external services
 	Endpoints ServicesMap
 
 	vcapApplication *VcapApplication
 	vcapServices    *VcapServices
 }
 
-func NewSystemConfig(serviceName ServiceName, endpointOverrides *ServicesMap) (*SystemConfig, error) {
+func NewSystemConfig(serviceName ServiceName,
+	endpointOverrides *ServicesMap) (*SystemConfig, error) {
+
 	var err error
 
 	sys := &SystemConfig{
@@ -72,13 +80,14 @@ func NewSystemConfig(serviceName ServiceName, endpointOverrides *ServicesMap) (*
 		}
 	}
 
-	// override/extend endpoints list with whatever the caller supplied for us
+	// override/extend endpoints list with whatever the caller supplied for us:
+	// this allows us to test various configurations of upstream services
 	if endpointOverrides != nil {
 		for k, v := range *endpointOverrides {
 			if v != "" {
 				sys.Endpoints[k] = v
 			} else {
-				sys.Endpoints[k] = string(k) + ".cf.piazzageo.io"
+				sys.Endpoints[k] = string(k) + defaultDomain
 			}
 		}
 	}
