@@ -23,6 +23,7 @@ const (
 	PzUuidgen       ServiceName = "pz-uuidgen"
 	PzWorkflow      ServiceName = "pz-workflow"
 	PzElasticSearch ServiceName = "elasticsearch"
+	PzGateway       ServiceName = "pa-gateway"
 )
 
 // TODO: this should be derived from VCAP_APPLICATION?
