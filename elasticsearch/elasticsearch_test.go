@@ -149,10 +149,10 @@ func deleteOldIndexes(es *elastic.Client) {
 
 	for _, v := range s {
 		if strings.HasPrefix(v, "alerts.") ||
-			strings.HasPrefix(v, "triggers") ||
-			strings.HasPrefix(v, "events") ||
-			strings.HasPrefix(v, "eventtypes") ||
-			strings.HasPrefix(v, "estest.") {
+			strings.HasPrefix(v, "triggers.") ||
+			strings.HasPrefix(v, "events.") ||
+			strings.HasPrefix(v, "eventtypes.") ||
+			strings.HasPrefix(v, "pzlogger.") {
 			del(v)
 		} else {
 			log.Printf("Skipping %s", v)
