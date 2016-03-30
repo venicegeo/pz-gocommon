@@ -21,7 +21,7 @@ import (
 
 	"github.com/venicegeo/pz-gocommon"
 
-	"gopkg.in/olivere/elastic.v2"
+	"gopkg.in/olivere/elastic.v3"
 )
 
 type Index struct {
@@ -150,7 +150,7 @@ func (esi *Index) Flush() error {
 	return nil
 }
 
-func (esi *Index) PostData(typ string, id string, obj interface{}) (*elastic.IndexResult, error) {
+func (esi *Index) PostData(typ string, id string, obj interface{}) (*elastic.IndexResponse, error) {
 	/*ok := esi.IndexExists()
 	if !ok {
 		log.Printf("Index %s does not exist", esi.index)
@@ -162,14 +162,14 @@ func (esi *Index) PostData(typ string, id string, obj interface{}) (*elastic.Ind
 		return nil, errors.New(fmt.Sprintf("Index %s or type %s does not exist", esi.index, typ))
 	}*/
 
-	indexResult, err := esi.lib.Index().
+	indexResponse, err := esi.lib.Index().
 		Index(esi.index).
 		Type(typ).
 		Id(id).
 		BodyJson(obj).
 		Do()
 
-	return indexResult, err
+	return indexResponse, err
 }
 
 func (esi *Index) GetByID(typ string, id string) (*elastic.GetResult, error) {
@@ -179,9 +179,7 @@ func (esi *Index) GetByID(typ string, id string) (*elastic.GetResult, error) {
 		return nil, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
 	}
 
-	svc := esi.lib.Get().Index(esi.index).Type(typ).Id(id)
-	log.Printf("Index.GetByID: %s", svc.String())
-	getResult, err := svc.Do()
+	getResult, err := esi.lib.Get().Index(esi.index).Type(typ).Id(id).Do()
 	if err != nil {
 		log.Printf("Index.GetByID failed: %s", err)
 		return nil, err
@@ -190,18 +188,18 @@ func (esi *Index) GetByID(typ string, id string) (*elastic.GetResult, error) {
 	return getResult, nil
 }
 
-func (esi *Index) DeleteByID(typ string, id string) (*elastic.DeleteResult, error) {
+func (esi *Index) DeleteByID(typ string, id string) (*elastic.DeleteResponse, error) {
 	ok := esi.ItemExists(typ, id)
 	if !ok {
 		return nil, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
 	}
 
-	deleteResult, err := esi.lib.Delete().
+	deleteResponse, err := esi.lib.Delete().
 		Index(esi.index).
 		Type(typ).
 		Id(id).
 		Do()
-	return deleteResult, err
+	return deleteResponse, err
 }
 
 func (esi *Index) FilterByMatchAll(typ string) (*elastic.SearchResult, error) {
@@ -214,7 +212,7 @@ func (esi *Index) FilterByMatchAll(typ string) (*elastic.SearchResult, error) {
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
 	}
 
-	q := elastic.NewMatchAllFilter()
+	q := elastic.NewMatchAllQuery()
 	searchResult, err := esi.lib.Search().
 		Index(esi.index).
 		Type(typ).
@@ -232,11 +230,11 @@ func (esi *Index) FilterByTermQuery(typ string, name string, value interface{}) 
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
 	}
 
-	termQuery := elastic.NewTermFilter(name, value)
+	termQuery := elastic.NewTermQuery(name, value)
 	searchResult, err := esi.lib.Search().
 		Index(esi.index).
 		Type(typ).
-		Query(&termQuery).
+		Query(termQuery).
 		//Sort("id", true).
 		Do()
 	return searchResult, err
@@ -333,7 +331,7 @@ func (esi *Index) GetMapping(typ string) (interface{}, error) {
 	return props2["mappings"], nil
 }
 
-func (esi *Index) AddPercolationQuery(id string, query piazza.JsonString) (*elastic.IndexResult, error) {
+func (esi *Index) AddPercolationQuery(id string, query piazza.JsonString) (*elastic.IndexResponse, error) {
 
 	ok := esi.IndexExists()
 	if !ok {
@@ -354,14 +352,14 @@ func (esi *Index) AddPercolationQuery(id string, query piazza.JsonString) (*elas
 	return indexResponse, nil
 }
 
-func (esi *Index) DeletePercolationQuery(id string) (*elastic.DeleteResult, error) {
+func (esi *Index) DeletePercolationQuery(id string) (*elastic.DeleteResponse, error) {
 	typ := ".percolator"
 	ok := esi.ItemExists(typ, id)
 	if !ok {
 		return nil, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
 	}
 
-	deleteResult, err := esi.lib.Delete().
+	deleteResponse, err := esi.lib.Delete().
 		Index(esi.index).
 		Type(".percolator").
 		Id(id).
@@ -370,7 +368,7 @@ func (esi *Index) DeletePercolationQuery(id string) (*elastic.DeleteResult, erro
 		return nil, err
 	}
 
-	return deleteResult, nil
+	return deleteResponse, nil
 }
 
 func (esi *Index) AddPercolationDocument(typ string, doc interface{}) (*elastic.PercolateResponse, error) {

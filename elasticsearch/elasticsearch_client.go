@@ -21,10 +21,10 @@ import (
 
 	"github.com/venicegeo/pz-gocommon"
 
-	"gopkg.in/olivere/elastic.v2"
+	"gopkg.in/olivere/elastic.v3"
 )
 
-const elasticsearchURL = "https://search-venice-es-pjebjkdaueu2gukocyccj4r5m4.us-east-1.es.amazonaws.com"
+const elasticsearchURL = "http://localhost:9200"
 
 // Client is the object that provides access to Elasticsearch. It implements
 // the IService interface.

@@ -22,10 +22,11 @@ import (
 	"strings"
 	"testing"
 
+	"gopkg.in/olivere/elastic.v3"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/venicegeo/pz-gocommon"
-	"gopkg.in/olivere/elastic.v2"
 )
 
 type EsTester struct {
@@ -80,7 +81,7 @@ func (suite *EsTester) SetUpIndex() *Index {
 	assert := assert.New(t)
 
 	endpoints := &piazza.ServicesMap{
-		piazza.PzElasticSearch: "https://search-venice-es-pjebjkdaueu2gukocyccj4r5m4.us-east-1.es.amazonaws.com",
+		piazza.PzElasticSearch: "https://localhost:9200",
 	}
 
 	sys, err := piazza.NewSystemConfig(piazza.PzTest, endpoints)
@@ -172,7 +173,7 @@ func (suite *EsTester) Test01Client() {
 
 	version, err := es.Version()
 	assert.NoError(err)
-	assert.Contains("1.5.2", version)
+	assert.Contains("2.2.0", version)
 
 	//deleteOldIndexes(es.lib)
 }
