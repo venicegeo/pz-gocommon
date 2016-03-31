@@ -147,9 +147,7 @@ func (sys *SystemConfig) StartServer(routes http.Handler) chan error {
 		log.Fatal(err)
 	}
 
-	log.Printf("SystemConfig.Name: %s", sys.Name)
-	log.Printf("SystemConfig.Address: %s", sys.Address)
-	log.Printf("SystemConfig.BindTo: %s", sys.BindTo)
+	log.Printf("Server %s started on %s (%s)", sys.Name, sys.Address, sys.BindTo)
 
 	sys.AddService(sys.Name, sys.BindTo)
 
@@ -164,7 +162,7 @@ func WaitForService(name ServiceName, address string) error {
 	for {
 		resp, err := http.Get(url)
 		if err == nil && resp.StatusCode == http.StatusOK {
-			log.Printf("found service %s", name)
+			//log.Printf("found service %s", name)
 			return nil
 		}
 		if msTime >= waitTimeout {

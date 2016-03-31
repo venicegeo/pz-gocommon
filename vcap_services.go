@@ -32,6 +32,7 @@
 package piazza
 
 import (
+	"encoding/json"
 	"log"
 	"os"
 )
@@ -54,16 +55,37 @@ type VcapServices struct {
 	Services map[ServiceName]string
 }
 
+var localVcapServices = &VcapServices{
+	UserProvided: []VcapServiceEntry{
+		VcapServiceEntry{
+			Name: "elasticsearch",
+			Credentials: VcapCredentials{
+				Host: "localhost:9200",
+			},
+		},
+	},
+}
+
 func NewVcapServices() (*VcapServices, error) {
 
+	var err error
+	var vcap *VcapServices
+
 	str := os.Getenv("VCAP_SERVICES")
-	if str == "" {
-		return nil, nil
+	if str != "" {
+
+		log.Printf("VCAP_SERVICES:\n%s", str)
+
+		err = json.Unmarshal([]byte(str), vcap)
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+		vcap = localVcapServices
 	}
 
-	log.Printf("VCAP_SERVICES:\n%s", str)
-
-	vcap := &VcapServices{Services: make(ServicesMap)}
+	vcap.Services = make(ServicesMap)
 
 	for _, serviceEntry := range vcap.UserProvided {
 		name := ServiceName(serviceEntry.Name)

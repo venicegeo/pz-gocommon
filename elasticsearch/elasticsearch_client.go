@@ -39,7 +39,8 @@ func init() {
 // NewClient returns an initialized Client object.
 func NewClient(sys *piazza.SystemConfig) (*Client, error) {
 
-	url := sys.GetService(piazza.PzElasticSearch)
+	url := "http://" + sys.GetService(piazza.PzElasticSearch)
+	//log.Printf("NewClient: %s", url)
 
 	lib, err := elastic.NewClient(
 		elastic.SetURL(url),

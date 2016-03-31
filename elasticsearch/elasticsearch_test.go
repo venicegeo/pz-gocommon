@@ -80,11 +80,11 @@ func (suite *EsTester) SetUpIndex() *Index {
 	t := suite.T()
 	assert := assert.New(t)
 
-	overrides := &piazza.ServicesMap{
-		piazza.PzElasticSearch: piazza.LocalElasticsearchURL,
+	required := []piazza.ServiceName{
+		piazza.PzElasticSearch,
 	}
 
-	sys, err := piazza.NewSystemConfig(piazza.PzTestBed, overrides)
+	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required, true)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -167,7 +167,10 @@ func (suite *EsTester) Test01Client() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	sys, err := piazza.NewSystemConfig(piazza.PzTestBed, nil)
+	// since this library doesn't have a PCF manifest, we need
+	// to explicitly require an ES server
+	required := []piazza.ServiceName{piazza.PzElasticSearch}
+	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required, true)
 	assert.NoError(err)
 
 	es, err := NewClient(sys)

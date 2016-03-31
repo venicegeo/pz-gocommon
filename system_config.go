@@ -17,18 +17,20 @@ package piazza
 import (
 	"log"
 	"net/http"
+	"strings"
 )
 
-const LocalElasticsearchURL = "http://localhost:9200"
+const DefaultElasticsearchAddress = "localhost:9200"
+const DefaultDomain = ".stage.geointservices.io"
 
 const (
-	PzTestBed       ServiceName = "PZ-TESTBED"
+	PzGoCommon      ServiceName = "PZ-GOCOMMON" // not a real service, just for testing
 	PzDiscover      ServiceName = "pz-discover"
 	PzLogger        ServiceName = "pz-logger"
 	PzUuidgen       ServiceName = "pz-uuidgen"
 	PzWorkflow      ServiceName = "pz-workflow"
 	PzElasticSearch ServiceName = "elasticsearch"
-	PzGateway       ServiceName = "pa-gateway"
+	PzGateway       ServiceName = "pz-gateway"
 )
 
 type ServiceName string
@@ -47,14 +49,16 @@ type SystemConfig struct {
 	vcapApplication *VcapApplication
 	vcapServices    *VcapServices
 	domain          string
+	debug           bool
 }
 
 func NewSystemConfig(serviceName ServiceName,
-	endpointOverrides *ServicesMap) (*SystemConfig, error) {
+	requiredServices []ServiceName,
+	debug bool) (*SystemConfig, error) {
 
 	var err error
 
-	sys := &SystemConfig{endpoints: make(ServicesMap)}
+	sys := &SystemConfig{endpoints: make(ServicesMap), debug: debug}
 
 	sys.vcapApplication, err = NewVcapApplication()
 	if err != nil {
@@ -68,19 +72,18 @@ func NewSystemConfig(serviceName ServiceName,
 
 	if sys.vcapApplication != nil {
 		sys.domain = sys.vcapApplication.GetDomain()
+	} else {
+		sys.domain = DefaultDomain
 	}
 
-	err = sys.registerThisService(serviceName)
-	if err != nil {
-		return nil, nil
-	}
+	// set some data about our own service first
+	sys.Name = serviceName
+	sys.Address = sys.vcapApplication.GetAddress()
+	sys.BindTo = sys.vcapApplication.GetBindToPort()
 
-	err = sys.registerOtherServices()
-	if err != nil {
-		return nil, err
-	}
-
-	err = sys.registerOverrides(endpointOverrides)
+	// set the services table with the services we require,
+	// using VcapServices to get the addresses
+	err = sys.checkRequirements(requiredServices)
 	if err != nil {
 		return nil, err
 	}
@@ -93,86 +96,77 @@ func NewSystemConfig(serviceName ServiceName,
 	return sys, nil
 }
 
-func (sys *SystemConfig) registerOverrides(overrides *ServicesMap) error {
-	// override/extend endpoints list with whatever the caller supplied for us:
-	// this allows us to test various configurations of upstream services
+func (sys *SystemConfig) checkRequirements(requirements []ServiceName) error {
 
-	if overrides == nil {
-		return nil
+	for _, name := range requirements {
+
+		if name == sys.Name {
+			sys.AddService(name, sys.Address)
+
+		} else {
+			if addr, ok := sys.vcapServices.Services[name]; !ok {
+				sys.AddService(name, string(name)+DefaultDomain)
+
+			} else {
+
+				if strings.HasPrefix(string(addr), "localhost") {
+					// special cases, e.g. for elasticsearch: do nothing
+					sys.AddService(name, addr)
+
+				} else {
+					sys.AddService(name, addr+DefaultDomain)
+				}
+			}
+		}
+
+		log.Printf("Required service %s: %s", name, sys.GetService(name))
 	}
-
-	// the user must give us a complete address (with domain)
-	for nam, addr := range *overrides {
-		sys.AddService(nam, addr)
-	}
-
-	return nil
-}
-
-func (sys *SystemConfig) registerOtherServices() error {
-
-	// initialize the endpoints list with the VCAP data
-
-	if sys.vcapServices == nil {
-		return nil
-	}
-
-	for k, v := range sys.vcapServices.Services {
-		sys.AddService(k, v)
-	}
-
-	return nil
-}
-
-func (sys *SystemConfig) registerThisService(name ServiceName) error {
-
-	// get information on our own service
-
-	sys.Name = name
-
-	if sys.vcapApplication == nil {
-		// no VCAP present, so we'll assume we're in testing mode runing locally
-		sys.Address = "localhost:0"
-		sys.BindTo = "localhost:0"
-	} else {
-		sys.Address = sys.vcapApplication.GetAddress()
-		sys.BindTo = sys.vcapApplication.GetBindToPort()
-	}
-
-	// remember to register ourself, of course
-	// (when the server is strarted, this will be updated to correspond to the "bind to" address)
-	sys.AddService(name, sys.Address)
 
 	return nil
 }
 
 func (sys *SystemConfig) runHealthChecks() error {
-	for nam, addr := range sys.endpoints {
-		if nam == sys.Name {
-			continue
-		}
+	//log.Printf("SystemConfig.runHealthChecks: start")
 
-		resp, err := http.Get("http://" + addr)
-		if err != nil {
-			return err
+	for name, addr := range sys.endpoints {
+		if name != sys.Name {
+			//log.Printf("Service healthy? %s at %s", nam, addr)
+
+			url := "http://" + addr
+
+			resp, err := http.Get(url)
+			if err != nil {
+				return err
+			}
+
+			if resp.StatusCode != http.StatusOK {
+				if name == PzGateway {
+					// TODO: Patrick doesn't have a healthcheck endpoint yet
+				} else {
+					return NewErrorf("Health check failed for service: %s at %s", name, url)
+				}
+			}
+
+			/*log.Printf("Service healthy: %s at %s", name, addr)
+			body, err := ReadFrom(resp.Body)
+			if err != nil {
+				return err
+			}
+			log.Printf(">>> %s <<<", string(body))*/
 		}
-		if resp.StatusCode != http.StatusOK {
-			return NewErrorf("Health check failed for service: %s at %s", nam, addr)
-		}
-		log.Printf("Service healthy: %s at %s", nam, addr)
 	}
 
+	//log.Printf("SystemConfig.runHealthChecks: end")
 	return nil
 }
 
 // it is explicitly allowed for outsiders to update an existing service, but we'll log it just to be safe
 func (sys *SystemConfig) AddService(name ServiceName, address string) {
 	old, ok := sys.endpoints[name]
-	if ok {
-		log.Printf("updating registered service %s from %s to %s", name, old, address)
-	}
-
 	sys.endpoints[name] = address
+	if ok {
+		log.Printf("SystemConfig.AddService: updated %s from %s to %s", name, old, address)
+	}
 }
 
 func (sys *SystemConfig) GetService(name ServiceName) string {
@@ -189,14 +183,7 @@ func (sys *SystemConfig) GetDomain() string {
 }
 
 func (sys *SystemConfig) Testing() bool {
-	return sys.Name == PzTestBed
-}
-
-func (sys *SystemConfig) String() string {
-	log.Printf("SystemConfig.Name: %s", sys.Name)
-	log.Printf("SystemConfig.eAddress: %s", sys.Address)
-	log.Printf("SystemConfig.BindTo: %s", sys.BindTo)
-	return "-config-"
+	return sys.debug
 }
 
 /*
