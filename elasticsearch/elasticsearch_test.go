@@ -80,18 +80,18 @@ func (suite *EsTester) SetUpIndex() *Index {
 	t := suite.T()
 	assert := assert.New(t)
 
-	endpoints := &piazza.ServicesMap{
-		piazza.PzElasticSearch: "https://localhost:9200",
+	overrides := &piazza.ServicesMap{
+		piazza.PzElasticSearch: piazza.LocalElasticsearchURL,
 	}
 
-	sys, err := piazza.NewSystemConfig(piazza.PzTest, endpoints)
+	sys, err := piazza.NewSystemConfig(piazza.PzTestBed, overrides)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	suite.sys = sys
 
-	esBase, err := NewClient(suite.sys, true)
+	esBase, err := NewClient(suite.sys)
 	assert.NoError(err)
 	assert.NotNil(esBase)
 
@@ -167,11 +167,14 @@ func (suite *EsTester) Test01Client() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	es, err := NewClient(nil, true)
+	sys, err := piazza.NewSystemConfig(piazza.PzTestBed, nil)
+	assert.NoError(err)
+
+	es, err := NewClient(sys)
 	assert.NoError(err)
 	assert.NotNil(es)
 
-	version, err := es.Version()
+	version := es.GetVersion()
 	assert.NoError(err)
 	assert.Contains("2.2.0", version)
 
@@ -625,7 +628,7 @@ func (suite *EsTester) Test09FullPercolation() {
 
 	// create index
 	{
-		esBase, err := NewClient(nil, true)
+		esBase, err := NewClient(suite.sys)
 		assert.NoError(err)
 		assert.NotNil(esBase)
 

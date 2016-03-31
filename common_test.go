@@ -51,6 +51,6 @@ func (suite *CommonTester) TestSystemConfig() {
 
 	endpoints := &ServicesMap{}
 
-	_, err := NewSystemConfig(PzTest, endpoints)
+	_, err := NewSystemConfig(PzTestBed, endpoints)
 	assert.NoError(err)
 }

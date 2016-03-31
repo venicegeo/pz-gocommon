@@ -15,6 +15,8 @@
 package piazza
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 )
@@ -34,4 +36,9 @@ func ReadFrom(reader io.Reader) ([]byte, error) {
 		return nil, err
 	}
 	return data, err
+}
+
+func NewErrorf(format string, a ...interface{}) error {
+	s := fmt.Sprintf(format, a)
+	return errors.New(s)
 }

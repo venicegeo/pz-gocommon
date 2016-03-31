@@ -12,6 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/* example:
+"VCAP_APPLICATION": {
+  "application_id": "14fca253-8087-402e-abf5-8fd40ddda81f",
+  "application_name": "pz-workflow",
+  "application_uris": [
+   "pz-workflow.stage.geointservices.io"
+  ],
+  "application_version": "5f0ee99d-252c-4f8d-b241-bc3e22534afc",
+  "limits": {
+   "disk": 1024,
+   "fds": 16384,
+   "mem": 512
+  },
+  "name": "pz-workflow",
+  "space_id": "d65a0987-df00-4d69-a50b-657e52cb2f8e",
+  "space_name": "simulator-stage",
+  "uris": [
+   "pz-workflow.stage.geointservices.io"
+  ],
+  "users": null,
+  "version": "5f0ee99d-252c-4f8d-b241-bc3e22534afc"
+ }
+}
+*/
+
 package piazza
 
 import (
@@ -19,15 +44,24 @@ import (
 	"errors"
 	"log"
 	"os"
+	"strings"
 )
 
 type VcapApplication struct {
-	Name            ServiceName
-	Address         string
-	BindToPort      string
-	ApplicationID   string   `json:"application_id"`
-	ApplicationName string   `json:"application_name"`
-	ApplicationURIs []string `json:"application_uris"`
+	ApplicationID      string         `json:"application_id"`
+	ApplicationName    string         `json:"application_name"`
+	ApplicationURIs    []string       `json:"application_uris"`
+	ApplicationVersion string         `json:"application_version"`
+	Limits             map[string]int `json:"limits"`
+	Name               string         `json:"name"`
+	SpaceId            string         `json:"space_id"`
+	SpaceName          string         `json:"space_name"`
+	URIs               []string       `json:"uris"`
+	Users              interface{}    `json:"users"` // don't know what the datattype actually is
+	Version            string         `json:"version"`
+
+	bindToPort string
+	domain     string
 }
 
 func NewVcapApplication() (*VcapApplication, error) {
@@ -46,17 +80,35 @@ func NewVcapApplication() (*VcapApplication, error) {
 		return nil, err
 	}
 
-	vcap.Name = ServiceName(vcap.ApplicationName)
-	vcap.Address = vcap.ApplicationURIs[0]
-
-	port := os.Getenv("PORT")
+	vcap.bindToPort = os.Getenv("PORT")
 	if str == "" {
 		return nil, errors.New("Unable to read $PORT for PCF deployment")
 	}
+	vcap.bindToPort = ":" + vcap.bindToPort
+	log.Printf("PORT: %s", vcap.bindToPort)
 
-	log.Printf("PORT: %s", port)
-
-	vcap.BindToPort = ":" + port
+	full := vcap.GetAddress()
+	dot := strings.Index(full, ".")
+	if dot == -1 {
+		return nil, NewErrorf("error extracting domain from address %s", full)
+	}
+	vcap.domain = full[dot+1:]
 
 	return vcap, nil
+}
+
+func (vcap *VcapApplication) GetAddress() string {
+	return vcap.ApplicationURIs[0]
+}
+
+func (vcap *VcapApplication) GetName() ServiceName {
+	return ServiceName(vcap.ApplicationName)
+}
+
+func (vcap *VcapApplication) GetBindToPort() string {
+	return vcap.bindToPort
+}
+
+func (vcap *VcapApplication) GetDomain() string {
+	return vcap.domain
 }

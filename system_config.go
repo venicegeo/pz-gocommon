@@ -14,10 +14,15 @@
 
 package piazza
 
-import "log"
+import (
+	"log"
+	"net/http"
+)
+
+const LocalElasticsearchURL = "http://localhost:9200"
 
 const (
-	PzTest          ServiceName = "PZ-TEST"
+	PzTestBed       ServiceName = "PZ-TESTBED"
 	PzDiscover      ServiceName = "pz-discover"
 	PzLogger        ServiceName = "pz-logger"
 	PzUuidgen       ServiceName = "pz-uuidgen"
@@ -25,9 +30,6 @@ const (
 	PzElasticSearch ServiceName = "elasticsearch"
 	PzGateway       ServiceName = "pa-gateway"
 )
-
-// TODO: this should be derived from VCAP_APPLICATION?
-const defaultDomain = ".stage.geointservices.io"
 
 type ServiceName string
 
@@ -44,6 +46,7 @@ type SystemConfig struct {
 
 	vcapApplication *VcapApplication
 	vcapServices    *VcapServices
+	domain          string
 }
 
 func NewSystemConfig(serviceName ServiceName,
@@ -51,8 +54,7 @@ func NewSystemConfig(serviceName ServiceName,
 
 	var err error
 
-	sys := &SystemConfig{}
-	sys.endpoints = make(ServicesMap)
+	sys := &SystemConfig{endpoints: make(ServicesMap)}
 
 	sys.vcapApplication, err = NewVcapApplication()
 	if err != nil {
@@ -62,6 +64,10 @@ func NewSystemConfig(serviceName ServiceName,
 	sys.vcapServices, err = NewVcapServices()
 	if err != nil {
 		return nil, err
+	}
+
+	if sys.vcapApplication != nil {
+		sys.domain = sys.vcapApplication.GetDomain()
 	}
 
 	err = sys.registerThisService(serviceName)
@@ -79,6 +85,11 @@ func NewSystemConfig(serviceName ServiceName,
 		return nil, err
 	}
 
+	err = sys.runHealthChecks()
+	if err != nil {
+		return nil, err
+	}
+
 	return sys, nil
 }
 
@@ -90,14 +101,9 @@ func (sys *SystemConfig) registerOverrides(overrides *ServicesMap) error {
 		return nil
 	}
 
-	for k, v := range *overrides {
-		if v != "" {
-			sys.AddService(k, v)
-		} else {
-			// if they didn't give us an address, we'll default to using
-			// the service name itself with whatever domain we're in
-			sys.AddService(k, string(k)+defaultDomain)
-		}
+	// the user must give us a complete address (with domain)
+	for nam, addr := range *overrides {
+		sys.AddService(nam, addr)
 	}
 
 	return nil
@@ -111,7 +117,7 @@ func (sys *SystemConfig) registerOtherServices() error {
 		return nil
 	}
 
-	for k, v := range sys.vcapServices.Map {
+	for k, v := range sys.vcapServices.Services {
 		sys.AddService(k, v)
 	}
 
@@ -129,8 +135,8 @@ func (sys *SystemConfig) registerThisService(name ServiceName) error {
 		sys.Address = "localhost:0"
 		sys.BindTo = "localhost:0"
 	} else {
-		sys.Address = sys.vcapApplication.Address
-		sys.BindTo = sys.vcapApplication.BindToPort
+		sys.Address = sys.vcapApplication.GetAddress()
+		sys.BindTo = sys.vcapApplication.GetBindToPort()
 	}
 
 	// remember to register ourself, of course
@@ -140,7 +146,26 @@ func (sys *SystemConfig) registerThisService(name ServiceName) error {
 	return nil
 }
 
-// it is explicitly allowed to update an existing service, but we'll log it just to be safe
+func (sys *SystemConfig) runHealthChecks() error {
+	for nam, addr := range sys.endpoints {
+		if nam == sys.Name {
+			continue
+		}
+
+		resp, err := http.Get("http://" + addr)
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode != http.StatusOK {
+			return NewErrorf("Health check failed for service: %s at %s", nam, addr)
+		}
+		log.Printf("Service healthy: %s at %s", nam, addr)
+	}
+
+	return nil
+}
+
+// it is explicitly allowed for outsiders to update an existing service, but we'll log it just to be safe
 func (sys *SystemConfig) AddService(name ServiceName, address string) {
 	old, ok := sys.endpoints[name]
 	if ok {
@@ -157,6 +182,14 @@ func (sys *SystemConfig) GetService(name ServiceName) string {
 	}
 
 	return addr
+}
+
+func (sys *SystemConfig) GetDomain() string {
+	return sys.domain
+}
+
+func (sys *SystemConfig) Testing() bool {
+	return sys.Name == PzTestBed
 }
 
 func (sys *SystemConfig) String() string {

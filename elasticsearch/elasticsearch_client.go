@@ -19,20 +19,17 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/venicegeo/pz-gocommon"
-
 	"gopkg.in/olivere/elastic.v3"
-)
 
-const elasticsearchURL = "http://localhost:9200"
+	"github.com/venicegeo/pz-gocommon"
+)
 
 // Client is the object that provides access to Elasticsearch. It implements
 // the IService interface.
 type Client struct {
-	name        piazza.ServiceName
-	address     string
-	indexSuffix string
-	lib         *elastic.Client
+	indexSuffix          string
+	lib                  *elastic.Client
+	elasticsearchVersion string
 }
 
 func init() {
@@ -40,10 +37,12 @@ func init() {
 }
 
 // NewClient returns an initialized Client object.
-func NewClient(sys *piazza.SystemConfig, testMode bool) (*Client, error) {
+func NewClient(sys *piazza.SystemConfig) (*Client, error) {
+
+	url := sys.GetService(piazza.PzElasticSearch)
 
 	lib, err := elastic.NewClient(
-		elastic.SetURL(elasticsearchURL),
+		elastic.SetURL(url),
 		elastic.SetSniff(false),
 		elastic.SetMaxRetries(5),
 		//elastic.SetErrorLog(log.New(os.Stderr, "ELASTIC ", log.LstdFlags)), // TODO
@@ -53,32 +52,23 @@ func NewClient(sys *piazza.SystemConfig, testMode bool) (*Client, error) {
 		return nil, err
 	}
 
+	version, err := lib.ElasticsearchVersion(url)
+	if err != nil {
+		return nil, err
+	}
+
 	suffix := ""
-	if testMode {
+	if sys.Testing() {
 		n := rand.Intn(0xffffffff)
 		suffix = fmt.Sprintf(".%x", n)
 	}
 
-	es := Client{lib: lib, name: piazza.PzElasticSearch, address: elasticsearchURL, indexSuffix: suffix}
+	client := Client{lib: lib, indexSuffix: suffix, elasticsearchVersion: version}
 
-	if sys != nil {
-		sys.Endpoints[piazza.PzElasticSearch] = elasticsearchURL
-	}
-
-	return &es, nil
-}
-
-// GetName returns the name of the service.
-func (es Client) GetName() piazza.ServiceName {
-	return es.name
-}
-
-// GetAddress returns the IP address (and port) of this service.
-func (es Client) GetAddress() string {
-	return es.address
+	return &client, nil
 }
 
 // Version returns the version of Elasticsearch as a string, e.g. "1.5.2".
-func (es Client) Version() (string, error) {
-	return es.lib.ElasticsearchVersion(elasticsearchURL)
+func (client *Client) GetVersion() string {
+	return client.elasticsearchVersion
 }
