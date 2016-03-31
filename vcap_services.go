@@ -20,12 +20,13 @@ import (
 )
 
 type VcapServices struct {
+	////	root map[string][]serviceEntry
 	Map map[ServiceName]string
 }
 
 func NewVcapServices() (*VcapServices, error) {
 
-	str := os.Getenv("VCAP_APPLICATION")
+	str := os.Getenv("VCAP_SERVICES")
 	if str == "" {
 		return nil, nil
 	}

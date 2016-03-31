@@ -151,7 +151,7 @@ func (sys *SystemConfig) StartServer(routes http.Handler) chan error {
 	log.Printf("SystemConfig.Address: %s", sys.Address)
 	log.Printf("SystemConfig.BindTo: %s", sys.BindTo)
 
-	sys.Endpoints[sys.Name] = sys.BindTo
+	sys.AddService(sys.Name, sys.BindTo)
 
 	return done
 }

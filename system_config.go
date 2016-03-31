@@ -40,7 +40,7 @@ type SystemConfig struct {
 	BindTo  string
 
 	// our external services
-	Endpoints ServicesMap
+	endpoints ServicesMap
 
 	vcapApplication *VcapApplication
 	vcapServices    *VcapServices
@@ -51,16 +51,79 @@ func NewSystemConfig(serviceName ServiceName,
 
 	var err error
 
-	sys := &SystemConfig{
-		Name:      serviceName,
-		Endpoints: make(ServicesMap),
-	}
+	sys := &SystemConfig{}
+	sys.endpoints = make(ServicesMap)
 
-	// get information on our own service
 	sys.vcapApplication, err = NewVcapApplication()
 	if err != nil {
 		return nil, err
 	}
+
+	sys.vcapServices, err = NewVcapServices()
+	if err != nil {
+		return nil, err
+	}
+
+	err = sys.registerThisService(serviceName)
+	if err != nil {
+		return nil, nil
+	}
+
+	err = sys.registerOtherServices()
+	if err != nil {
+		return nil, err
+	}
+
+	err = sys.registerOverrides(endpointOverrides)
+	if err != nil {
+		return nil, err
+	}
+
+	return sys, nil
+}
+
+func (sys *SystemConfig) registerOverrides(overrides *ServicesMap) error {
+	// override/extend endpoints list with whatever the caller supplied for us:
+	// this allows us to test various configurations of upstream services
+
+	if overrides == nil {
+		return nil
+	}
+
+	for k, v := range *overrides {
+		if v != "" {
+			sys.AddService(k, v)
+		} else {
+			// if they didn't give us an address, we'll default to using
+			// the service name itself with whatever domain we're in
+			sys.AddService(k, string(k)+defaultDomain)
+		}
+	}
+
+	return nil
+}
+
+func (sys *SystemConfig) registerOtherServices() error {
+
+	// initialize the endpoints list with the VCAP data
+
+	if sys.vcapServices == nil {
+		return nil
+	}
+
+	for k, v := range sys.vcapServices.Map {
+		sys.AddService(k, v)
+	}
+
+	return nil
+}
+
+func (sys *SystemConfig) registerThisService(name ServiceName) error {
+
+	// get information on our own service
+
+	sys.Name = name
+
 	if sys.vcapApplication == nil {
 		// no VCAP present, so we'll assume we're in testing mode runing locally
 		sys.Address = "localhost:0"
@@ -70,30 +133,30 @@ func NewSystemConfig(serviceName ServiceName,
 		sys.BindTo = sys.vcapApplication.BindToPort
 	}
 
-	// initialize the endpoints list with the VCAP data
-	sys.vcapServices, err = NewVcapServices()
-	if err != nil {
-		return nil, err
-	}
-	if sys.vcapServices != nil {
-		for k, v := range sys.vcapServices.Map {
-			sys.Endpoints[k] = v
-		}
+	// remember to register ourself, of course
+	// (when the server is strarted, this will be updated to correspond to the "bind to" address)
+	sys.AddService(name, sys.Address)
+
+	return nil
+}
+
+// it is explicitly allowed to update an existing service, but we'll log it just to be safe
+func (sys *SystemConfig) AddService(name ServiceName, address string) {
+	old, ok := sys.endpoints[name]
+	if ok {
+		log.Printf("updating registered service %s from %s to %s", name, old, address)
 	}
 
-	// override/extend endpoints list with whatever the caller supplied for us:
-	// this allows us to test various configurations of upstream services
-	if endpointOverrides != nil {
-		for k, v := range *endpointOverrides {
-			if v != "" {
-				sys.Endpoints[k] = v
-			} else {
-				sys.Endpoints[k] = string(k) + defaultDomain
-			}
-		}
+	sys.endpoints[name] = address
+}
+
+func (sys *SystemConfig) GetService(name ServiceName) string {
+	addr, ok := sys.endpoints[name]
+	if !ok {
+		return ""
 	}
 
-	return sys, nil
+	return addr
 }
 
 func (sys *SystemConfig) String() string {
