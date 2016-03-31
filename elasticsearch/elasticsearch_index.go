@@ -17,6 +17,7 @@ package elasticsearch
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/venicegeo/pz-gocommon"
 
@@ -178,8 +179,15 @@ func (esi *Index) GetByID(typ string, id string) (*elastic.GetResult, error) {
 		return nil, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
 	}
 
-	getResult, err := esi.lib.Get().Index(esi.index).Type(typ).Id(id).Do()
-	return getResult, err
+	svc := esi.lib.Get().Index(esi.index).Type(typ).Id(id)
+	log.Printf("Index.GetByID: %s", svc.String())
+	getResult, err := svc.Do()
+	if err != nil {
+		log.Printf("Index.GetByID failed: %s", err)
+		return nil, err
+	}
+
+	return getResult, nil
 }
 
 func (esi *Index) DeleteByID(typ string, id string) (*elastic.DeleteResult, error) {

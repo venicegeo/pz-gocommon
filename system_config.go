@@ -24,6 +24,7 @@ const (
 	PzWorkflow      ServiceName = "pz-workflow"
         PzGateway       ServiceName = "pz-gateway"
 	PzElasticSearch ServiceName = "elasticsearch"
+	PzGateway       ServiceName = "pa-gateway"
 )
 
 // TODO: this should be derived from VCAP_APPLICATION?
