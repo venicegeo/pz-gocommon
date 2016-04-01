@@ -24,14 +24,13 @@ const DefaultElasticsearchAddress = "localhost:9200"
 const DefaultDomain = ".stage.geointservices.io"
 
 const (
-	PzGoCommon      ServiceName = "PZ-GOCOMMON" // not a real service, just for testing
 	PzDiscover      ServiceName = "pz-discover"
+	PzElasticSearch ServiceName = "elasticsearch"
+	PzGateway       ServiceName = "pz-gateway"
+	PzGoCommon      ServiceName = "PZ-GOCOMMON" // not a real service, just for testing
 	PzLogger        ServiceName = "pz-logger"
 	PzUuidgen       ServiceName = "pz-uuidgen"
 	PzWorkflow      ServiceName = "pz-workflow"
-        PzGateway       ServiceName = "pz-gateway"
-	PzElasticSearch ServiceName = "elasticsearch"
-	PzGateway       ServiceName = "pz-gateway"
 )
 
 type ServiceName string
