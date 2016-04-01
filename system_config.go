@@ -15,13 +15,18 @@
 package piazza
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 const DefaultElasticsearchAddress = "localhost:9200"
 const DefaultDomain = ".stage.geointservices.io"
+const DefaultProtocol = "http"
+
+type ServiceName string
 
 const (
 	PzDiscover      ServiceName = "pz-discover"
@@ -33,7 +38,23 @@ const (
 	PzWorkflow      ServiceName = "pz-workflow"
 )
 
-type ServiceName string
+var EndpointPrefixes = map[ServiceName]string{
+	PzDiscover:      "",
+	PzElasticSearch: "",
+	PzGateway:       "",
+	PzLogger:        "/v1",
+	PzUuidgen:       "/v1",
+	PzWorkflow:      "/v1",
+}
+
+var HealthcheckEndpoints = map[ServiceName]string{
+	PzDiscover:      "",
+	PzElasticSearch: "",
+	PzGateway:       "/health",
+	PzLogger:        "/",
+	PzUuidgen:       "/",
+	PzWorkflow:      "/",
+}
 
 type ServicesMap map[ServiceName]string
 
@@ -119,7 +140,11 @@ func (sys *SystemConfig) checkRequirements(requirements []ServiceName) error {
 			}
 		}
 
-		log.Printf("Required service %s: %s", name, sys.GetService(name))
+		newaddr, err := sys.GetAddress(name)
+		if err != nil {
+			return err
+		}
+		log.Printf("Required service %s: %s", name, newaddr)
 	}
 
 	return nil
@@ -130,9 +155,9 @@ func (sys *SystemConfig) runHealthChecks() error {
 
 	for name, addr := range sys.endpoints {
 		if name != sys.Name {
-			//log.Printf("Service healthy? %s at %s", nam, addr)
+			url := fmt.Sprintf("%s://%s%s", DefaultProtocol, addr, HealthcheckEndpoints[name])
 
-			url := "http://" + addr
+			//log.Printf("Service healthy? %s at %s", nam, url)
 
 			resp, err := http.Get(url)
 			if err != nil {
@@ -140,15 +165,11 @@ func (sys *SystemConfig) runHealthChecks() error {
 			}
 
 			if resp.StatusCode != http.StatusOK {
-				if name == PzGateway {
-					// TODO: Patrick doesn't have a healthcheck endpoint yet
-				} else {
-					return NewErrorf("Health check failed for service: %s at %s", name, url)
-				}
+				return NewErrorf("Health check failed for service: %s at %s", name, url)
 			}
 
-			/*log.Printf("Service healthy: %s at %s", name, addr)
-			body, err := ReadFrom(resp.Body)
+			log.Printf("Service healthy: %s at %s", name, addr)
+			/*body, err := ReadFrom(resp.Body)
 			if err != nil {
 				return err
 			}
@@ -169,13 +190,24 @@ func (sys *SystemConfig) AddService(name ServiceName, address string) {
 	}
 }
 
-func (sys *SystemConfig) GetService(name ServiceName) string {
+func (sys *SystemConfig) GetAddress(name ServiceName) (string, error) {
 	addr, ok := sys.endpoints[name]
 	if !ok {
-		return ""
+		return "", NewErrorf("Unknown service: %s", name)
 	}
 
-	return addr
+	return addr, nil
+}
+
+func (sys *SystemConfig) GetURL(name ServiceName) (string, error) {
+	addr, err := sys.GetAddress(name)
+	if err != nil {
+		return "", err
+	}
+
+	url := fmt.Sprintf("%s://%s%s", DefaultProtocol, addr, EndpointPrefixes[name])
+
+	return url, nil
 }
 
 func (sys *SystemConfig) GetDomain() string {
@@ -184,6 +216,40 @@ func (sys *SystemConfig) GetDomain() string {
 
 func (sys *SystemConfig) Testing() bool {
 	return sys.debug
+}
+
+func (sys *SystemConfig) WaitForService(name ServiceName) error {
+	addr, err := sys.GetAddress(name)
+	if err != nil {
+		return err
+	}
+
+	err = sys.WaitForServiceByAddress(name, addr)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sys *SystemConfig) WaitForServiceByAddress(name ServiceName, address string) error {
+	url := fmt.Sprintf("%s://%s", DefaultProtocol, address)
+
+	msTime := 0
+
+	for {
+		resp, err := http.Get(url)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			//log.Printf("found service %s", name)
+			return nil
+		}
+		if msTime >= waitTimeout {
+			return fmt.Errorf("timed out waiting for service: %s at %s", name, url)
+		}
+		time.Sleep(waitSleep * time.Millisecond)
+		msTime += waitSleep
+	}
+	/* notreached */
 }
 
 /*

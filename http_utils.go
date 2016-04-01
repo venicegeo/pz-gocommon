@@ -142,7 +142,7 @@ func (sys *SystemConfig) StartServer(routes http.Handler) chan error {
 
 	<-ready
 
-	err := WaitForService(sys.Name, sys.BindTo)
+	err := sys.WaitForServiceByAddress(sys.Name, sys.BindTo)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -152,24 +152,4 @@ func (sys *SystemConfig) StartServer(routes http.Handler) chan error {
 	sys.AddService(sys.Name, sys.BindTo)
 
 	return done
-}
-
-func WaitForService(name ServiceName, address string) error {
-	url := fmt.Sprintf("http://%s", address)
-
-	msTime := 0
-
-	for {
-		resp, err := http.Get(url)
-		if err == nil && resp.StatusCode == http.StatusOK {
-			//log.Printf("found service %s", name)
-			return nil
-		}
-		if msTime >= waitTimeout {
-			return fmt.Errorf("timed out waiting for service: %s at %s", name, url)
-		}
-		time.Sleep(waitSleep * time.Millisecond)
-		msTime += waitSleep
-	}
-	/* notreached */
 }
