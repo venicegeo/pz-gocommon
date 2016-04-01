@@ -49,8 +49,8 @@ func (suite *CommonTester) TestSystemConfig() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	endpoints := &ServicesMap{}
+	required := []ServiceName{}
 
-	_, err := NewSystemConfig(PzTest, endpoints)
+	_, err := NewSystemConfig(PzGoCommon, required, true)
 	assert.NoError(err)
 }

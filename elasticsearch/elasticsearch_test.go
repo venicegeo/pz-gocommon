@@ -22,10 +22,11 @@ import (
 	"strings"
 	"testing"
 
+	"gopkg.in/olivere/elastic.v3"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/venicegeo/pz-gocommon"
-	"gopkg.in/olivere/elastic.v2"
 )
 
 type EsTester struct {
@@ -79,18 +80,18 @@ func (suite *EsTester) SetUpIndex() *Index {
 	t := suite.T()
 	assert := assert.New(t)
 
-	endpoints := &piazza.ServicesMap{
-		piazza.PzElasticSearch: "https://search-venice-es-pjebjkdaueu2gukocyccj4r5m4.us-east-1.es.amazonaws.com",
+	required := []piazza.ServiceName{
+		piazza.PzElasticSearch,
 	}
 
-	sys, err := piazza.NewSystemConfig(piazza.PzTest, endpoints)
+	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required, true)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	suite.sys = sys
 
-	esBase, err := NewClient(suite.sys, true)
+	esBase, err := NewClient(suite.sys)
 	assert.NoError(err)
 	assert.NotNil(esBase)
 
@@ -166,13 +167,19 @@ func (suite *EsTester) Test01Client() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	es, err := NewClient(nil, true)
+	// since this library doesn't have a PCF manifest, we need
+	// to explicitly require an ES server
+	required := []piazza.ServiceName{piazza.PzElasticSearch}
+	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required, true)
+	assert.NoError(err)
+
+	es, err := NewClient(sys)
 	assert.NoError(err)
 	assert.NotNil(es)
 
-	version, err := es.Version()
+	version := es.GetVersion()
 	assert.NoError(err)
-	assert.Contains("1.5.2", version)
+	assert.Contains("2.2.0", version)
 
 	//deleteOldIndexes(es.lib)
 }
@@ -624,7 +631,7 @@ func (suite *EsTester) Test09FullPercolation() {
 
 	// create index
 	{
-		esBase, err := NewClient(nil, true)
+		esBase, err := NewClient(suite.sys)
 		assert.NoError(err)
 		assert.NotNil(esBase)
 

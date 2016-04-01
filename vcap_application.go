@@ -12,6 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// example:
+//     "VCAP_APPLICATION": {
+//         "application_id": "14fca253-8087-402e-abf5-8fd40ddda81f",
+//         "application_name": "pz-workflow",
+//         "application_uris": [
+//             "pz-workflow.stage.geointservices.io"
+//         ],
+//         "application_version": "5f0ee99d-252c-4f8d-b241-bc3e22534afc",
+//         "limits": {
+//             "disk": 1024,
+//             "fds": 16384,
+//             "mem": 512
+//         },
+//         "name": "pz-workflow",
+//         "space_id": "d65a0987-df00-4d69-a50b-657e52cb2f8e",
+//         "space_name": "simulator-stage",
+//         "uris": [
+//             "pz-workflow.stage.geointservices.io"
+//         ],
+//         "users": null,
+//         "version": "5f0ee99d-252c-4f8d-b241-bc3e22534afc"
+//     }
+
 package piazza
 
 import (
@@ -19,44 +42,92 @@ import (
 	"errors"
 	"log"
 	"os"
+	"strings"
 )
 
 type VcapApplication struct {
-	Name            ServiceName
-	Address         string
-	BindToPort      string
-	ApplicationID   string   `json:"application_id"`
-	ApplicationName string   `json:"application_name"`
-	ApplicationURIs []string `json:"application_uris"`
+	ApplicationID      string         `json:"application_id"`
+	ApplicationName    string         `json:"application_name"`
+	ApplicationURIs    []string       `json:"application_uris"`
+	ApplicationVersion string         `json:"application_version"`
+	Limits             map[string]int `json:"limits"`
+	Name               string         `json:"name"`
+	SpaceId            string         `json:"space_id"`
+	SpaceName          string         `json:"space_name"`
+	URIs               []string       `json:"uris"`
+	Users              interface{}    `json:"users"` // don't know what the datattype actually is
+	Version            string         `json:"version"`
+
+	bindToPort string
+	domain     string
+}
+
+// if running on laptop, we'll use this
+var localVcapApplication = &VcapApplication{
+	ApplicationName: "myapplicationname",
+	ApplicationURIs: []string{"localhost:0"},
+	bindToPort:      "localhost:0",
+	domain:          ".stage.geointservices.io",
+}
+
+// if running on Jenkins, use this
+var jenkinsVcap = &VcapApplication{
+	ApplicationName: "myapplicationname",
+	ApplicationURIs: []string{"localhost:0"},
+	bindToPort:      "localhost:0",
+	domain:          ".stage.geointservices.io",
 }
 
 func NewVcapApplication() (*VcapApplication, error) {
 
+	var err error
+	var vcap *VcapApplication
+
 	str := os.Getenv("VCAP_APPLICATION")
-	if str == "" {
-		return nil, nil
+	if str != "" {
+		log.Printf("VCAP_APPLICATION:\n%s", str)
+		vcap = &VcapApplication{}
+
+		err = json.Unmarshal([]byte(str), vcap)
+		if err != nil {
+			return nil, err
+		}
+
+		vcap.bindToPort = os.Getenv("PORT")
+		if str == "" {
+			return nil, errors.New("Unable to read $PORT for PCF deployment")
+		}
+
+		vcap.bindToPort = ":" + vcap.bindToPort
+		log.Printf("PORT: %s", vcap.bindToPort)
+
+		full := vcap.GetAddress()
+		dot := strings.Index(full, ".")
+		if dot == -1 {
+			return nil, NewErrorf("error extracting domain from address %s", full)
+		}
+		vcap.domain = full[dot+1:]
+
+	} else {
+		// TODO: differentiate between local and Jenkins?
+		vcap = localVcapApplication
 	}
-
-	log.Printf("VCAP_APPLICATION:\n%s", str)
-
-	vcap := &VcapApplication{}
-
-	err := json.Unmarshal([]byte(str), vcap)
-	if err != nil {
-		return nil, err
-	}
-
-	vcap.Name = ServiceName(vcap.ApplicationName)
-	vcap.Address = vcap.ApplicationURIs[0]
-
-	port := os.Getenv("PORT")
-	if str == "" {
-		return nil, errors.New("Unable to read $PORT for PCF deployment")
-	}
-
-	log.Printf("PORT: %s", port)
-
-	vcap.BindToPort = ":" + port
 
 	return vcap, nil
+}
+
+func (vcap *VcapApplication) GetAddress() string {
+	return vcap.ApplicationURIs[0]
+}
+
+func (vcap *VcapApplication) GetName() ServiceName {
+	return ServiceName(vcap.ApplicationName)
+}
+
+func (vcap *VcapApplication) GetBindToPort() string {
+	return vcap.bindToPort
+}
+
+func (vcap *VcapApplication) GetDomain() string {
+	return vcap.domain
 }

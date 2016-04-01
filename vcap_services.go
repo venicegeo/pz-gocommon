@@ -12,26 +12,86 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
+"VCAP_SERVICES": {
+  "user-provided": [
+   {
+    "credentials": {
+     "host": "172.32.125.109:9200"
+    },
+    "label": "user-provided",
+    "name": "pz-elasticsearch",
+    "syslog_drain_url": "",
+    "tags": []
+   }
+  ]
+ }
+}
+*/
+
 package piazza
 
 import (
+	"encoding/json"
 	"log"
 	"os"
 )
 
+type VcapCredentials struct {
+	Host string `json:"host"`
+}
+
+type VcapServiceEntry struct {
+	Credentials    VcapCredentials `json:"credentials"`
+	Label          string          `json:"label"`
+	Name           string          `json:"string"`
+	SyslogDrainUrl string          `json:"syslog_drain_url"`
+	Tags           []string        `json:"tags"`
+}
+
 type VcapServices struct {
-	Map map[ServiceName]string
+	UserProvided []VcapServiceEntry `json:"user-provided"`
+
+	Services map[ServiceName]string
+}
+
+var localVcapServices = &VcapServices{
+	UserProvided: []VcapServiceEntry{
+		VcapServiceEntry{
+			Name: "elasticsearch",
+			Credentials: VcapCredentials{
+				Host: "localhost:9200",
+			},
+		},
+	},
 }
 
 func NewVcapServices() (*VcapServices, error) {
 
-	str := os.Getenv("VCAP_APPLICATION")
-	if str == "" {
-		return nil, nil
+	var err error
+	var vcap *VcapServices
+
+	str := os.Getenv("VCAP_SERVICES")
+	if str != "" {
+
+		log.Printf("VCAP_SERVICES:\n%s", str)
+
+		err = json.Unmarshal([]byte(str), vcap)
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+		vcap = localVcapServices
 	}
 
-	log.Printf("VCAP_SERVICES:\n%s", str)
+	vcap.Services = make(ServicesMap)
 
-	vcap := &VcapServices{Map: make(ServicesMap)}
+	for _, serviceEntry := range vcap.UserProvided {
+		name := ServiceName(serviceEntry.Name)
+		addr := serviceEntry.Credentials.Host
+		vcap.Services[name] = addr
+	}
+
 	return vcap, nil
 }

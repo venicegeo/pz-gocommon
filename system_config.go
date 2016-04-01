@@ -14,23 +14,47 @@
 
 package piazza
 
-import "log"
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"strings"
+	"time"
+)
+
+const DefaultElasticsearchAddress = "localhost:9200"
+const DefaultDomain = ".stage.geointservices.io"
+const DefaultProtocol = "http"
+
+type ServiceName string
 
 const (
-	PzTest          ServiceName = "PZ-TEST"
 	PzDiscover      ServiceName = "pz-discover"
+	PzElasticSearch ServiceName = "elasticsearch"
+	PzGateway       ServiceName = "pz-gateway"
+	PzGoCommon      ServiceName = "PZ-GOCOMMON" // not a real service, just for testing
 	PzLogger        ServiceName = "pz-logger"
 	PzUuidgen       ServiceName = "pz-uuidgen"
 	PzWorkflow      ServiceName = "pz-workflow"
-        PzGateway       ServiceName = "pz-gateway"
-	PzElasticSearch ServiceName = "elasticsearch"
-	PzGateway       ServiceName = "pa-gateway"
 )
 
-// TODO: this should be derived from VCAP_APPLICATION?
-const defaultDomain = ".stage.geointservices.io"
+var EndpointPrefixes = map[ServiceName]string{
+	PzDiscover:      "",
+	PzElasticSearch: "",
+	PzGateway:       "",
+	PzLogger:        "/v1",
+	PzUuidgen:       "/v1",
+	PzWorkflow:      "/v1",
+}
 
-type ServiceName string
+var HealthcheckEndpoints = map[ServiceName]string{
+	PzDiscover:      "",
+	PzElasticSearch: "",
+	PzGateway:       "/health",
+	PzLogger:        "/",
+	PzUuidgen:       "/",
+	PzWorkflow:      "/",
+}
 
 type ServicesMap map[ServiceName]string
 
@@ -41,67 +65,191 @@ type SystemConfig struct {
 	BindTo  string
 
 	// our external services
-	Endpoints ServicesMap
+	endpoints ServicesMap
 
 	vcapApplication *VcapApplication
 	vcapServices    *VcapServices
+	domain          string
+	debug           bool
 }
 
 func NewSystemConfig(serviceName ServiceName,
-	endpointOverrides *ServicesMap) (*SystemConfig, error) {
+	requiredServices []ServiceName,
+	debug bool) (*SystemConfig, error) {
 
 	var err error
 
-	sys := &SystemConfig{
-		Name:      serviceName,
-		Endpoints: make(ServicesMap),
-	}
+	sys := &SystemConfig{endpoints: make(ServicesMap), debug: debug}
 
-	// get information on our own service
 	sys.vcapApplication, err = NewVcapApplication()
 	if err != nil {
 		return nil, err
 	}
-	if sys.vcapApplication == nil {
-		// no VCAP present, so we'll assume we're in testing mode runing locally
-		sys.Address = "localhost:0"
-		sys.BindTo = "localhost:0"
-	} else {
-		sys.Address = sys.vcapApplication.Address
-		sys.BindTo = sys.vcapApplication.BindToPort
-	}
 
-	// initialize the endpoints list with the VCAP data
 	sys.vcapServices, err = NewVcapServices()
 	if err != nil {
 		return nil, err
 	}
-	if sys.vcapServices != nil {
-		for k, v := range sys.vcapServices.Map {
-			sys.Endpoints[k] = v
-		}
+
+	if sys.vcapApplication != nil {
+		sys.domain = sys.vcapApplication.GetDomain()
+	} else {
+		sys.domain = DefaultDomain
 	}
 
-	// override/extend endpoints list with whatever the caller supplied for us:
-	// this allows us to test various configurations of upstream services
-	if endpointOverrides != nil {
-		for k, v := range *endpointOverrides {
-			if v != "" {
-				sys.Endpoints[k] = v
-			} else {
-				sys.Endpoints[k] = string(k) + defaultDomain
-			}
-		}
+	// set some data about our own service first
+	sys.Name = serviceName
+	sys.Address = sys.vcapApplication.GetAddress()
+	sys.BindTo = sys.vcapApplication.GetBindToPort()
+
+	// set the services table with the services we require,
+	// using VcapServices to get the addresses
+	err = sys.checkRequirements(requiredServices)
+	if err != nil {
+		return nil, err
+	}
+
+	err = sys.runHealthChecks()
+	if err != nil {
+		return nil, err
 	}
 
 	return sys, nil
 }
 
-func (sys *SystemConfig) String() string {
-	log.Printf("SystemConfig.Name: %s", sys.Name)
-	log.Printf("SystemConfig.eAddress: %s", sys.Address)
-	log.Printf("SystemConfig.BindTo: %s", sys.BindTo)
-	return "-config-"
+func (sys *SystemConfig) checkRequirements(requirements []ServiceName) error {
+
+	for _, name := range requirements {
+
+		if name == sys.Name {
+			sys.AddService(name, sys.Address)
+
+		} else {
+			if addr, ok := sys.vcapServices.Services[name]; !ok {
+				sys.AddService(name, string(name)+DefaultDomain)
+
+			} else {
+
+				if strings.HasPrefix(string(addr), "localhost") {
+					// special cases, e.g. for elasticsearch: do nothing
+					sys.AddService(name, addr)
+
+				} else {
+					sys.AddService(name, addr+DefaultDomain)
+				}
+			}
+		}
+
+		newaddr, err := sys.GetAddress(name)
+		if err != nil {
+			return err
+		}
+		log.Printf("Required service %s: %s", name, newaddr)
+	}
+
+	return nil
+}
+
+func (sys *SystemConfig) runHealthChecks() error {
+	//log.Printf("SystemConfig.runHealthChecks: start")
+
+	for name, addr := range sys.endpoints {
+		if name != sys.Name {
+			url := fmt.Sprintf("%s://%s%s", DefaultProtocol, addr, HealthcheckEndpoints[name])
+
+			//log.Printf("Service healthy? %s at %s", nam, url)
+
+			resp, err := http.Get(url)
+			if err != nil {
+				return err
+			}
+
+			if resp.StatusCode != http.StatusOK {
+				return NewErrorf("Health check failed for service: %s at %s", name, url)
+			}
+
+			log.Printf("Service healthy: %s at %s", name, addr)
+			/*body, err := ReadFrom(resp.Body)
+			if err != nil {
+				return err
+			}
+			log.Printf(">>> %s <<<", string(body))*/
+		}
+	}
+
+	//log.Printf("SystemConfig.runHealthChecks: end")
+	return nil
+}
+
+// it is explicitly allowed for outsiders to update an existing service, but we'll log it just to be safe
+func (sys *SystemConfig) AddService(name ServiceName, address string) {
+	old, ok := sys.endpoints[name]
+	sys.endpoints[name] = address
+	if ok {
+		log.Printf("SystemConfig.AddService: updated %s from %s to %s", name, old, address)
+	}
+}
+
+func (sys *SystemConfig) GetAddress(name ServiceName) (string, error) {
+	addr, ok := sys.endpoints[name]
+	if !ok {
+		return "", NewErrorf("Unknown service: %s", name)
+	}
+
+	return addr, nil
+}
+
+func (sys *SystemConfig) GetURL(name ServiceName) (string, error) {
+	addr, err := sys.GetAddress(name)
+	if err != nil {
+		return "", err
+	}
+
+	url := fmt.Sprintf("%s://%s%s", DefaultProtocol, addr, EndpointPrefixes[name])
+
+	return url, nil
+}
+
+func (sys *SystemConfig) GetDomain() string {
+	return sys.domain
+}
+
+func (sys *SystemConfig) Testing() bool {
+	return sys.debug
+}
+
+func (sys *SystemConfig) WaitForService(name ServiceName) error {
+	addr, err := sys.GetAddress(name)
+	if err != nil {
+		return err
+	}
+
+	err = sys.WaitForServiceByAddress(name, addr)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sys *SystemConfig) WaitForServiceByAddress(name ServiceName, address string) error {
+	url := fmt.Sprintf("%s://%s", DefaultProtocol, address)
+
+	msTime := 0
+
+	for {
+		resp, err := http.Get(url)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			//log.Printf("found service %s", name)
+			return nil
+		}
+		if msTime >= waitTimeout {
+			return fmt.Errorf("timed out waiting for service: %s at %s", name, url)
+		}
+		time.Sleep(waitSleep * time.Millisecond)
+		msTime += waitSleep
+	}
+	/* notreached */
 }
 
 /*
