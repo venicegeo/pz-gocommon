@@ -24,6 +24,10 @@ import (
 	"github.com/venicegeo/pz-gocommon"
 )
 
+type IClient interface {
+	GetVersion() string
+}
+
 // Client is the object that provides access to Elasticsearch. It implements
 // the IService interface.
 type Client struct {
@@ -76,4 +80,19 @@ func NewClient(sys *piazza.SystemConfig) (*Client, error) {
 // Version returns the version of Elasticsearch as a string, e.g. "1.5.2".
 func (client *Client) GetVersion() string {
 	return client.elasticsearchVersion
+}
+
+//======================================================================================
+
+type MockClient struct {
+}
+
+func NewMockClient(sys *piazza.SystemConfig) (*MockClient, error) {
+	m := &MockClient{}
+	return m, nil
+}
+
+// Version returns the version of Elasticsearch as a string, e.g. "1.5.2".
+func (client *MockClient) GetVersion() string {
+	return "2.2.0"
 }

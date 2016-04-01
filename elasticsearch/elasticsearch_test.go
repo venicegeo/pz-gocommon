@@ -29,7 +29,7 @@ import (
 	"github.com/venicegeo/pz-gocommon"
 )
 
-const mocking = true
+const MOCKING = true
 
 type EsTester struct {
 	suite.Suite
@@ -93,17 +93,26 @@ func (suite *EsTester) SetUpIndex() IIndex {
 
 	suite.sys = sys
 
-	esBase, err := NewClient(suite.sys)
-	assert.NoError(err)
-	assert.NotNil(esBase)
-
 	var esi IIndex
-	if mocking {
-		esi = NewMockIndex(esBase, "estest")
+	if MOCKING {
+		var client *MockClient
+		var index *MockIndex
+		client, err = NewMockClient(suite.sys)
+		assert.NoError(err)
+		assert.NotNil(client)
+		index = NewMockIndex(client, "estest")
+		assert.NotNil(index)
+		esi = index
 	} else {
-		esi = NewIndex(esBase, "estest")
+		var client *Client
+		var index *Index
+		client, err = NewClient(suite.sys)
+		assert.NoError(err)
+		assert.NotNil(client)
+		index = NewIndex(client, "estest")
+		assert.NotNil(index)
+		esi = index
 	}
-	assert.NotNil(esi)
 
 	err = esi.Delete()
 	//assert.NoError(err)
@@ -244,7 +253,7 @@ func (suite *EsTester) Test03Operations() {
 		assert.EqualValues("data1", tmp1.Data)
 	}
 
-	if !mocking {
+	if !MOCKING {
 		{
 			// SEARCH for everything
 			searchResult, err := esi.FilterByMatchAll(mapping)
@@ -252,11 +261,10 @@ func (suite *EsTester) Test03Operations() {
 			assert.NotNil(searchResult)
 
 			assert.Equal(int64(3), searchResult.TotalHits())
-			assert.EqualValues(3, searchResult.Hits.TotalHits)
 
 			m := make(map[string]Obj)
 
-			for _, hit := range searchResult.Hits.Hits {
+			for _, hit := range *searchResult.Hits() {
 				err = json.Unmarshal(*hit.Source, &tmp1)
 				assert.NoError(err)
 				m[tmp1.ID] = tmp1
@@ -315,7 +323,7 @@ func (suite *EsTester) Test03Operations() {
 }
 
 func (suite *EsTester) Test04JsonOperations() {
-	if mocking {
+	if MOCKING {
 		return
 	}
 
@@ -409,7 +417,7 @@ func (suite *EsTester) Test04JsonOperations() {
 }
 
 func (suite *EsTester) Test05Mapping() {
-	if mocking {
+	if MOCKING {
 		return
 	}
 
@@ -459,7 +467,7 @@ func (suite *EsTester) Test05Mapping() {
 }
 
 func (suite *EsTester) Test06SetMapping() {
-	if mocking {
+	if MOCKING {
 		return
 	}
 
@@ -555,7 +563,7 @@ func (suite *EsTester) Test07ConstructMapping() {
 }
 
 func (suite *EsTester) Test08Percolation() {
-	if mocking {
+	if MOCKING {
 		return
 	}
 
@@ -643,14 +651,11 @@ func sortMatches(matches []*elastic.PercolateMatch) []*elastic.PercolateMatch {
 }
 
 func (suite *EsTester) Test09FullPercolation() {
-	if mocking {
-		return
-	}
-
 	t := suite.T()
 	assert := assert.New(t)
 
 	var esi IIndex
+
 	var index = "fullperctest"
 	var err error
 
@@ -661,16 +666,19 @@ func (suite *EsTester) Test09FullPercolation() {
 
 	// create index
 	{
-		esBase, err := NewClient(suite.sys)
-		assert.NoError(err)
-		assert.NotNil(esBase)
-
-		if mocking {
+		if MOCKING {
+			esBase, err := NewMockClient(suite.sys)
+			assert.NoError(err)
+			assert.NotNil(esBase)
 			esi = NewMockIndex(esBase, index)
+			assert.NotNil(esi)
 		} else {
+			esBase, err := NewClient(suite.sys)
+			assert.NoError(err)
+			assert.NotNil(esBase)
 			esi = NewIndex(esBase, index)
+			assert.NotNil(esi)
 		}
-		assert.NotNil(esi)
 
 		// make the index
 		err = esi.Create()
@@ -684,6 +692,10 @@ func (suite *EsTester) Test09FullPercolation() {
 	{
 		err = esi.Flush()
 		assert.NoError(err)
+	}
+
+	if MOCKING {
+		return
 	}
 
 	//-----------------------------------------------------------------------
