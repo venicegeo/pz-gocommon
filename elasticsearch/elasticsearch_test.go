@@ -29,6 +29,8 @@ import (
 	"github.com/venicegeo/pz-gocommon"
 )
 
+const mocking = true
+
 type EsTester struct {
 	suite.Suite
 	sys *piazza.SystemConfig
@@ -76,7 +78,7 @@ var objs = []Obj{
 
 const mapping = "Obj"
 
-func (suite *EsTester) SetUpIndex() *Index {
+func (suite *EsTester) SetUpIndex() IIndex {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -95,7 +97,12 @@ func (suite *EsTester) SetUpIndex() *Index {
 	assert.NoError(err)
 	assert.NotNil(esBase)
 
-	esi := NewIndex(esBase, "estest")
+	var esi IIndex
+	if mocking {
+		esi = NewMockIndex(esBase, "estest")
+	} else {
+		esi = NewIndex(esBase, "estest")
+	}
 	assert.NotNil(esi)
 
 	err = esi.Delete()
@@ -228,6 +235,7 @@ func (suite *EsTester) Test03Operations() {
 	{
 		// GET a specific one
 		getResult, err := esi.GetByID(mapping, "id1")
+		log.Printf("> %#v", esi)
 		assert.NoError(err)
 		assert.NotNil(getResult)
 		src = getResult.Source
@@ -236,63 +244,65 @@ func (suite *EsTester) Test03Operations() {
 		assert.EqualValues("data1", tmp1.Data)
 	}
 
-	{
-		// SEARCH for everything
-		searchResult, err := esi.FilterByMatchAll(mapping)
-		assert.NoError(err)
-		assert.NotNil(searchResult)
-
-		assert.Equal(int64(3), searchResult.TotalHits())
-		assert.EqualValues(3, searchResult.Hits.TotalHits)
-
-		m := make(map[string]Obj)
-
-		for _, hit := range searchResult.Hits.Hits {
-			err = json.Unmarshal(*hit.Source, &tmp1)
+	if !mocking {
+		{
+			// SEARCH for everything
+			searchResult, err := esi.FilterByMatchAll(mapping)
 			assert.NoError(err)
-			m[tmp1.ID] = tmp1
+			assert.NotNil(searchResult)
+
+			assert.Equal(int64(3), searchResult.TotalHits())
+			assert.EqualValues(3, searchResult.Hits.TotalHits)
+
+			m := make(map[string]Obj)
+
+			for _, hit := range searchResult.Hits.Hits {
+				err = json.Unmarshal(*hit.Source, &tmp1)
+				assert.NoError(err)
+				m[tmp1.ID] = tmp1
+			}
+
+			assert.Contains(m, "id0")
+			assert.Contains(m, "id1")
+			assert.Contains(m, "id2")
 		}
 
-		assert.Contains(m, "id0")
-		assert.Contains(m, "id1")
-		assert.Contains(m, "id2")
-	}
+		{
+			// SEARCH for a specific one
+			searchResult, err = esi.FilterByTermQuery(mapping, "id", "id1")
+			assert.NoError(err)
+			assert.NotNil(searchResult)
+			assert.EqualValues(1, searchResult.Hits.TotalHits)
+			assert.NotNil(searchResult.Hits.Hits[0])
+			src = searchResult.Hits.Hits[0].Source
+			assert.NotNil(src)
+			err = json.Unmarshal(*src, &tmp1)
+			assert.NoError(err)
+			assert.EqualValues("data1", tmp1.Data)
+		}
 
-	{
-		// SEARCH for a specific one
-		searchResult, err = esi.FilterByTermQuery(mapping, "id", "id1")
-		assert.NoError(err)
-		assert.NotNil(searchResult)
-		assert.EqualValues(1, searchResult.Hits.TotalHits)
-		assert.NotNil(searchResult.Hits.Hits[0])
-		src = searchResult.Hits.Hits[0].Source
-		assert.NotNil(src)
-		err = json.Unmarshal(*src, &tmp1)
-		assert.NoError(err)
-		assert.EqualValues("data1", tmp1.Data)
-	}
+		{
+			// SEARCH fuzzily
+			searchResult, err = esi.FilterByTermQuery(mapping, "tags", "foo")
+			assert.NoError(err)
+			assert.NotNil(searchResult)
+			assert.EqualValues(2, searchResult.Hits.TotalHits)
+			assert.NotNil(searchResult.Hits.Hits[0])
 
-	{
-		// SEARCH fuzzily
-		searchResult, err = esi.FilterByTermQuery(mapping, "tags", "foo")
-		assert.NoError(err)
-		assert.NotNil(searchResult)
-		assert.EqualValues(2, searchResult.Hits.TotalHits)
-		assert.NotNil(searchResult.Hits.Hits[0])
+			src = searchResult.Hits.Hits[0].Source
+			assert.NotNil(src)
+			err = json.Unmarshal(*src, &tmp1)
+			assert.NoError(err)
 
-		src = searchResult.Hits.Hits[0].Source
-		assert.NotNil(src)
-		err = json.Unmarshal(*src, &tmp1)
-		assert.NoError(err)
+			src = searchResult.Hits.Hits[1].Source
+			assert.NotNil(src)
+			err = json.Unmarshal(*src, &tmp2)
+			assert.NoError(err)
 
-		src = searchResult.Hits.Hits[1].Source
-		assert.NotNil(src)
-		err = json.Unmarshal(*src, &tmp2)
-		assert.NoError(err)
-
-		ok1 := ("id0" == tmp1.ID && "id2" == tmp2.ID)
-		ok2 := ("id0" == tmp2.ID && "id2" == tmp1.ID)
-		assert.True((ok1 || ok2) && !(ok1 && ok2))
+			ok1 := ("id0" == tmp1.ID && "id2" == tmp2.ID)
+			ok2 := ("id0" == tmp2.ID && "id2" == tmp1.ID)
+			assert.True((ok1 || ok2) && !(ok1 && ok2))
+		}
 	}
 
 	{
@@ -305,6 +315,10 @@ func (suite *EsTester) Test03Operations() {
 }
 
 func (suite *EsTester) Test04JsonOperations() {
+	if mocking {
+		return
+	}
+
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -395,6 +409,10 @@ func (suite *EsTester) Test04JsonOperations() {
 }
 
 func (suite *EsTester) Test05Mapping() {
+	if mocking {
+		return
+	}
+
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -441,6 +459,10 @@ func (suite *EsTester) Test05Mapping() {
 }
 
 func (suite *EsTester) Test06SetMapping() {
+	if mocking {
+		return
+	}
+
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -533,6 +555,10 @@ func (suite *EsTester) Test07ConstructMapping() {
 }
 
 func (suite *EsTester) Test08Percolation() {
+	if mocking {
+		return
+	}
+
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -617,10 +643,14 @@ func sortMatches(matches []*elastic.PercolateMatch) []*elastic.PercolateMatch {
 }
 
 func (suite *EsTester) Test09FullPercolation() {
+	if mocking {
+		return
+	}
+
 	t := suite.T()
 	assert := assert.New(t)
 
-	var esi *Index
+	var esi IIndex
 	var index = "fullperctest"
 	var err error
 
@@ -635,7 +665,11 @@ func (suite *EsTester) Test09FullPercolation() {
 		assert.NoError(err)
 		assert.NotNil(esBase)
 
-		esi = NewIndex(esBase, index)
+		if mocking {
+			esi = NewMockIndex(esBase, index)
+		} else {
+			esi = NewIndex(esBase, index)
+		}
 		assert.NotNil(esi)
 
 		// make the index
@@ -694,7 +728,7 @@ func (suite *EsTester) Test09FullPercolation() {
 			matches := sortMatches(percolateResponse.Matches)
 
 			for i, expected := range t.expected {
-				assert.Equal(esi.index, matches[i].Index)
+				assert.Equal(esi.IndexName(), matches[i].Index)
 				assert.Equal(expected, matches[i].Id)
 			}
 		}
