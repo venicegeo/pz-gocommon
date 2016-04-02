@@ -37,6 +37,31 @@ const (
 	MappingElementTypeLong    MappingElementTypeName = "long"
 )
 
+type IIndex interface {
+	GetVersion() string
+
+	IndexName() string
+	IndexExists() bool
+	TypeExists(typ string) bool
+	ItemExists(typ string, id string) bool
+	Create() error
+	Close() error
+	Delete() error
+	Flush() error
+	PostData(typ string, id string, obj interface{}) (*IndexResponse, error)
+	GetByID(typ string, id string) (*GetResult, error)
+	DeleteByID(typ string, id string) (*DeleteResponse, error)
+	FilterByMatchAll(typ string) (*SearchResult, error)
+	FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error)
+	SearchByJSON(typ string, jsn string) (*SearchResult, error)
+	SetMapping(typename string, jsn piazza.JsonString) error
+	GetTypes() ([]string, error)
+	GetMapping(typ string) (interface{}, error)
+	AddPercolationQuery(id string, query piazza.JsonString) (*IndexResponse, error)
+	DeletePercolationQuery(id string) (*DeleteResponse, error)
+	AddPercolationDocument(typ string, doc interface{}) (*PercolateResponse, error)
+}
+
 // ConstructMappingSchema takes a map of parameter names to datatypes and
 // returns the corresponding ES DSL for it.
 func ConstructMappingSchema(name string, items map[string]MappingElementTypeName) (piazza.JsonString, error) {

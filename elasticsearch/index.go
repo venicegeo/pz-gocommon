@@ -16,128 +16,58 @@ package elasticsearch
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
-	"strconv"
+	"time"
 
 	"github.com/venicegeo/pz-gocommon"
 
 	"gopkg.in/olivere/elastic.v3"
 )
 
-type SeachResutlHit struct {
-	Id     string
-	Source *json.RawMessage
-}
-
-type SearchResult struct {
-	totalHits int64
-	hits      []*SeachResutlHit
-}
-
-func NewSearchResult(searchResult *elastic.SearchResult) *SearchResult {
-	resp := &SearchResult{
-		totalHits: searchResult.TotalHits(),
-		hits:      make([]*SeachResutlHit, searchResult.TotalHits()),
-	}
-
-	for i, hit := range searchResult.Hits.Hits {
-		tmp := &SeachResutlHit{
-			Id:     hit.Id,
-			Source: hit.Source,
-		}
-		resp.hits[i] = tmp
-	}
-
-	return resp
-}
-
-func (r *SearchResult) TotalHits() int64 {
-	return r.totalHits
-}
-
-func (r *SearchResult) Hits() *[]*SeachResutlHit {
-	return &r.hits
-}
-
-type IndexResponse struct {
-	Created bool
-	Id      string
-	Index   string
-	Type    string
-}
-
-func NewIndexResponse(indexResponse *elastic.IndexResponse) *IndexResponse {
-	resp := &IndexResponse{}
-	return resp
-}
-
-type PercolateResponse struct {
-}
-
-func NewPercolateResponse(percolateResponse *elastic.PercolateResponse) *PercolateResponse {
-	resp := &PercolateResponse{}
-	return resp
-}
-
-type DeleteResponse struct {
-	Found bool
-}
-
-func NewDeleteResponse(deleteResponse *elastic.DeleteResponse) *DeleteResponse {
-	resp := &DeleteResponse{}
-	return resp
-}
-
-type GetResult struct {
-	Id     string
-	Source *json.RawMessage
-}
-
-func NewGetResult(getResult *elastic.GetResult) *GetResult {
-	resp := &GetResult{}
-	return resp
-}
-
-//===================================================
-
 type Index struct {
-	esClient *Client
-	lib      *elastic.Client
-	index    string
+	lib     *elastic.Client
+	version string
+	index   string
 }
 
-type IIndex interface {
-	IndexName() string
-	IndexExists() bool
-	TypeExists(typ string) bool
-	ItemExists(typ string, id string) bool
-	Create() error
-	Close() error
-	Delete() error
-	Flush() error
-	PostData(typ string, id string, obj interface{}) (*IndexResponse, error)
-	GetByID(typ string, id string) (*GetResult, error)
-	DeleteByID(typ string, id string) (*DeleteResponse, error)
-	FilterByMatchAll(typ string) (*SearchResult, error)
-	FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error)
-	SearchByJSON(typ string, jsn string) (*SearchResult, error)
-	SetMapping(typename string, jsn piazza.JsonString) error
-	GetTypes() ([]string, error)
-	GetMapping(typ string) (interface{}, error)
-	AddPercolationQuery(id string, query piazza.JsonString) (*IndexResponse, error)
-	DeletePercolationQuery(id string) (*DeleteResponse, error)
-	AddPercolationDocument(typ string, doc interface{}) (*PercolateResponse, error)
-}
+func NewIndex(sys *piazza.SystemConfig, index string) (*Index, error) {
 
-func NewIndex(es *Client, index string) *Index {
-	esi := &Index{
-		esClient: es,
-		lib:      es.lib,
-		index:    index + es.indexSuffix,
+	esi := &Index{}
+
+	suffix := ""
+	if sys.Testing() {
+		n := time.Now().Nanosecond()
+		suffix = fmt.Sprintf(".%x", n)
 	}
-	return esi
+	esi.index = index + suffix
+
+	url, err := sys.GetURL(piazza.PzElasticSearch)
+	if err != nil {
+		return nil, err
+	}
+
+	esi.lib, err = elastic.NewClient(
+		elastic.SetURL(url),
+		elastic.SetSniff(false),
+		elastic.SetMaxRetries(5),
+		//elastic.SetErrorLog(log.New(os.Stderr, "ELASTIC ", log.LstdFlags)), // TODO
+		//elastic.SetInfoLog(log.New(os.Stdout, "", log.LstdFlags)),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	esi.version, err = esi.lib.ElasticsearchVersion(url)
+	if err != nil {
+		return nil, err
+	}
+
+	return esi, nil
+}
+
+func (esi *Index) GetVersion() string {
+	return esi.version
 }
 
 func (esi *Index) IndexName() string {
@@ -492,219 +422,4 @@ func (esi *Index) AddPercolationDocument(typ string, doc interface{}) (*Percolat
 	}
 
 	return NewPercolateResponse(percolateResponse), nil
-}
-
-//=========================================================================================
-//=========================================================================================
-
-type MockIndex struct {
-	esClient  *MockClient
-	index     string
-	items     map[string](map[string]*json.RawMessage)
-	exists    bool
-	open      bool
-	ids       int
-	percolate string
-}
-
-func NewMockIndex(es *MockClient, index string) *MockIndex {
-	esi := MockIndex{
-		esClient:  es,
-		index:     index,
-		items:     make(map[string](map[string]*json.RawMessage)),
-		exists:    false,
-		open:      false,
-		percolate: ".percolate",
-	}
-	return &esi
-}
-
-func (esi *MockIndex) newid() string {
-	id := strconv.Itoa(esi.ids)
-	esi.ids++
-	return id
-}
-
-func (esi *MockIndex) IndexName() string {
-	return esi.index
-}
-
-func (esi *MockIndex) IndexExists() bool {
-	return esi.exists
-}
-
-func (esi *MockIndex) TypeExists(typ string) bool {
-	if !esi.IndexExists() {
-		return false
-	}
-	_, ok := esi.items[typ]
-	return ok
-}
-
-func (esi *MockIndex) ItemExists(typ string, id string) bool {
-	if !esi.IndexExists() {
-		return false
-	}
-	if !esi.TypeExists(typ) {
-		return false
-	}
-	_, ok := esi.items[typ][id]
-	return ok
-}
-
-// if index already exists, does nothing
-func (esi *MockIndex) Create() error {
-	esi.exists = true
-	return nil
-}
-
-// if index doesn't already exist, does nothing
-func (esi *MockIndex) Close() error {
-	esi.open = false
-	return nil
-}
-
-// if index doesn't already exist, does nothing
-func (esi *MockIndex) Delete() error {
-	esi.exists = false
-	esi.open = false
-
-	for k := range esi.items {
-		for j := range esi.items[k] {
-			delete(esi.items[k], j)
-		}
-		delete(esi.items, k)
-	}
-
-	return nil
-}
-
-func (esi *MockIndex) Flush() error {
-	return nil
-}
-
-func (esi *MockIndex) PostData(typ string, id string, obj interface{}) (*IndexResponse, error) {
-	if !esi.TypeExists(typ) {
-		esi.items[typ] = make(map[string]*json.RawMessage)
-	}
-
-	byts, err := json.Marshal(obj)
-	if err != nil {
-		return nil, err
-	}
-
-	var raw json.RawMessage
-	err = raw.UnmarshalJSON(byts)
-	if err != nil {
-		return nil, err
-	}
-	esi.items[typ][id] = &raw
-
-	r := &IndexResponse{Created: true, Id: id, Index: esi.index, Type: typ}
-	return r, nil
-}
-
-func (esi *MockIndex) GetByID(typ string, id string) (*GetResult, error) {
-	for k, _ := range esi.items[typ] {
-		if k == id {
-			r := &GetResult{Id: id, Source: esi.items[typ][k]}
-			return r, nil
-		}
-	}
-	return nil, errors.New("GetById: not found: " + id)
-}
-
-func (esi *MockIndex) DeleteByID(typ string, id string) (*DeleteResponse, error) {
-	for k, _ := range esi.items[typ] {
-		if k == id {
-			delete(esi.items[typ], k)
-			r := &DeleteResponse{Found: true}
-			return r, nil
-		}
-	}
-	r := &DeleteResponse{Found: false}
-	return r, nil
-}
-
-func (esi *MockIndex) FilterByMatchAll(typ string) (*SearchResult, error) {
-
-	/*q := NewMatchAllQuery()
-	searchResult, err := esi.lib.Search().
-		Index(esi.index).
-		Type(typ).
-		Query(q).
-		Do()
-	return searchResult, err*/
-
-	resp := &SearchResult{}
-	return resp, nil
-}
-
-func (esi *MockIndex) FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error) {
-
-	/*termQuery := NewTermQuery(name, value)
-	searchResult, err := esi.lib.Search().
-		Index(esi.index).
-		Type(typ).
-		Query(termQuery).
-		Do()
-	return searchResult, err*/
-
-	resp := &SearchResult{}
-	return resp, nil
-}
-
-func (esi *MockIndex) SearchByJSON(typ string, jsn string) (*SearchResult, error) {
-
-	/*var obj interface{}
-	err := json.Unmarshal([]byte(jsn), &obj)
-	if err != nil {
-		return nil, err
-	}
-
-	searchResult, err := esi.lib.Search().
-		Index(esi.index).
-		Type(typ).
-		Source(obj).Do()
-
-	return searchResult, err*/
-
-	resp := &SearchResult{}
-	return resp, nil
-}
-
-func (esi *MockIndex) SetMapping(typename string, jsn piazza.JsonString) error {
-	return nil
-}
-
-func (esi *MockIndex) GetTypes() ([]string, error) {
-	var s []string
-
-	for k, _ := range esi.items {
-		s = append(s, k)
-	}
-
-	return s, nil
-}
-
-func (esi *MockIndex) GetMapping(typ string) (interface{}, error) {
-	return nil, nil
-}
-
-func (esi *MockIndex) AddPercolationQuery(id string, query piazza.JsonString) (*IndexResponse, error) {
-	return esi.PostData(esi.percolate, id, query)
-}
-
-func (esi *MockIndex) DeletePercolationQuery(id string) (*DeleteResponse, error) {
-	return esi.DeleteByID(esi.percolate, id)
-}
-
-func (esi *MockIndex) AddPercolationDocument(typ string, doc interface{}) (*PercolateResponse, error) {
-	for _, _ = range esi.items[esi.percolate] {
-		r := &PercolateResponse{}
-		return r, nil
-	}
-
-	resp := &PercolateResponse{}
-	return resp, nil
 }
