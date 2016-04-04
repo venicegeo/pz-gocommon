@@ -15,6 +15,7 @@
 package elasticsearch
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -60,6 +61,27 @@ type IIndex interface {
 	AddPercolationQuery(id string, query piazza.JsonString) (*IndexResponse, error)
 	DeletePercolationQuery(id string) (*DeleteResponse, error)
 	AddPercolationDocument(typ string, doc interface{}) (*PercolateResponse, error)
+}
+
+func NewIndexInterface(sys *piazza.SystemConfig, index string, mocking bool) (IIndex, error) {
+	var esi IIndex
+	var err error
+
+	if mocking {
+		esi = NewMockIndex(index)
+		return esi, nil
+	}
+
+	esi, err = NewIndex(sys, index)
+	if err != nil {
+		return nil, err
+	}
+
+	if esi == nil {
+		return nil, errors.New("Index creation failed: returned nil")
+	}
+
+	return esi, nil
 }
 
 // ConstructMappingSchema takes a map of parameter names to datatypes and
