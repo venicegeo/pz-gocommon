@@ -29,7 +29,7 @@ import (
 	"github.com/venicegeo/pz-gocommon"
 )
 
-const MOCKING = false
+const MOCKING = true
 
 type EsTester struct {
 	suite.Suite
@@ -44,6 +44,9 @@ func (suite *EsTester) TearDownSuite() {
 }
 
 func TestRunSuite(t *testing.T) {
+	if MOCKING {
+		log.Printf("*** MOCKING enabled ***")
+	}
 	s1 := new(EsTester)
 	suite.Run(t, s1)
 }
@@ -93,21 +96,8 @@ func (suite *EsTester) SetUpIndex() IIndex {
 
 	suite.sys = sys
 
-	var esi IIndex
-	if MOCKING {
-		var index *MockIndex
-		index = NewMockIndex("estest")
-		assert.NotNil(index)
-		esi = index
-	} else {
-		var index *Index
-		index, err = NewIndex(suite.sys, "estest")
-		if err != nil {
-			log.Fatal(err)
-		}
-		assert.NotNil(index)
-		esi = index
-	}
+	esi, err := NewIndexInterface(sys, "estest", MOCKING)
+	assert.NoError(err)
 
 	err = esi.Delete()
 	//assert.NoError(err)
@@ -184,21 +174,8 @@ func (suite *EsTester) Test01Client() {
 	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required, true)
 	assert.NoError(err)
 
-	var esi IIndex
-	if MOCKING {
-		var index *MockIndex
-		index = NewMockIndex("estest")
-		assert.NotNil(index)
-		esi = index
-	} else {
-		var index *Index
-		index, err = NewIndex(sys, "estest")
-		if err != nil {
-			log.Fatal(err)
-		}
-		assert.NotNil(index)
-		esi = index
-	}
+	esi, err := NewIndexInterface(sys, "esindex", MOCKING)
+	assert.NoError(err)
 
 	version := esi.GetVersion()
 	assert.NoError(err)
@@ -260,7 +237,9 @@ func (suite *EsTester) Test03Operations() {
 		assert.EqualValues("data1", tmp1.Data)
 	}
 
-	if !MOCKING {
+	if MOCKING {
+		t.Skip("skipping part of test, because mocking.")
+	} else {
 		{
 			// SEARCH for everything
 			searchResult, err := esi.FilterByMatchAll(mapping)
@@ -333,12 +312,13 @@ func (suite *EsTester) Test03Operations() {
 }
 
 func (suite *EsTester) Test04JsonOperations() {
-	if MOCKING {
-		return
-	}
-
 	t := suite.T()
 	assert := assert.New(t)
+
+	if MOCKING {
+		t.Skip("skipping test, because mocking.")
+		return
+	}
 
 	var tmp1, tmp2 Obj
 	var err error
@@ -430,12 +410,13 @@ func (suite *EsTester) Test04JsonOperations() {
 }
 
 func (suite *EsTester) Test05Mapping() {
-	if MOCKING {
-		return
-	}
-
 	t := suite.T()
 	assert := assert.New(t)
+
+	if MOCKING {
+		t.Skip("skipping test, because mocking.")
+		return
+	}
 
 	var err error
 
@@ -480,12 +461,13 @@ func (suite *EsTester) Test05Mapping() {
 }
 
 func (suite *EsTester) Test06SetMapping() {
-	if MOCKING {
-		return
-	}
-
 	t := suite.T()
 	assert := assert.New(t)
+
+	if MOCKING {
+		t.Skip("skipping test, because mocking.")
+		return
+	}
 
 	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
@@ -576,12 +558,13 @@ func (suite *EsTester) Test07ConstructMapping() {
 }
 
 func (suite *EsTester) Test08Percolation() {
-	if MOCKING {
-		return
-	}
-
 	t := suite.T()
 	assert := assert.New(t)
+
+	if MOCKING {
+		t.Skip("skipping test, because mocking.")
+		return
+	}
 
 	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
@@ -679,14 +662,8 @@ func (suite *EsTester) Test09FullPercolation() {
 
 	// create index
 	{
-		if MOCKING {
-			esi = NewMockIndex(index)
-			assert.NotNil(esi)
-		} else {
-			esi, err = NewIndex(suite.sys, index)
-			assert.NoError(err)
-			assert.NotNil(esi)
-		}
+		esi, err = NewIndexInterface(suite.sys, index, MOCKING)
+		assert.NoError(err)
 
 		// make the index
 		err = esi.Create()
@@ -703,6 +680,7 @@ func (suite *EsTester) Test09FullPercolation() {
 	}
 
 	if MOCKING {
+		t.Skip("skipping test, because mocking.")
 		return
 	}
 
