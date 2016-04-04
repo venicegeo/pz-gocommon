@@ -126,7 +126,7 @@ func (esi *MockIndex) PostData(typ string, id string, obj interface{}) (*IndexRe
 func (esi *MockIndex) GetByID(typ string, id string) (*GetResult, error) {
 	for k, _ := range esi.items[typ] {
 		if k == id {
-			r := &GetResult{Id: id, Source: esi.items[typ][k]}
+			r := &GetResult{Id: id, Source: esi.items[typ][k], Found: true}
 			return r, nil
 		}
 	}
@@ -146,16 +146,22 @@ func (esi *MockIndex) DeleteByID(typ string, id string) (*DeleteResponse, error)
 }
 
 func (esi *MockIndex) FilterByMatchAll(typ string) (*SearchResult, error) {
+	objs := esi.items[typ]
+	resp := &SearchResult{
+		totalHits: int64(len(objs)),
+		hits:      make([]*SeachResultHit, len(objs)),
+	}
 
-	/*q := NewMatchAllQuery()
-	searchResult, err := esi.lib.Search().
-		Index(esi.index).
-		Type(typ).
-		Query(q).
-		Do()
-	return searchResult, err*/
+	i := 0
+	for id, obj := range objs {
+		tmp := &SeachResultHit{
+			Id:     id,
+			Source: obj,
+		}
+		resp.hits[i] = tmp
+		i++
+	}
 
-	resp := &SearchResult{}
 	return resp, nil
 }
 
@@ -169,8 +175,9 @@ func (esi *MockIndex) FilterByTermQuery(typ string, name string, value interface
 		Do()
 	return searchResult, err*/
 
-	resp := &SearchResult{}
-	return resp, nil
+	////resp := &SearchResult{}
+	////return resp, nil
+	return nil, errors.New("FilterByTermQuery not supported under mocking")
 }
 
 func (esi *MockIndex) SearchByJSON(typ string, jsn string) (*SearchResult, error) {
@@ -188,12 +195,15 @@ func (esi *MockIndex) SearchByJSON(typ string, jsn string) (*SearchResult, error
 
 	return searchResult, err*/
 
-	resp := &SearchResult{}
-	return resp, nil
+	////resp := &SearchResult{}
+	////return resp, nil
+
+	return nil, errors.New("SearchByJSON not supported under mocking")
 }
 
 func (esi *MockIndex) SetMapping(typename string, jsn piazza.JsonString) error {
 	return nil
+	//return errors.New("SetMapping not supported under mocking")
 }
 
 func (esi *MockIndex) GetTypes() ([]string, error) {
@@ -207,7 +217,7 @@ func (esi *MockIndex) GetTypes() ([]string, error) {
 }
 
 func (esi *MockIndex) GetMapping(typ string) (interface{}, error) {
-	return nil, nil
+	return nil, errors.New("GetMapping not supported under mocking")
 }
 
 func (esi *MockIndex) AddPercolationQuery(id string, query piazza.JsonString) (*IndexResponse, error) {
