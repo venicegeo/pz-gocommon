@@ -149,18 +149,18 @@ func (sys *SystemConfig) runHealthChecks() error {
 		if name != sys.Name {
 			url := fmt.Sprintf("%s://%s%s", DefaultProtocol, addr, HealthcheckEndpoints[name])
 
-			log.Printf("Service healthy? %s at %s (%s)", name, addr, url)
+			log.Printf("Service healthy?? %s at %s (%s)", name, addr, url)
 
 			resp, err := http.Get(url)
 			if err != nil {
-				return NewErrorf("Health check errored for service: %s at %s", string(name), url)
+				return NewErrorf("Health check errored for service: %s at %s <%#v>", name, url, resp)
 			}
 
 			if resp.StatusCode != http.StatusOK {
-				return NewErrorf("Health check failed for service: %s at %s", string(name), url)
+				return NewErrorf("Health check failed for service: %s at %s <%#v>", name, url, resp)
 			}
 
-			log.Printf("Service healthy: %s at %s", string(name), url)
+			log.Printf("Service healthy: %s at %s", name, url)
 			/*body, err := ReadFrom(resp.Body)
 			if err != nil {
 				return err
