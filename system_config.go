@@ -30,7 +30,7 @@ type ServiceName string
 
 const (
 	PzDiscover      ServiceName = "pz-discover"
-	PzElasticSearch ServiceName = "elasticsearch"
+	PzElasticSearch ServiceName = "pz-elasticsearch"
 	PzGateway       ServiceName = "pz-gateway"
 	PzGoCommon      ServiceName = "PZ-GOCOMMON" // not a real service, just for testing
 	PzLogger        ServiceName = "pz-logger"
