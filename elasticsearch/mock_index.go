@@ -30,6 +30,8 @@ type MockIndex struct {
 }
 
 func NewMockIndex(index string) *MockIndex {
+	var _ IIndex = new(MockIndex)
+
 	esi := MockIndex{
 		index:     index,
 		items:     make(map[string](map[string]*json.RawMessage)),
@@ -53,6 +55,7 @@ func (esi *MockIndex) IndexExists() bool {
 }
 
 func (esi *MockIndex) TypeExists(typ string) bool {
+
 	if !esi.IndexExists() {
 		return false
 	}

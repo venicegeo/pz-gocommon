@@ -85,18 +85,21 @@ func (suite *EsTester) SetUpIndex() IIndex {
 	t := suite.T()
 	assert := assert.New(t)
 
-	required := []piazza.ServiceName{
-		piazza.PzElasticSearch,
+	var required []piazza.ServiceName
+	if MOCKING {
+		required = []piazza.ServiceName{}
+	} else {
+		required = []piazza.ServiceName{piazza.PzElasticSearch}
 	}
 
-	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required, true)
+	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	suite.sys = sys
 
-	esi, err := NewIndexInterface(sys, "estest", MOCKING)
+	esi, err := NewIndexInterface(sys, "estest$", MOCKING)
 	assert.NoError(err)
 
 	err = esi.Delete()
@@ -154,6 +157,8 @@ func deleteOldIndexes(es *elastic.Client) {
 			strings.HasPrefix(v, "triggers.") ||
 			strings.HasPrefix(v, "events.") ||
 			strings.HasPrefix(v, "eventtypes.") ||
+			strings.HasPrefix(v, "estest.") ||
+			strings.HasPrefix(v, "test.") ||
 			strings.HasPrefix(v, "pzlogger.") {
 			del(v)
 		} else {
@@ -168,20 +173,23 @@ func (suite *EsTester) Test01Client() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	// since this library doesn't have a PCF manifest, we need
-	// to explicitly require an ES server
-	required := []piazza.ServiceName{piazza.PzElasticSearch}
-	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required, true)
+	var required []piazza.ServiceName
+	if MOCKING {
+		required = []piazza.ServiceName{}
+	} else {
+		required = []piazza.ServiceName{piazza.PzElasticSearch}
+	}
+	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required)
 	assert.NoError(err)
 
-	esi, err := NewIndexInterface(sys, "esindex", MOCKING)
+	esi, err := NewIndexInterface(sys, "estest01$", MOCKING)
 	assert.NoError(err)
 
 	version := esi.GetVersion()
 	assert.NoError(err)
 	assert.Contains("2.2.0", version)
 
-	//deleteOldIndexes(es.lib)
+	//deleteOldIndexes(esi.(*Index).lib)
 }
 
 func (suite *EsTester) Test02SimplePost() {
@@ -652,7 +660,6 @@ func (suite *EsTester) Test09FullPercolation() {
 
 	var esi IIndex
 
-	var index = "fullperctest"
 	var err error
 
 	defer func() {
@@ -662,7 +669,7 @@ func (suite *EsTester) Test09FullPercolation() {
 
 	// create index
 	{
-		esi, err = NewIndexInterface(suite.sys, index, MOCKING)
+		esi, err = NewIndexInterface(suite.sys, "estest09$", MOCKING)
 		assert.NoError(err)
 
 		// make the index

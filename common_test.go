@@ -51,6 +51,6 @@ func (suite *CommonTester) TestSystemConfig() {
 
 	required := []ServiceName{}
 
-	_, err := NewSystemConfig(PzGoCommon, required, true)
+	_, err := NewSystemConfig(PzGoCommon, required)
 	assert.NoError(err)
 }

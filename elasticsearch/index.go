@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/venicegeo/pz-gocommon"
@@ -32,15 +33,13 @@ type Index struct {
 }
 
 func NewIndex(sys *piazza.SystemConfig, index string) (*Index, error) {
+	var _ IIndex = new(Index)
 
-	esi := &Index{}
-
-	suffix := ""
-	if sys.Testing() {
-		n := time.Now().Nanosecond()
-		suffix = fmt.Sprintf(".%x", n)
+	if strings.HasSuffix(index, "$") {
+		index = fmt.Sprintf("%s.%x", index, time.Now().Nanosecond())
 	}
-	esi.index = index + suffix
+
+	esi := &Index{index: index}
 
 	url, err := sys.GetURL(piazza.PzElasticSearch)
 	if err != nil {
@@ -237,8 +236,7 @@ func (esi *Index) FilterByMatchAll(typ string) (*SearchResult, error) {
 	//q := elastic.NewBoolFilter()
 	//q.Must(elastic.NewTermFilter("a", 1))
 
-	// TODO: the caller should enforce this instead
-	ok := esi.TypeExists(typ)
+	ok := typ != "" && esi.TypeExists(typ)
 	if !ok {
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
 	}
@@ -256,8 +254,7 @@ func (esi *Index) FilterByMatchAll(typ string) (*SearchResult, error) {
 
 func (esi *Index) FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error) {
 
-	// TODO: the caller should enforce this instead
-	ok := esi.TypeExists(typ)
+	ok := typ != "" && esi.TypeExists(typ)
 	if !ok {
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
 	}
@@ -275,8 +272,7 @@ func (esi *Index) FilterByTermQuery(typ string, name string, value interface{}) 
 
 func (esi *Index) SearchByJSON(typ string, jsn string) (*SearchResult, error) {
 
-	// TODO: the caller should enforce this instead
-	ok := esi.TypeExists(typ)
+	ok := typ != "" && esi.TypeExists(typ)
 	if !ok {
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
 	}
