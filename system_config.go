@@ -70,16 +70,14 @@ type SystemConfig struct {
 	vcapApplication *VcapApplication
 	vcapServices    *VcapServices
 	domain          string
-	debug           bool
 }
 
 func NewSystemConfig(serviceName ServiceName,
-	requiredServices []ServiceName,
-	debug bool) (*SystemConfig, error) {
+	requiredServices []ServiceName) (*SystemConfig, error) {
 
 	var err error
 
-	sys := &SystemConfig{endpoints: make(ServicesMap), debug: debug}
+	sys := &SystemConfig{endpoints: make(ServicesMap)}
 
 	sys.vcapApplication, err = NewVcapApplication()
 	if err != nil {
@@ -212,10 +210,6 @@ func (sys *SystemConfig) GetURL(name ServiceName) (string, error) {
 
 func (sys *SystemConfig) GetDomain() string {
 	return sys.domain
-}
-
-func (sys *SystemConfig) Testing() bool {
-	return sys.debug
 }
 
 func (sys *SystemConfig) WaitForService(name ServiceName) error {

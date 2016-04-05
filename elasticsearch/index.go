@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
+	"time"
 
 	"github.com/venicegeo/pz-gocommon"
 
@@ -25,18 +27,46 @@ import (
 )
 
 type Index struct {
-	esClient *Client
-	lib      *elastic.Client
-	index    string
+	lib     *elastic.Client
+	version string
+	index   string
 }
 
-func NewIndex(es *Client, index string) *Index {
-	esi := &Index{
-		esClient: es,
-		lib:      es.lib,
-		index:    index + es.indexSuffix,
+func NewIndex(sys *piazza.SystemConfig, index string) (*Index, error) {
+	var _ IIndex = new(Index)
+
+	if strings.HasSuffix(index, "$") {
+		index = fmt.Sprintf("%s.%x", index, time.Now().Nanosecond())
 	}
-	return esi
+
+	esi := &Index{index: index}
+
+	url, err := sys.GetURL(piazza.PzElasticSearch)
+	if err != nil {
+		return nil, err
+	}
+
+	esi.lib, err = elastic.NewClient(
+		elastic.SetURL(url),
+		elastic.SetSniff(false),
+		elastic.SetMaxRetries(5),
+		//elastic.SetErrorLog(log.New(os.Stderr, "ELASTIC ", log.LstdFlags)), // TODO
+		//elastic.SetInfoLog(log.New(os.Stdout, "", log.LstdFlags)),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	esi.version, err = esi.lib.ElasticsearchVersion(url)
+	if err != nil {
+		return nil, err
+	}
+
+	return esi, nil
+}
+
+func (esi *Index) GetVersion() string {
+	return esi.version
 }
 
 func (esi *Index) IndexName() string {
@@ -150,7 +180,7 @@ func (esi *Index) Flush() error {
 	return nil
 }
 
-func (esi *Index) PostData(typ string, id string, obj interface{}) (*elastic.IndexResponse, error) {
+func (esi *Index) PostData(typ string, id string, obj interface{}) (*IndexResponse, error) {
 	/*ok := esi.IndexExists()
 	if !ok {
 		log.Printf("Index %s does not exist", esi.index)
@@ -169,10 +199,10 @@ func (esi *Index) PostData(typ string, id string, obj interface{}) (*elastic.Ind
 		BodyJson(obj).
 		Do()
 
-	return indexResponse, err
+	return NewIndexResponse(indexResponse), err
 }
 
-func (esi *Index) GetByID(typ string, id string) (*elastic.GetResult, error) {
+func (esi *Index) GetByID(typ string, id string) (*GetResult, error) {
 	// TODO: the caller should enforce this instead (here and elsewhere)
 	ok := esi.ItemExists(typ, id)
 	if !ok {
@@ -185,10 +215,10 @@ func (esi *Index) GetByID(typ string, id string) (*elastic.GetResult, error) {
 		return nil, err
 	}
 
-	return getResult, nil
+	return NewGetResult(getResult), nil
 }
 
-func (esi *Index) DeleteByID(typ string, id string) (*elastic.DeleteResponse, error) {
+func (esi *Index) DeleteByID(typ string, id string) (*DeleteResponse, error) {
 	ok := esi.ItemExists(typ, id)
 	if !ok {
 		return nil, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
@@ -199,15 +229,14 @@ func (esi *Index) DeleteByID(typ string, id string) (*elastic.DeleteResponse, er
 		Type(typ).
 		Id(id).
 		Do()
-	return deleteResponse, err
+	return NewDeleteResponse(deleteResponse), err
 }
 
-func (esi *Index) FilterByMatchAll(typ string) (*elastic.SearchResult, error) {
+func (esi *Index) FilterByMatchAll(typ string) (*SearchResult, error) {
 	//q := elastic.NewBoolFilter()
 	//q.Must(elastic.NewTermFilter("a", 1))
 
-	// TODO: the caller should enforce this instead
-	ok := esi.TypeExists(typ)
+	ok := typ != "" && esi.TypeExists(typ)
 	if !ok {
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
 	}
@@ -219,13 +248,13 @@ func (esi *Index) FilterByMatchAll(typ string) (*elastic.SearchResult, error) {
 		Query(q).
 		//Sort("id", true).
 		Do()
-	return searchResult, err
+
+	return NewSearchResult(searchResult), err
 }
 
-func (esi *Index) FilterByTermQuery(typ string, name string, value interface{}) (*elastic.SearchResult, error) {
+func (esi *Index) FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error) {
 
-	// TODO: the caller should enforce this instead
-	ok := esi.TypeExists(typ)
+	ok := typ != "" && esi.TypeExists(typ)
 	if !ok {
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
 	}
@@ -237,13 +266,13 @@ func (esi *Index) FilterByTermQuery(typ string, name string, value interface{}) 
 		Query(termQuery).
 		//Sort("id", true).
 		Do()
-	return searchResult, err
+
+	return NewSearchResult(searchResult), err
 }
 
-func (esi *Index) SearchByJSON(typ string, jsn string) (*elastic.SearchResult, error) {
+func (esi *Index) SearchByJSON(typ string, jsn string) (*SearchResult, error) {
 
-	// TODO: the caller should enforce this instead
-	ok := esi.TypeExists(typ)
+	ok := typ != "" && esi.TypeExists(typ)
 	if !ok {
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
 	}
@@ -259,7 +288,7 @@ func (esi *Index) SearchByJSON(typ string, jsn string) (*elastic.SearchResult, e
 		Type(typ).
 		Source(obj).Do()
 
-	return searchResult, err
+	return NewSearchResult(searchResult), err
 }
 
 func (esi *Index) SetMapping(typename string, jsn piazza.JsonString) error {
@@ -331,7 +360,7 @@ func (esi *Index) GetMapping(typ string) (interface{}, error) {
 	return props2["mappings"], nil
 }
 
-func (esi *Index) AddPercolationQuery(id string, query piazza.JsonString) (*elastic.IndexResponse, error) {
+func (esi *Index) AddPercolationQuery(id string, query piazza.JsonString) (*IndexResponse, error) {
 
 	ok := esi.IndexExists()
 	if !ok {
@@ -349,10 +378,10 @@ func (esi *Index) AddPercolationQuery(id string, query piazza.JsonString) (*elas
 		return nil, err
 	}
 
-	return indexResponse, nil
+	return NewIndexResponse(indexResponse), nil
 }
 
-func (esi *Index) DeletePercolationQuery(id string) (*elastic.DeleteResponse, error) {
+func (esi *Index) DeletePercolationQuery(id string) (*DeleteResponse, error) {
 	typ := ".percolator"
 	ok := esi.ItemExists(typ, id)
 	if !ok {
@@ -368,10 +397,10 @@ func (esi *Index) DeletePercolationQuery(id string) (*elastic.DeleteResponse, er
 		return nil, err
 	}
 
-	return deleteResponse, nil
+	return NewDeleteResponse(deleteResponse), nil
 }
 
-func (esi *Index) AddPercolationDocument(typ string, doc interface{}) (*elastic.PercolateResponse, error) {
+func (esi *Index) AddPercolationDocument(typ string, doc interface{}) (*PercolateResponse, error) {
 	ok := esi.TypeExists(typ)
 	if !ok {
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
@@ -388,5 +417,5 @@ func (esi *Index) AddPercolationDocument(typ string, doc interface{}) (*elastic.
 		return nil, err
 	}
 
-	return percolateResponse, nil
+	return NewPercolateResponse(percolateResponse), nil
 }

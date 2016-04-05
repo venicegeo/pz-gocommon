@@ -15,6 +15,7 @@
 package elasticsearch
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -36,6 +37,52 @@ const (
 	MappingElementTypeShort   MappingElementTypeName = "short"
 	MappingElementTypeLong    MappingElementTypeName = "long"
 )
+
+type IIndex interface {
+	GetVersion() string
+
+	IndexName() string
+	IndexExists() bool
+	TypeExists(typ string) bool
+	ItemExists(typ string, id string) bool
+	Create() error
+	Close() error
+	Delete() error
+	Flush() error
+	PostData(typ string, id string, obj interface{}) (*IndexResponse, error)
+	GetByID(typ string, id string) (*GetResult, error)
+	DeleteByID(typ string, id string) (*DeleteResponse, error)
+	FilterByMatchAll(typ string) (*SearchResult, error)
+	FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error)
+	SearchByJSON(typ string, jsn string) (*SearchResult, error)
+	SetMapping(typename string, jsn piazza.JsonString) error
+	GetTypes() ([]string, error)
+	GetMapping(typ string) (interface{}, error)
+	AddPercolationQuery(id string, query piazza.JsonString) (*IndexResponse, error)
+	DeletePercolationQuery(id string) (*DeleteResponse, error)
+	AddPercolationDocument(typ string, doc interface{}) (*PercolateResponse, error)
+}
+
+func NewIndexInterface(sys *piazza.SystemConfig, index string, mocking bool) (IIndex, error) {
+	var esi IIndex
+	var err error
+
+	if mocking {
+		esi = NewMockIndex(index)
+		return esi, nil
+	}
+
+	esi, err = NewIndex(sys, index)
+	if err != nil {
+		return nil, err
+	}
+
+	if esi == nil {
+		return nil, errors.New("Index creation failed: returned nil")
+	}
+
+	return esi, nil
+}
 
 // ConstructMappingSchema takes a map of parameter names to datatypes and
 // returns the corresponding ES DSL for it.
