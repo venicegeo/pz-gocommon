@@ -44,7 +44,7 @@ type VcapCredentials struct {
 type VcapServiceEntry struct {
 	Credentials    VcapCredentials `json:"credentials"`
 	Label          string          `json:"label"`
-	Name           string          `json:"string"`
+	Name           string          `json:"name"`
 	SyslogDrainUrl string          `json:"syslog_drain_url"`
 	Tags           []string        `json:"tags"`
 }
