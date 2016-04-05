@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -124,17 +123,12 @@ func (sys *SystemConfig) checkRequirements(requirements []ServiceName) error {
 
 		} else {
 			if addr, ok := sys.vcapServices.Services[name]; !ok {
-				sys.AddService(name, string(name))
+				// the service we want is not in VCAP, so fake it
+				sys.AddService(name, string(name)+DefaultDomain)
 
 			} else {
-
-				if strings.HasPrefix(string(addr), "localhost") {
-					// special cases, e.g. for elasticsearch: do nothing
-					sys.AddService(name, addr)
-
-				} else {
-					sys.AddService(name, addr+DefaultDomain)
-				}
+				// the service we want is in VCAP, with a full and valid address
+				sys.AddService(name, addr)
 			}
 		}
 
