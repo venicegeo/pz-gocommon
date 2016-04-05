@@ -124,7 +124,7 @@ func (sys *SystemConfig) checkRequirements(requirements []ServiceName) error {
 
 		} else {
 			if addr, ok := sys.vcapServices.Services[name]; !ok {
-				sys.AddService(name, string(name)+DefaultDomain)
+				sys.AddService(name, string(name))
 
 			} else {
 
