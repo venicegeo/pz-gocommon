@@ -75,6 +75,7 @@ func NewVcapServices() (*VcapServices, error) {
 	if str != "" {
 
 		log.Printf("VCAP_SERVICES:\n%s", str)
+		vcap = &VcapApplication{}
 
 		err = json.Unmarshal([]byte(str), vcap)
 		if err != nil {
