@@ -58,7 +58,7 @@ type VcapServices struct {
 var localVcapServices = &VcapServices{
 	UserProvided: []VcapServiceEntry{
 		VcapServiceEntry{
-			Name: "elasticsearch",
+			Name: "pz-elasticsearch",
 			Credentials: VcapCredentials{
 				Host: "localhost:9200",
 			},
