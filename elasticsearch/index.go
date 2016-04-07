@@ -36,7 +36,7 @@ func NewIndex(sys *piazza.SystemConfig, index string) (*Index, error) {
 	var _ IIndex = new(Index)
 
 	if strings.HasSuffix(index, "$") {
-		index = fmt.Sprintf("%s.%x", index, time.Now().Nanosecond())
+		index = fmt.Sprintf("%s.%x", index[0:len(index)-1], time.Now().Nanosecond())
 	}
 
 	esi := &Index{index: index}
