@@ -149,7 +149,20 @@ func (esi *MockIndex) DeleteByID(typ string, id string) (*DeleteResponse, error)
 }
 
 func (esi *MockIndex) FilterByMatchAll(typ string) (*SearchResult, error) {
-	objs := esi.items[typ]
+	objs := make(map[string]*json.RawMessage)
+
+	if typ == "" {
+		for t := range esi.items {
+			for id, i := range esi.items[t] {
+				objs[id] = i
+			}
+		}
+	} else {
+		for id, i := range esi.items[typ] {
+			objs[id] = i
+		}
+	}
+
 	resp := &SearchResult{
 		totalHits: int64(len(objs)),
 		hits:      make([]*SeachResultHit, len(objs)),
