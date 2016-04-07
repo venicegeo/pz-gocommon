@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"gopkg.in/olivere/elastic.v3"
 
@@ -159,6 +160,7 @@ func deleteOldIndexes(es *elastic.Client) {
 			strings.HasPrefix(v, "eventtypes.") ||
 			strings.HasPrefix(v, "estest.") ||
 			strings.HasPrefix(v, "test.") ||
+			strings.HasPrefix(v, "getall.") ||
 			strings.HasPrefix(v, "pzlogger.") {
 			del(v)
 		} else {
@@ -205,6 +207,8 @@ func (suite *EsTester) Test02SimplePost() {
 		esi.Delete()
 	}()
 
+	err = esi.SetMapping(mapping, piazza.JsonString(objMapping))
+
 	type NotObj struct {
 		ID   int    `json:"id" binding:"required"`
 		Data string `json:"data" binding:"required"`
@@ -212,9 +216,23 @@ func (suite *EsTester) Test02SimplePost() {
 	}
 	o := NotObj{ID: 99, Data: "quick fox", Foo: true}
 
-	indexResult, err := esi.PostData(mapping, "88", o)
+	indexResult, err := esi.PostData(mapping, "99", o)
 	assert.NoError(err)
 	assert.NotNil(indexResult)
+
+	{
+		// GET it
+		getResult, err := esi.GetByID(mapping, "99")
+		assert.NoError(err)
+		assert.NotNil(getResult)
+		src := getResult.Source
+		assert.NotNil(src)
+		var tmp1 NotObj
+		err = json.Unmarshal(*src, &tmp1)
+		assert.NoError(err)
+		assert.EqualValues("quick fox", tmp1.Data)
+	}
+
 }
 
 func (suite *EsTester) Test03Operations() {
@@ -872,4 +890,166 @@ func (suite *EsTester) Test09FullPercolation() {
 	}
 
 	addEvents(tests)
+}
+
+func (suite *EsTester) Test10GetAll() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	var required []piazza.ServiceName
+	if MOCKING {
+		required = []piazza.ServiceName{}
+	} else {
+		required = []piazza.ServiceName{piazza.PzElasticSearch}
+	}
+
+	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	esi, err := NewIndexInterface(sys, "getall$", MOCKING)
+	assert.NoError(err)
+	defer func() {
+		esi.Close()
+		esi.Delete()
+	}()
+
+	// make the index
+	err = esi.Create()
+	assert.NoError(err)
+
+	type T1 struct {
+		Data1  string `json:"data1" binding:"required"`
+		Extra1 string `json:"extra1" binding:"required"`
+	}
+
+	type T2 struct {
+		Data2  int    `json:"data2" binding:"required"`
+		Extra2 string `json:"extra2" binding:"required"`
+	}
+
+	schema1 :=
+		`{
+		    "schema1":{
+			    "properties":{
+				    "data1":{
+					    "type":"string",
+					    "store":true
+    			    },
+				    "extra1":{
+					    "type":"string",
+					    "store":true
+    			    }
+	    	    }
+	        }
+        }`
+
+	schema2 :=
+		`{
+		    "schema2":{
+			    "properties":{
+				    "data2":{
+					    "type":"integer",
+					    "store":true
+    			    },
+				    "extra2":{
+					    "type":"string",
+					    "store":true
+    			    }
+	    	    }
+	        }
+        }`
+
+	err = esi.SetMapping("schema1", piazza.JsonString(schema1))
+	assert.NoError(err)
+	err = esi.SetMapping("schema2", piazza.JsonString(schema2))
+	assert.NoError(err)
+
+	obj1 := T1{Data1: "obj", Extra1: "extra1"}
+	obj2 := T2{Data2: 123, Extra2: "extra2"}
+	indexResult, err := esi.PostData("schema1", "id1", obj1)
+	assert.NoError(err)
+	assert.NotNil(indexResult)
+	indexResult, err = esi.PostData("schema2", "id2", obj2)
+	assert.NoError(err)
+	assert.NotNil(indexResult)
+
+	{
+		// GET a specific one
+		getResult, err := esi.GetByID("schema1", "id1")
+		assert.NoError(err)
+		assert.NotNil(getResult)
+		src := getResult.Source
+		assert.NotNil(src)
+		var tmp T1
+		err = json.Unmarshal(*src, &tmp)
+		assert.NoError(err)
+		assert.EqualValues("obj", tmp.Data1)
+	}
+
+	{
+		// GET a specific one
+		getResult, err := esi.GetByID("schema2", "id2")
+		assert.NoError(err)
+		assert.NotNil(getResult)
+		src := getResult.Source
+		assert.NotNil(src)
+		var tmp T2
+		err = json.Unmarshal(*src, &tmp)
+		assert.NoError(err)
+		assert.Equal(123, tmp.Data2)
+	}
+
+	{
+		// GET the types
+		strs, err := esi.GetTypes()
+		assert.NoError(err)
+		assert.Len(strs, 2)
+		if strs[0] == "schema1" {
+			assert.EqualValues("schema2", strs[1])
+		} else if strs[0] == "schema2" {
+			assert.EqualValues("schema1", strs[1])
+		} else {
+			assert.True(false)
+		}
+	}
+
+	// I have reason to suspect the ES indexing process for an item takes longer
+	// than just adding the item, so we enforce a delay here.
+	time.Sleep(1 * time.Second)
+
+	{
+		getResult, err := esi.FilterByMatchAll("")
+		assert.NoError(err)
+		assert.NotNil(getResult)
+		assert.Len(*getResult.GetHits(), 2)
+		src1 := getResult.GetHit(0).Source
+		assert.NotNil(src1)
+		src2 := getResult.GetHit(1).Source
+		assert.NotNil(src2)
+
+		var tmp1 T1
+		var tmp2 T2
+		err1 := json.Unmarshal(*src1, &tmp1)
+		err2 := json.Unmarshal(*src2, &tmp2)
+		assert.True((err1 == nil && err2 == nil) || (err1 != nil && err2 != nil))
+
+		if err1 != nil {
+			err = json.Unmarshal(*src1, &tmp1)
+			assert.NoError(err)
+			err = json.Unmarshal(*src2, &tmp2)
+			assert.NoError(err)
+		} else {
+			err = json.Unmarshal(*src1, &tmp2)
+			assert.NoError(err)
+			err = json.Unmarshal(*src2, &tmp1)
+			assert.NoError(err)
+		}
+
+		assert.Equal(tmp1.Data1, "obj")
+		assert.Equal(tmp1.Extra1, "extra1")
+		assert.Equal(tmp2.Data2, 123)
+		assert.Equal(tmp2.Extra2, "extra2")
+	}
 }

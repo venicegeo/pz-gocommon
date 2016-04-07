@@ -36,7 +36,7 @@ func NewIndex(sys *piazza.SystemConfig, index string) (*Index, error) {
 	var _ IIndex = new(Index)
 
 	if strings.HasSuffix(index, "$") {
-		index = fmt.Sprintf("%s.%x", index, time.Now().Nanosecond())
+		index = fmt.Sprintf("%s.%x", index[0:len(index)-1], time.Now().Nanosecond())
 	}
 
 	esi := &Index{index: index}
@@ -236,10 +236,10 @@ func (esi *Index) FilterByMatchAll(typ string) (*SearchResult, error) {
 	//q := elastic.NewBoolFilter()
 	//q.Must(elastic.NewTermFilter("a", 1))
 
-	ok := typ != "" && esi.TypeExists(typ)
+	/*ok := typ != "" && esi.TypeExists(typ)
 	if !ok {
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
-	}
+	}*/
 
 	q := elastic.NewMatchAllQuery()
 	searchResult, err := esi.lib.Search().
