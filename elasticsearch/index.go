@@ -236,10 +236,10 @@ func (esi *Index) FilterByMatchAll(typ string) (*SearchResult, error) {
 	//q := elastic.NewBoolFilter()
 	//q.Must(elastic.NewTermFilter("a", 1))
 
-	ok := typ != "" && esi.TypeExists(typ)
+	/*ok := typ != "" && esi.TypeExists(typ)
 	if !ok {
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
-	}
+	}*/
 
 	q := elastic.NewMatchAllQuery()
 	searchResult, err := esi.lib.Search().
