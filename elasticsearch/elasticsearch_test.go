@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"gopkg.in/olivere/elastic.v3"
 
@@ -29,7 +30,7 @@ import (
 	"github.com/venicegeo/pz-gocommon"
 )
 
-const MOCKING = true
+const MOCKING = false
 
 type EsTester struct {
 	suite.Suite
@@ -205,6 +206,8 @@ func (suite *EsTester) Test02SimplePost() {
 		esi.Delete()
 	}()
 
+	err = esi.SetMapping(mapping, piazza.JsonString(objMapping))
+
 	type NotObj struct {
 		ID   int    `json:"id" binding:"required"`
 		Data string `json:"data" binding:"required"`
@@ -212,9 +215,23 @@ func (suite *EsTester) Test02SimplePost() {
 	}
 	o := NotObj{ID: 99, Data: "quick fox", Foo: true}
 
-	indexResult, err := esi.PostData(mapping, "88", o)
+	indexResult, err := esi.PostData(mapping, "99", o)
 	assert.NoError(err)
 	assert.NotNil(indexResult)
+
+	{
+		// GET it
+		getResult, err := esi.GetByID(mapping, "99")
+		assert.NoError(err)
+		assert.NotNil(getResult)
+		src := getResult.Source
+		assert.NotNil(src)
+		var tmp1 NotObj
+		err = json.Unmarshal(*src, &tmp1)
+		assert.NoError(err)
+		assert.EqualValues("quick fox", tmp1.Data)
+	}
+
 }
 
 func (suite *EsTester) Test03Operations() {
@@ -872,4 +889,128 @@ func (suite *EsTester) Test09FullPercolation() {
 	}
 
 	addEvents(tests)
+}
+
+func (suite *EsTester) Test10GetAll() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	var required []piazza.ServiceName
+	if MOCKING {
+		required = []piazza.ServiceName{}
+	} else {
+		required = []piazza.ServiceName{piazza.PzElasticSearch}
+	}
+
+	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	esi, err := NewIndexInterface(sys, "getall$", MOCKING)
+	assert.NoError(err)
+
+	// make the index
+	err = esi.Create()
+	assert.NoError(err)
+
+	type T1 struct {
+		Data1 string `json:"data1" binding:"required"`
+	}
+
+	type T2 struct {
+		Data2 int `json:"data2" binding:"required"`
+	}
+
+	schema1 :=
+		`{
+		    "schema1":{
+			    "properties":{
+				    "data1":{
+					    "type":"string",
+					    "store":true
+    			    }
+	    	    }
+	        }
+        }`
+
+	schema2 :=
+		`{
+		    "schema2":{
+			    "properties":{
+				    "data2":{
+					    "type":"integer",
+					    "store":true
+    			    }
+	    	    }
+	        }
+        }`
+
+	err = esi.SetMapping("schema1", piazza.JsonString(schema1))
+	assert.NoError(err)
+	err = esi.SetMapping("schema2", piazza.JsonString(schema2))
+	assert.NoError(err)
+
+	obj1 := T1{Data1: "obj"}
+	obj2 := T2{Data2: 123}
+	indexResult, err := esi.PostData("schema1", "id1", obj1)
+	assert.NoError(err)
+	assert.NotNil(indexResult)
+	indexResult, err = esi.PostData("schema2", "id2", obj2)
+	assert.NoError(err)
+	assert.NotNil(indexResult)
+
+	{
+		// GET a specific one
+		getResult, err := esi.GetByID("schema1", "id1")
+		assert.NoError(err)
+		assert.NotNil(getResult)
+		src := getResult.Source
+		assert.NotNil(src)
+		var tmp T1
+		err = json.Unmarshal(*src, &tmp)
+		assert.NoError(err)
+		assert.EqualValues("obj", tmp.Data1)
+	}
+
+	{
+		// GET a specific one
+		getResult, err := esi.GetByID("schema2", "id2")
+		assert.NoError(err)
+		assert.NotNil(getResult)
+		src := getResult.Source
+		assert.NotNil(src)
+		var tmp T2
+		err = json.Unmarshal(*src, &tmp)
+		assert.NoError(err)
+		assert.Equal(123, tmp.Data2)
+	}
+
+	{
+		// GET the types
+		strs, err := esi.GetTypes()
+		assert.NoError(err)
+		assert.Len(strs, 2)
+		if strs[0] == "schema1" {
+			assert.EqualValues("schema2", strs[1])
+		} else if strs[0] == "schema2" {
+			assert.EqualValues("schema1", strs[1])
+		} else {
+			assert.True(false)
+		}
+	}
+
+	time.Sleep(1 * time.Second)
+
+	{
+		getResult, err := esi.FilterByMatchAll("")
+		assert.NoError(err)
+		assert.NotNil(getResult)
+		assert.Len(*getResult.GetHits(), 2)
+		/*src := getResult.GetHit(0).Source
+		assert.NotNil(src)
+		var tmp T1
+		err = json.Unmarshal(*src, &tmp)
+		assert.NoError(err)*/
+	}
 }
