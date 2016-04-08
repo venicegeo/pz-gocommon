@@ -30,7 +30,7 @@ import (
 	"github.com/venicegeo/pz-gocommon"
 )
 
-const MOCKING = true
+const MOCKING = false
 
 type EsTester struct {
 	suite.Suite
@@ -268,7 +268,8 @@ func (suite *EsTester) Test03Operations() {
 	} else {
 		{
 			// SEARCH for everything
-			searchResult, err := esi.FilterByMatchAll(mapping)
+			// TODO: exercise sortKey
+			searchResult, err := esi.FilterByMatchAll(mapping, "")
 			assert.NoError(err)
 			assert.NotNil(searchResult)
 
@@ -1020,7 +1021,7 @@ func (suite *EsTester) Test10GetAll() {
 	time.Sleep(1 * time.Second)
 
 	{
-		getResult, err := esi.FilterByMatchAll("")
+		getResult, err := esi.FilterByMatchAll("", "")
 		assert.NoError(err)
 		assert.NotNil(getResult)
 		assert.Len(*getResult.GetHits(), 2)

@@ -148,7 +148,10 @@ func (esi *MockIndex) DeleteByID(typ string, id string) (*DeleteResponse, error)
 	return r, nil
 }
 
-func (esi *MockIndex) FilterByMatchAll(typ string) (*SearchResult, error) {
+func (esi *MockIndex) FilterByMatchAll(typ string, sortKey string) (*SearchResult, error) {
+
+	// TODO; sortKey not supported
+
 	objs := make(map[string]*json.RawMessage)
 
 	if typ == "" {
