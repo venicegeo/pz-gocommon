@@ -31,9 +31,11 @@ type SearchResult struct {
 }
 
 func NewSearchResult(searchResult *elastic.SearchResult) *SearchResult {
+	count := len(searchResult.Hits.Hits)
+
 	resp := &SearchResult{
-		totalHits: searchResult.TotalHits(),
-		hits:      make([]*SeachResultHit, searchResult.TotalHits()),
+		totalHits: int64(count),
+		hits:      make([]*SeachResultHit, count),
 	}
 
 	for i, hit := range searchResult.Hits.Hits {
