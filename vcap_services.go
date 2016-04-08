@@ -92,7 +92,7 @@ func NewVcapServices() (*VcapServices, error) {
 		name := ServiceName(serviceEntry.Name)
 		addr := serviceEntry.Credentials.Host
 		vcap.Services[name] = addr
-		log.Printf("VcapServices: added %s for %s", name, addr)
+		//log.Printf("VcapServices: added %s for %s", name, addr)
 	}
 
 	return vcap, nil
