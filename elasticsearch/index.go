@@ -232,7 +232,7 @@ func (esi *Index) DeleteByID(typ string, id string) (*DeleteResponse, error) {
 	return NewDeleteResponse(deleteResponse), err
 }
 
-func (esi *Index) FilterByMatchAll(typ string, sortKey string) (*SearchResult, error) {
+func (esi *Index) FilterByMatchAll(typ string, sortKey string, size int, from int) (*SearchResult, error) {
 	//q := elastic.NewBoolFilter()
 	//q.Must(elastic.NewTermFilter("a", 1))
 
@@ -242,10 +242,8 @@ func (esi *Index) FilterByMatchAll(typ string, sortKey string) (*SearchResult, e
 	}*/
 
 	q := elastic.NewMatchAllQuery()
-	f := esi.lib.Search().
-		Index(esi.index).
-		Type(typ).
-		Query(q)
+	f := esi.lib.Search().Index(esi.index).Type(typ).Query(q).
+		From(from).Size(size)
 	if sortKey != "" {
 		f = f.Sort(sortKey, true)
 	}

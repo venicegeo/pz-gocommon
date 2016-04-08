@@ -52,7 +52,7 @@ type IIndex interface {
 	PostData(typ string, id string, obj interface{}) (*IndexResponse, error)
 	GetByID(typ string, id string) (*GetResult, error)
 	DeleteByID(typ string, id string) (*DeleteResponse, error)
-	FilterByMatchAll(typ string, sortKey string) (*SearchResult, error)
+	FilterByMatchAll(typ string, sortKey string, size int, from int) (*SearchResult, error)
 	FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error)
 	SearchByJSON(typ string, jsn string) (*SearchResult, error)
 	SetMapping(typename string, jsn piazza.JsonString) error

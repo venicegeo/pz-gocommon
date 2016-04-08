@@ -17,6 +17,7 @@ package elasticsearch
 import (
 	"encoding/json"
 	"errors"
+	"sort"
 
 	"github.com/venicegeo/pz-gocommon"
 )
@@ -148,9 +149,26 @@ func (esi *MockIndex) DeleteByID(typ string, id string) (*DeleteResponse, error)
 	return r, nil
 }
 
-func (esi *MockIndex) FilterByMatchAll(typ string, sortKey string) (*SearchResult, error) {
+type srhByID []*SeachResultHit
+
+func (a srhByID) Len() int {
+	return len(a)
+}
+func (a srhByID) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+func (a srhByID) Less(i, j int) bool {
+	return (*a[i]).Id < (*a[j]).Id
+}
+func srhSortMatches(matches []*SeachResultHit) []*SeachResultHit {
+	sort.Sort(srhByID(matches))
+	return matches
+}
+
+func (esi *MockIndex) FilterByMatchAll(typ string, sortKey string, size int, from int) (*SearchResult, error) {
 
 	// TODO; sortKey not supported
+	// TODO: size and from not supported
 
 	objs := make(map[string]*json.RawMessage)
 
@@ -180,6 +198,16 @@ func (esi *MockIndex) FilterByMatchAll(typ string, sortKey string) (*SearchResul
 		resp.hits[i] = tmp
 		i++
 	}
+
+	resp.hits = srhSortMatches(resp.hits)
+
+	if from >= len(resp.hits) {
+		resp.hits = make([]*SeachResultHit, 0)
+	}
+	if from+size >= len(resp.hits) {
+		size = len(resp.hits)
+	}
+	resp.hits = resp.hits[from : from+size]
 
 	return resp, nil
 }

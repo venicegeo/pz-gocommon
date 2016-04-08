@@ -208,6 +208,7 @@ func (suite *EsTester) Test02SimplePost() {
 	}()
 
 	err = esi.SetMapping(mapping, piazza.JsonString(objMapping))
+	assert.NoError(err)
 
 	type NotObj struct {
 		ID   int    `json:"id" binding:"required"`
@@ -269,7 +270,7 @@ func (suite *EsTester) Test03Operations() {
 		{
 			// SEARCH for everything
 			// TODO: exercise sortKey
-			searchResult, err := esi.FilterByMatchAll(mapping, "")
+			searchResult, err := esi.FilterByMatchAll(mapping, "", 10, 0)
 			assert.NoError(err)
 			assert.NotNil(searchResult)
 
@@ -1021,7 +1022,7 @@ func (suite *EsTester) Test10GetAll() {
 	time.Sleep(1 * time.Second)
 
 	{
-		getResult, err := esi.FilterByMatchAll("", "")
+		getResult, err := esi.FilterByMatchAll("", "", 10, 0)
 		assert.NoError(err)
 		assert.NotNil(getResult)
 		assert.Len(*getResult.GetHits(), 2)
@@ -1052,5 +1053,73 @@ func (suite *EsTester) Test10GetAll() {
 		assert.Equal(tmp1.Extra1, "extra1")
 		assert.Equal(tmp2.Data2, 123)
 		assert.Equal(tmp2.Extra2, "extra2")
+	}
+}
+
+func (suite *EsTester) Test11Pagination() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	var err error
+
+	esi := suite.SetUpIndex()
+	assert.NotNil(esi)
+	defer func() {
+		esi.Close()
+		esi.Delete()
+	}()
+
+	type Obj3 struct {
+		ID   string `json:"id3" binding:"required"`
+		Data int    `json:"data3" binding:"required"`
+	}
+	obj3Mapping := `{
+	 "Obj3":{
+		"properties":{
+			"id3": {
+				"type":"string",
+                "store":true
+			},
+			"data3": {
+				"type":"integer",
+                "store": true
+			}
+		}
+	}
+}`
+
+	err = esi.SetMapping("Obj3", piazza.JsonString(obj3Mapping))
+	assert.NoError(err)
+
+	p := fmt.Sprintf("%x", time.Now().Nanosecond()%0xffffffff)
+
+	for i := 0; i <= 9; i++ {
+		id := fmt.Sprintf("id%d_%s", i, p)
+		obj := Obj3{ID: id, Data: i * i}
+		indexResult, err := esi.PostData("Obj3", id, obj)
+		assert.NoError(err)
+		assert.NotNil(indexResult)
+		assert.EqualValues(id, indexResult.Id)
+	}
+
+	time.Sleep(1 * time.Second)
+
+	{
+		getResult, err := esi.FilterByMatchAll("Obj3", "id3", 4, 0)
+		assert.NoError(err)
+		assert.Len(*getResult.GetHits(), 4)
+		assert.Equal("id0_"+p, getResult.GetHit(0).Id)
+		assert.Equal("id1_"+p, getResult.GetHit(1).Id)
+		assert.Equal("id2_"+p, getResult.GetHit(2).Id)
+		assert.Equal("id3_"+p, getResult.GetHit(3).Id)
+	}
+
+	{
+		getResult, err := esi.FilterByMatchAll("Obj3", "id3", 3, 3)
+		assert.NoError(err)
+		assert.Len(*getResult.GetHits(), 3)
+		assert.Equal("id3_"+p, getResult.GetHit(0).Id)
+		assert.Equal("id4_"+p, getResult.GetHit(1).Id)
+		assert.Equal("id5_"+p, getResult.GetHit(2).Id)
 	}
 }
