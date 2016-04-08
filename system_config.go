@@ -119,15 +119,18 @@ func (sys *SystemConfig) checkRequirements(requirements []ServiceName) error {
 	for _, name := range requirements {
 
 		if name == sys.Name {
+			log.Printf("check requirements for %s: case 1", name)
 			sys.AddService(name, sys.Address)
 
 		} else {
 			if addr, ok := sys.vcapServices.Services[name]; !ok {
 				// the service we want is not in VCAP, so fake it
+				log.Printf("check requirements for %s: case 2", name)
 				sys.AddService(name, string(name)+DefaultDomain)
 
 			} else {
 				// the service we want is in VCAP, with a full and valid address
+				log.Printf("check requirements for %s: case 3", name)
 				sys.AddService(name, addr)
 			}
 		}
