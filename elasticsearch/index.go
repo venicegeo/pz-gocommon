@@ -232,7 +232,7 @@ func (esi *Index) DeleteByID(typ string, id string) (*DeleteResponse, error) {
 	return NewDeleteResponse(deleteResponse), err
 }
 
-func (esi *Index) FilterByMatchAll(typ string, sortKey string, size int, from int) (*SearchResult, error) {
+func (esi *Index) FilterByMatchAll(typ string, format QueryFormat) (*SearchResult, error) {
 	//q := elastic.NewBoolFilter()
 	//q.Must(elastic.NewTermFilter("a", 1))
 
@@ -242,15 +242,25 @@ func (esi *Index) FilterByMatchAll(typ string, sortKey string, size int, from in
 	}*/
 
 	q := elastic.NewMatchAllQuery()
-	f := esi.lib.Search().Index(esi.index).Type(typ).Query(q).
-		From(from).Size(size)
-	if sortKey != "" {
-		ascending := sortKey != "stamp" // TODO HACK BUG FIXME
-		f = f.Sort(sortKey, ascending)
-	}
-	searchResult, err := f.Do()
+	f := esi.lib.Search().Index(esi.index).Type(typ).Query(q)
 
-	return NewSearchResult(searchResult), err
+	f = f.From(format.From)
+	f = f.Size(format.Size)
+
+	if format.Key != "" {
+		f = f.Sort(format.Key, !bool(format.Order))
+	}
+
+	searchResult, err := f.Do()
+	if err != nil {
+		// if the mapping (or the index?) doesn't exist yet, squash the error
+		// (this is the case in some of the unit tests which ((try to)) assure the DB is empty)
+		resp := &SearchResult{totalHits: 0, hits: make([]*SeachResultHit, 0)}
+		return resp, nil
+	}
+
+	resp := NewSearchResult(searchResult)
+	return resp, nil
 }
 
 func (esi *Index) FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error) {

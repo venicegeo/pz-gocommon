@@ -17,13 +17,31 @@ package elasticsearch
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"strconv"
 	"strings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/venicegeo/pz-gocommon"
 )
 
 // MappingElementTypeName is just an alias for a string.
 type MappingElementTypeName string
+
+// Constants indicating ascending (1,2,3) or descending (3,2,1) order.
+type SortOrder bool
+
+const (
+	SortAscending  SortOrder = false
+	SortDescending SortOrder = true
+)
+
+type QueryFormat struct {
+	Size  int
+	From  int
+	Order SortOrder
+	Key   string
+}
 
 // Constants representing the supported data types for the Event parameters.
 const (
@@ -52,7 +70,7 @@ type IIndex interface {
 	PostData(typ string, id string, obj interface{}) (*IndexResponse, error)
 	GetByID(typ string, id string) (*GetResult, error)
 	DeleteByID(typ string, id string) (*DeleteResponse, error)
-	FilterByMatchAll(typ string, sortKey string, size int, from int) (*SearchResult, error)
+	FilterByMatchAll(typ string, format QueryFormat) (*SearchResult, error)
 	FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error)
 	SearchByJSON(typ string, jsn string) (*SearchResult, error)
 	SetMapping(typename string, jsn piazza.JsonString) error
@@ -106,4 +124,61 @@ func ConstructMappingSchema(name string, items map[string]MappingElementTypeName
 	json := fmt.Sprintf(template, name, strings.Join(stuff, ","))
 
 	return piazza.JsonString(json), nil
+}
+
+func GetFormatParams(c *gin.Context,
+	defaultSize int, defaultFrom int, defaultKey string, defaultOrder SortOrder) QueryFormat {
+
+	paramInt := func(param string, defalt int) int {
+		str := c.Query(param)
+		if str == "" {
+			return defalt
+		}
+
+		value64, err := strconv.ParseInt(str, 10, 0)
+		if err != nil {
+			c.String(http.StatusBadRequest, "query argument for '?%s' is invalid: %s", param, str)
+			return -1
+		}
+		value := int(value64)
+
+		return value
+	}
+
+	paramString := func(param string, defalt string) string {
+		str := c.Query(param)
+		if str == "" {
+			return defalt
+		}
+		return str
+	}
+
+	paramOrder := func(param string, defalt SortOrder) SortOrder {
+		str := c.Query(param)
+		if str == "" {
+			return defalt
+		}
+
+		value, err := strconv.ParseBool(str)
+		if err != nil {
+			c.String(http.StatusBadRequest, "query argument for '?%s' is invalid: %s", param, str)
+			return defalt
+		}
+
+		return SortOrder(value)
+	}
+
+	format := QueryFormat{
+		Size:  paramInt("size", defaultSize),
+		From:  paramInt("from", defaultFrom),
+		Key:   paramString("key", defaultKey),
+		Order: paramOrder("order", defaultOrder),
+	}
+
+	return format
+}
+
+func (format QueryFormat) String() string {
+	return fmt.Sprintf("Size=%d, From=%d, Key=%s, Order=%t",
+		format.Size, format.From, format.Key, format.Order)
 }
