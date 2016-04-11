@@ -246,13 +246,21 @@ func (esi *Index) FilterByMatchAll(typ string, format QueryFormat) (*SearchResul
 
 	f = f.From(format.From)
 	f = f.Size(format.Size)
+
 	if format.Key != "" {
 		f = f.Sort(format.Key, !bool(format.Order))
 	}
 
 	searchResult, err := f.Do()
+	if err != nil {
+		// if the mapping (or the index?) doesn't exist yet, squash the error
+		// (this is the case in some of the unit tests which ((try to)) assure the DB is empty)
+		resp := &SearchResult{totalHits: 0, hits: make([]*SeachResultHit, 0)}
+		return resp, nil
+	}
 
-	return NewSearchResult(searchResult), err
+	resp := NewSearchResult(searchResult)
+	return resp, nil
 }
 
 func (esi *Index) FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error) {
