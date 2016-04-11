@@ -177,3 +177,8 @@ func GetFormatParams(c *gin.Context,
 
 	return format
 }
+
+func (format QueryFormat) String() string {
+	return fmt.Sprintf("Size=%d, From=%d, Key=%s, Order=%t",
+		format.Size, format.From, format.Key, format.Order)
+}
