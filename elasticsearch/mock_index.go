@@ -165,10 +165,8 @@ func srhSortMatches(matches []*SeachResultHit) []*SeachResultHit {
 	return matches
 }
 
-func (esi *MockIndex) FilterByMatchAll(typ string, sortKey string, size int, from int) (*SearchResult, error) {
+func (esi *MockIndex) FilterByMatchAll(typ string, format QueryFormat) (*SearchResult, error) {
 
-	// TODO; sortKey not supported
-	// TODO: "descending" for sortKey 'stamp' not supported
 	objs := make(map[string]*json.RawMessage)
 
 	if typ == "" {
@@ -197,6 +195,12 @@ func (esi *MockIndex) FilterByMatchAll(typ string, sortKey string, size int, fro
 		resp.hits[i] = tmp
 		i++
 	}
+
+	// TODO; sort key not supported
+	// TODO: sort order not supported
+
+	from := format.From
+	size := format.Size
 
 	resp.hits = srhSortMatches(resp.hits)
 

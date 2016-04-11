@@ -232,7 +232,7 @@ func (esi *Index) DeleteByID(typ string, id string) (*DeleteResponse, error) {
 	return NewDeleteResponse(deleteResponse), err
 }
 
-func (esi *Index) FilterByMatchAll(typ string, sortKey string, size int, from int) (*SearchResult, error) {
+func (esi *Index) FilterByMatchAll(typ string, format QueryFormat) (*SearchResult, error) {
 	//q := elastic.NewBoolFilter()
 	//q.Must(elastic.NewTermFilter("a", 1))
 
@@ -242,12 +242,14 @@ func (esi *Index) FilterByMatchAll(typ string, sortKey string, size int, from in
 	}*/
 
 	q := elastic.NewMatchAllQuery()
-	f := esi.lib.Search().Index(esi.index).Type(typ).Query(q).
-		From(from).Size(size)
-	if sortKey != "" {
-		ascending := sortKey != "stamp" // TODO HACK BUG FIXME
-		f = f.Sort(sortKey, ascending)
+	f := esi.lib.Search().Index(esi.index).Type(typ).Query(q)
+
+	f = f.From(format.From)
+	f = f.Size(format.Size)
+	if format.Key != "" {
+		f = f.Sort(format.Key, !bool(format.Order))
 	}
+
 	searchResult, err := f.Do()
 
 	return NewSearchResult(searchResult), err

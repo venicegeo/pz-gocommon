@@ -270,7 +270,8 @@ func (suite *EsTester) Test03Operations() {
 		{
 			// SEARCH for everything
 			// TODO: exercise sortKey
-			searchResult, err := esi.FilterByMatchAll(mapping, "", 10, 0)
+			format := QueryFormat{Size: 10, From: 0}
+			searchResult, err := esi.FilterByMatchAll(mapping, format)
 			assert.NoError(err)
 			assert.NotNil(searchResult)
 
@@ -1022,7 +1023,8 @@ func (suite *EsTester) Test10GetAll() {
 	time.Sleep(1 * time.Second)
 
 	{
-		getResult, err := esi.FilterByMatchAll("", "", 10, 0)
+		format := QueryFormat{Size: 10, From: 0, Order: SortAscending, Key: ""}
+		getResult, err := esi.FilterByMatchAll("", format)
 		assert.NoError(err)
 		assert.NotNil(getResult)
 		assert.Len(*getResult.GetHits(), 2)
@@ -1105,7 +1107,8 @@ func (suite *EsTester) Test11Pagination() {
 	time.Sleep(1 * time.Second)
 
 	{
-		getResult, err := esi.FilterByMatchAll("Obj3", "id3", 4, 0)
+		format := QueryFormat{Size: 4, From: 0, Order: SortAscending, Key: "id3"}
+		getResult, err := esi.FilterByMatchAll("Obj3", format)
 		assert.NoError(err)
 		assert.Len(*getResult.GetHits(), 4)
 		assert.Equal("id0_"+p, getResult.GetHit(0).Id)
@@ -1115,7 +1118,8 @@ func (suite *EsTester) Test11Pagination() {
 	}
 
 	{
-		getResult, err := esi.FilterByMatchAll("Obj3", "id3", 3, 3)
+		format := QueryFormat{Size: 3, From: 3, Order: SortAscending, Key: "id3"}
+		getResult, err := esi.FilterByMatchAll("Obj3", format)
 		assert.NoError(err)
 		assert.Len(*getResult.GetHits(), 3)
 		assert.Equal("id3_"+p, getResult.GetHit(0).Id)
