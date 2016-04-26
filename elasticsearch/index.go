@@ -255,7 +255,7 @@ func (esi *Index) FilterByMatchAll(typ string, format QueryFormat) (*SearchResul
 	if err != nil {
 		// if the mapping (or the index?) doesn't exist yet, squash the error
 		// (this is the case in some of the unit tests which ((try to)) assure the DB is empty)
-		resp := &SearchResult{totalHits: 0, hits: make([]*SeachResultHit, 0)}
+		resp := &SearchResult{totalHits: 0, hits: make([]*SearchResultHit, 0)}
 		return resp, nil
 	}
 

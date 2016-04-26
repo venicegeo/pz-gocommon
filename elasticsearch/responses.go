@@ -20,14 +20,14 @@ import (
 	"gopkg.in/olivere/elastic.v3"
 )
 
-type SeachResultHit struct {
+type SearchResultHit struct {
 	Id     string
 	Source *json.RawMessage
 }
 
 type SearchResult struct {
 	totalHits int64
-	hits      []*SeachResultHit
+	hits      []*SearchResultHit
 }
 
 func NewSearchResult(searchResult *elastic.SearchResult) *SearchResult {
@@ -35,11 +35,11 @@ func NewSearchResult(searchResult *elastic.SearchResult) *SearchResult {
 
 	resp := &SearchResult{
 		totalHits: int64(count),
-		hits:      make([]*SeachResultHit, count),
+		hits:      make([]*SearchResultHit, count),
 	}
 
 	for i, hit := range searchResult.Hits.Hits {
-		tmp := &SeachResultHit{
+		tmp := &SearchResultHit{
 			Id:     hit.Id,
 			Source: hit.Source,
 		}
@@ -53,11 +53,11 @@ func (r *SearchResult) TotalHits() int64 {
 	return r.totalHits
 }
 
-func (r *SearchResult) GetHits() *[]*SeachResultHit {
+func (r *SearchResult) GetHits() *[]*SearchResultHit {
 	return &r.hits
 }
 
-func (r *SearchResult) GetHit(i int) *SeachResultHit {
+func (r *SearchResult) GetHit(i int) *SearchResultHit {
 	arr := r.GetHits()
 	return (*arr)[i]
 }
