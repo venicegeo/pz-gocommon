@@ -149,7 +149,7 @@ func (esi *MockIndex) DeleteByID(typ string, id string) (*DeleteResponse, error)
 	return r, nil
 }
 
-type srhByID []*SeachResultHit
+type srhByID []*SearchResultHit
 
 func (a srhByID) Len() int {
 	return len(a)
@@ -160,7 +160,7 @@ func (a srhByID) Swap(i, j int) {
 func (a srhByID) Less(i, j int) bool {
 	return (*a[i]).Id < (*a[j]).Id
 }
-func srhSortMatches(matches []*SeachResultHit) []*SeachResultHit {
+func srhSortMatches(matches []*SearchResultHit) []*SearchResultHit {
 	sort.Sort(srhByID(matches))
 	return matches
 }
@@ -183,12 +183,12 @@ func (esi *MockIndex) FilterByMatchAll(typ string, format QueryFormat) (*SearchR
 
 	resp := &SearchResult{
 		totalHits: int64(len(objs)),
-		hits:      make([]*SeachResultHit, len(objs)),
+		hits:      make([]*SearchResultHit, len(objs)),
 	}
 
 	i := 0
 	for id, obj := range objs {
-		tmp := &SeachResultHit{
+		tmp := &SearchResultHit{
 			Id:     id,
 			Source: obj,
 		}
@@ -205,7 +205,7 @@ func (esi *MockIndex) FilterByMatchAll(typ string, format QueryFormat) (*SearchR
 	resp.hits = srhSortMatches(resp.hits)
 
 	if from >= len(resp.hits) {
-		resp.hits = make([]*SeachResultHit, 0)
+		resp.hits = make([]*SearchResultHit, 0)
 	}
 	if from+size >= len(resp.hits) {
 		size = len(resp.hits)
