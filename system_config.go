@@ -17,7 +17,9 @@ package piazza
 import (
 	"fmt"
 	"log"
+	"os"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -94,6 +96,13 @@ func NewSystemConfig(serviceName ServiceName,
 		sys.domain = DefaultDomain
 	}
 
+	if os.Getenv("DOMAIN") != "" {
+		sys.domain = os.Getenv("DOMAIN")
+		if ! strings.HasPrefix( sys.domain, ".") {
+			sys.domain = "." + sys.domain
+		}		
+	}
+
 	// set some data about our own service first
 	sys.Name = serviceName
 	sys.Address = sys.vcapApplication.GetAddress()
@@ -125,8 +134,8 @@ func (sys *SystemConfig) checkRequirements(requirements []ServiceName) error {
 		} else {
 			if addr, ok := sys.vcapServices.Services[name]; !ok {
 				// the service we want is not in VCAP, so fake it
-				//log.Printf("check requirements for %s: case 2", name)
-				sys.AddService(name, string(name)+DefaultDomain)
+				//log.Printf("check requirements for %s: case 2", name)				
+				sys.AddService(name, string(name)+sys.domain)
 
 			} else {
 				// the service we want is in VCAP, with a full and valid address
