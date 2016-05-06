@@ -42,3 +42,15 @@ func NewErrorf(format string, a ...interface{}) error {
 	s := fmt.Sprintf(format, a)
 	return errors.New(s)
 }
+
+type Pagination struct {
+	Count int64 `json:"count" binding:"required"`
+	Page int `json:"page" binding:"required"`
+	PerPage int `json:"per_page" binding:"required"`	
+	SortBy string `json:"sort_by,omitempty"`
+	Order string `json:"order,omitempty"`
+}
+type Common18FListResponse struct {
+	Data []interface{} `json:"data" binding:"required"`
+	Pagination Pagination `json:"pagination" binding:"required"`	
+}
