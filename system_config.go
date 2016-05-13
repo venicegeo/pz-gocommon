@@ -17,8 +17,8 @@ package piazza
 import (
 	"fmt"
 	"log"
-	"os"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -37,6 +37,7 @@ const (
 	PzLogger        ServiceName = "pz-logger"
 	PzUuidgen       ServiceName = "pz-uuidgen"
 	PzWorkflow      ServiceName = "pz-workflow"
+	PzsvcHello      ServiceName = "pzsvc-hello"
 )
 
 var EndpointPrefixes = map[ServiceName]string{
@@ -46,6 +47,7 @@ var EndpointPrefixes = map[ServiceName]string{
 	PzLogger:        "/v1",
 	PzUuidgen:       "/v1",
 	PzWorkflow:      "/v1",
+	PzsvcHello:      "/v1",
 }
 
 var HealthcheckEndpoints = map[ServiceName]string{
@@ -55,6 +57,7 @@ var HealthcheckEndpoints = map[ServiceName]string{
 	PzLogger:        "/",
 	PzUuidgen:       "/",
 	PzWorkflow:      "/",
+	PzsvcHello:      "/",
 }
 
 type ServicesMap map[ServiceName]string
@@ -98,9 +101,9 @@ func NewSystemConfig(serviceName ServiceName,
 
 	if os.Getenv("DOMAIN") != "" {
 		sys.domain = os.Getenv("DOMAIN")
-		if ! strings.HasPrefix( sys.domain, ".") {
+		if !strings.HasPrefix(sys.domain, ".") {
 			sys.domain = "." + sys.domain
-		}		
+		}
 	}
 
 	// set some data about our own service first
@@ -134,7 +137,7 @@ func (sys *SystemConfig) checkRequirements(requirements []ServiceName) error {
 		} else {
 			if addr, ok := sys.vcapServices.Services[name]; !ok {
 				// the service we want is not in VCAP, so fake it
-				//log.Printf("check requirements for %s: case 2", name)				
+				//log.Printf("check requirements for %s: case 2", name)
 				sys.AddService(name, string(name)+sys.domain)
 
 			} else {
@@ -251,11 +254,3 @@ func (sys *SystemConfig) WaitForServiceByAddress(name ServiceName, address strin
 	}
 	/* notreached */
 }
-
-/*
-func IsLocalConfig() bool {
-	localFlag := flag.Bool("local", false, "use localhost ports")
-	flag.Parse()
-	return *localFlag
-}
-*/
