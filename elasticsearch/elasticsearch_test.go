@@ -127,11 +127,6 @@ func (suite *EsTester) SetUpIndex() IIndex {
 		assert.NotNil(indexResult)
 	}
 
-	// Flush
-	// TODO: needed? how often?
-	err = esi.Flush()
-	assert.NoError(err)
-
 	return esi
 }
 
@@ -701,12 +696,6 @@ func (suite *EsTester) Test09FullPercolation() {
 		assert.True(ok)
 	}
 
-	// flush
-	{
-		err = esi.Flush()
-		assert.NoError(err)
-	}
-
 	if MOCKING {
 		t.Skip("skipping test, because mocking.")
 		return
@@ -722,9 +711,6 @@ func (suite *EsTester) Test09FullPercolation() {
 			err = esi.SetMapping(k, jsn)
 			assert.NoError(err)
 		}
-
-		err = esi.Flush()
-		assert.NoError(err)
 	}
 
 	addQueries := func(queries map[string]piazza.JsonString) {
@@ -732,9 +718,6 @@ func (suite *EsTester) Test09FullPercolation() {
 			_, err = esi.AddPercolationQuery(k, v)
 			assert.NoError(err)
 		}
-
-		err = esi.Flush()
-		assert.NoError(err)
 	}
 
 	type TestCase struct {

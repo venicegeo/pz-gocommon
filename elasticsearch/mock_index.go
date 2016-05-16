@@ -102,10 +102,6 @@ func (esi *MockIndex) Delete() error {
 	return nil
 }
 
-func (esi *MockIndex) Flush() error {
-	return nil
-}
-
 func (esi *MockIndex) PostData(typ string, id string, obj interface{}) (*IndexResponse, error) {
 	if !esi.TypeExists(typ) {
 		esi.items[typ] = make(map[string]*json.RawMessage)
