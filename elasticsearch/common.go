@@ -66,7 +66,6 @@ type IIndex interface {
 	Create() error
 	Close() error
 	Delete() error
-	Flush() error
 	PostData(typ string, id string, obj interface{}) (*IndexResponse, error)
 	GetByID(typ string, id string) (*GetResult, error)
 	DeleteByID(typ string, id string) (*DeleteResponse, error)
@@ -161,7 +160,7 @@ func GetFormatParamsV2(c *gin.Context,
 
 		//value, err := strconv.ParseBool(str)
 		value := strings.ToLower(str) == "desc"
-		
+
 		// if err != nil {
 		// 	c.String(http.StatusBadRequest, "query argument for '?%s' is invalid: %s", param, str)
 		// 	return defalt

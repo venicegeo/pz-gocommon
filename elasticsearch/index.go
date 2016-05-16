@@ -164,22 +164,6 @@ func (esi *Index) Delete() error {
 	return nil
 }
 
-// TODO: how often should we do this?
-func (esi *Index) Flush() error {
-	// TODO: the caller should enforce this instead
-	ok := esi.IndexExists()
-	if !ok {
-		return fmt.Errorf("Index %s does not exist", esi.index)
-	}
-
-	_, err := esi.lib.Flush().Index(esi.index).Do()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (esi *Index) PostData(typ string, id string, obj interface{}) (*IndexResponse, error) {
 	/*ok := esi.IndexExists()
 	if !ok {
