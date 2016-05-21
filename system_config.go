@@ -32,8 +32,8 @@ type ServiceName string
 const (
 	PzDiscover      ServiceName = "pz-discover"
 	PzElasticSearch ServiceName = "pz-elasticsearch"
-	PzGateway       ServiceName = "pz-gateway"
 	PzGoCommon      ServiceName = "PZ-GOCOMMON" // not a real service, just for testing
+	PzKafka         ServiceName = "pz-kafka"
 	PzLogger        ServiceName = "pz-logger"
 	PzUuidgen       ServiceName = "pz-uuidgen"
 	PzWorkflow      ServiceName = "pz-workflow"
@@ -43,7 +43,7 @@ const (
 var EndpointPrefixes = map[ServiceName]string{
 	PzDiscover:      "",
 	PzElasticSearch: "",
-	PzGateway:       "",
+	PzKafka:         "",
 	PzLogger:        "/v1",
 	PzUuidgen:       "/v1",
 	PzWorkflow:      "/v1",
@@ -53,7 +53,7 @@ var EndpointPrefixes = map[ServiceName]string{
 var HealthcheckEndpoints = map[ServiceName]string{
 	PzDiscover:      "",
 	PzElasticSearch: "",
-	PzGateway:       "/health",
+	PzKafka:         "",
 	PzLogger:        "/",
 	PzUuidgen:       "/",
 	PzWorkflow:      "/",
