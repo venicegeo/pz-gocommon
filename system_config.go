@@ -161,27 +161,29 @@ func (sys *SystemConfig) runHealthChecks() error {
 	//log.Printf("SystemConfig.runHealthChecks: start")
 
 	for name, addr := range sys.endpoints {
-		if name != sys.Name {
-			url := fmt.Sprintf("%s://%s%s", DefaultProtocol, addr, HealthcheckEndpoints[name])
-
-			//log.Printf("Service healthy? %s at %s (%s)", name, addr, url)
-
-			resp, err := http.Get(url)
-			if err != nil {
-				return NewErrorf("Health check errored for service: %s at %s <%#v>", name, url, resp)
-			}
-
-			if resp.StatusCode != http.StatusOK {
-				return NewErrorf("Health check failed for service: %s at %s <%#v>", name, url, resp)
-			}
-
-			log.Printf("Service healthy: %s at %s", name, url)
-			/*body, err := ReadFrom(resp.Body)
-			if err != nil {
-				return err
-			}
-			log.Printf(">>> %s <<<", string(body))*/
+		if name == sys.Name || name == PzKafka {
+			continue
 		}
+
+		url := fmt.Sprintf("%s://%s%s", DefaultProtocol, addr, HealthcheckEndpoints[name])
+
+		//log.Printf("Service healthy? %s at %s (%s)", name, addr, url)
+
+		resp, err := http.Get(url)
+		if err != nil {
+			return NewErrorf("Health check errored for service: %s at %s <%#v>", name, url, resp)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			return NewErrorf("Health check failed for service: %s at %s <%#v>", name, url, resp)
+		}
+
+		log.Printf("Service healthy: %s at %s", name, url)
+		/*body, err := ReadFrom(resp.Body)
+		if err != nil {
+			return err
+		}
+		log.Printf(">>> %s <<<", string(body))*/
 	}
 
 	//log.Printf("SystemConfig.runHealthChecks: end")
