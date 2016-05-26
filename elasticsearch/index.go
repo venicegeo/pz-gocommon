@@ -112,7 +112,8 @@ func (esi *Index) Create() error {
 
 	ok := esi.IndexExists()
 	if ok {
-		return fmt.Errorf("Index %s already exists", esi.index)
+		//return fmt.Errorf("Index %s already exists", esi.index)
+		return nil
 	}
 
 	createIndex, err := esi.lib.CreateIndex(esi.index).Do()
