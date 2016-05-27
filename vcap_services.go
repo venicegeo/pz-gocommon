@@ -60,7 +60,13 @@ var localVcapServices = &VcapServices{
 		VcapServiceEntry{
 			Name: "pz-elasticsearch",
 			Credentials: VcapCredentials{
-				Host: "localhost:9200",
+				Host: DefaultElasticsearchAddress,
+			},
+		},
+		VcapServiceEntry{
+			Name: "pz-kafka",
+			Credentials: VcapCredentials{
+				Host: DefaultKafkaAddress,
 			},
 		},
 	},

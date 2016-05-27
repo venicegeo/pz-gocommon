@@ -16,91 +16,211 @@ package piazza
 
 import (
 	"fmt"
+	"log"
+	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
+	"github.com/venicegeo/pz-gocommon"
+
+	"github.com/Shopify/sarama"
 )
 
-const kafkaHost = "localhost:9092"
+const MOCKING = true
 
-var OffsetNewest int64
+type KafkaTester struct {
+	suite.Suite
+	sys *piazza.SystemConfig
+}
 
-var kafka *Kafka
-
-func doReads(t *testing.T, numReads *int) {
-	c, err := kafka.NewConsumer()
-	if err != nil {
-		t.Fatal(err)
+func (suite *KafkaTester) SetupSuite() {
+	var required []piazza.ServiceName
+	if MOCKING {
+		required = []piazza.ServiceName{}
+	} else {
+		required = []piazza.ServiceName{piazza.PzKafka}
 	}
 
-	defer func() {
-		if err := c.Close(); err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	partitionConsumer, err := c.ConsumePartition("test3", 0, OffsetNewest)
+	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
-	defer func() {
-		if err := partitionConsumer.Close(); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	suite.sys = sys
+}
+
+func (suite *KafkaTester) TearDownSuite() {}
+
+func TestRunSuite(t *testing.T) {
+	if MOCKING {
+		log.Printf("*** MOCKING enabled ***")
+	}
+
+	s1 := new(KafkaTester)
+	suite.Run(t, s1)
+}
+
+//=================================================================
+
+type Closer interface {
+	Close() error
+}
+
+func close(t *testing.T, c Closer) {
+	assert := assert.New(t)
+
+	err := c.Close()
+	assert.NoError(err)
+}
+
+func makeTopicName() string {
+	rand.Seed(int64(time.Now().Nanosecond()))
+	topicName := fmt.Sprintf("test.%x", rand.Uint32())
+	//log.Printf("topic: %s", topicName)
+	return topicName
+}
+
+//=================================================================
+
+func (suite *KafkaTester) Test01() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	if MOCKING {
+		t.Skip("skipping test, because mocking enabled")
+	}
+
+	const M1 = "message one"
+	const M2 = "message two"
+
+	var producer sarama.AsyncProducer
+	var consumer sarama.Consumer
+	var partitionConsumer sarama.PartitionConsumer
+
+	var err error
+
+	server, err := suite.sys.GetAddress(piazza.PzKafka)
+	assert.NoError(err)
+
+	topic := makeTopicName()
+
+	{
+		config := sarama.NewConfig()
+		config.Producer.Return.Successes = false
+		config.Producer.Return.Errors = false
+
+		producer, err = sarama.NewAsyncProducer([]string{server}, config)
+		assert.NoError(err)
+		defer close(t, producer)
+
+		producer.Input() <- &sarama.ProducerMessage{
+			Topic: topic,
+			Key:   nil,
+			Value: sarama.StringEncoder(M1)}
+
+		producer.Input() <- &sarama.ProducerMessage{
+			Topic: topic,
+			Key:   nil,
+			Value: sarama.StringEncoder(M2)}
+	}
+
+	{
+		consumer, err = sarama.NewConsumer([]string{server}, nil)
+		assert.NoError(err)
+		defer close(t, consumer)
+
+		partitionConsumer, err = consumer.ConsumePartition(topic, 0, 0)
+		assert.NoError(err)
+		defer close(t, partitionConsumer)
+	}
+
+	{
+		mssg1 := <-partitionConsumer.Messages()
+		//t.Logf("Consumed: offset:%d  value:%v", mssg1.Offset, string(mssg1.Value))
+		mssg2 := <-partitionConsumer.Messages()
+		//t.Logf("Consumed: offset:%d  value:%v", mssg2.Offset, string(mssg2.Value))
+
+		assert.EqualValues(M1, string(mssg1.Value))
+		assert.EqualValues(M2, string(mssg2.Value))
+	}
+}
+
+//=================================================================
+
+func doReads(t *testing.T, server string, topic string, numReads *int) {
+	assert := assert.New(t)
+
+	consumer, err := sarama.NewConsumer([]string{server}, nil)
+	assert.NoError(err)
+	defer close(t, consumer)
+
+	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
+	assert.NoError(err)
+	defer close(t, partitionConsumer)
 
 	for {
-		msg := <-partitionConsumer.Messages()
-		t.Logf("Consumed: offset:%d  value:%v", msg.Offset, string(msg.Value))
+		_ = <-partitionConsumer.Messages()
+		//t.Logf("Consumed: offset:%d  value:%v", msg.Offset, string(msg.Value))
 		*numReads++
 	}
 
 	//t.Logf("Reader done: %d", *numReads)
 }
 
-func doWrites(t *testing.T, id int, count int) {
+func doWrites(t *testing.T, server string, topic string, id int, count int) {
+	assert := assert.New(t)
 
-	p, err := kafka.NewProducer()
-	if err != nil {
-		t.Fatal(err)
-	}
+	config := sarama.NewConfig()
+	config.Producer.Return.Successes = false
+	config.Producer.Return.Errors = false
 
-	defer func() {
-		if err := p.Close(); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	producer, err := sarama.NewAsyncProducer([]string{server}, config)
+	assert.NoError(err)
+	defer close(t, producer)
 
 	// TODO: handle "err := <-w.Errors():"
 
 	for n := 0; n < count; n++ {
-		p.Input() <- NewMessage("test3", fmt.Sprintf("mssg %d from %d", n, id))
+		producer.Input() <- &sarama.ProducerMessage{
+			Topic: topic,
+			Key:   nil,
+			Value: sarama.StringEncoder(fmt.Sprintf("mssg %d from %d", n, id)),
+		}
 	}
 
-	t.Logf("Writer done: %d", count)
+	//t.Logf("Writer done: %d", count)
 }
 
-func TestKafka(t *testing.T) {
-	kafka = &Kafka{host: kafkaHost}
+func (suite *KafkaTester) Test02() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	if MOCKING {
+		t.Skip("skipping test, because mocking enabled")
+	}
+
+	server, err := suite.sys.GetAddress(piazza.PzKafka)
+	assert.NoError(err)
+
+	topic := makeTopicName()
 
 	var numReads1, numReads2 int
 
-	go doReads(t, &numReads1)
-	go doReads(t, &numReads2)
+	go doReads(t, server, topic, &numReads1)
+	go doReads(t, server, topic, &numReads2)
 
 	n := 3
-	go doWrites(t, 1, n)
-	go doWrites(t, 2, n)
+	go doWrites(t, server, topic, 1, n)
+	go doWrites(t, server, topic, 2, n)
 
 	time.Sleep(1 * time.Second)
 
 	t.Log(numReads1, "---")
 	t.Log(numReads2, "---")
 
-	if numReads1 != n*2 {
-		t.Fatalf("read1 count was %d, expected %d", numReads1, n*2)
-	}
-	if numReads2 != n*2 {
-		t.Fatalf("read2 count was %d, expected %d", numReads2, n*2)
-	}
+	assert.Equal(n*2, numReads1, "read1 count")
+
+	assert.Equal(n*2, numReads2, "read2 count")
 }
