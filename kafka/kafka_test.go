@@ -16,11 +16,15 @@ package piazza
 
 import (
 	"fmt"
+	"log"
+	"math/rand"
 	"testing"
 	"time"
 )
 
 const kafkaHost = "localhost:9092"
+
+var topicName = "test.topic."
 
 var OffsetNewest int64
 
@@ -38,7 +42,7 @@ func doReads(t *testing.T, numReads *int) {
 		}
 	}()
 
-	partitionConsumer, err := c.ConsumePartition("test3", 0, OffsetNewest)
+	partitionConsumer, err := c.ConsumePartition(topicName, 0, OffsetNewest)
 	if err != nil {
 		panic(err)
 	}
@@ -74,7 +78,7 @@ func doWrites(t *testing.T, id int, count int) {
 	// TODO: handle "err := <-w.Errors():"
 
 	for n := 0; n < count; n++ {
-		p.Input() <- NewMessage("test3", fmt.Sprintf("mssg %d from %d", n, id))
+		p.Input() <- NewMessage(topicName, fmt.Sprintf("mssg %d from %d", n, id))
 	}
 
 	t.Logf("Writer done: %d", count)
@@ -82,6 +86,10 @@ func doWrites(t *testing.T, id int, count int) {
 
 func TestKafka(t *testing.T) {
 	kafka = &Kafka{host: kafkaHost}
+
+	rand.Seed(int64(time.Now().Nanosecond()))
+	topicName += fmt.Sprintf("%x", rand.Uint32())
+	log.Printf("topic: %s", topicName)
 
 	var numReads1, numReads2 int
 
