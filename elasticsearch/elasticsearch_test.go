@@ -127,6 +127,9 @@ func (suite *EsTester) SetUpIndex() IIndex {
 		assert.NotNil(indexResult)
 	}
 
+	// allow the database time to settle
+	time.Sleep(1 * time.Second)
+
 	return esi
 }
 
