@@ -20,38 +20,108 @@ import (
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/Shopify/sarama"
 )
 
 const kafkaHost = "localhost:9092"
 
-var topicName = "test.topic."
+type Closer interface {
+	Close() error
+}
 
-var OffsetNewest int64
+func close(t *testing.T, c Closer) {
+	if err := c.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
 
-var kafka *Kafka
+func makeTopicName() string {
+	rand.Seed(int64(time.Now().Nanosecond()))
+	topicName := fmt.Sprintf("test.%x", rand.Uint32())
+	log.Printf("topic: %s", topicName)
+	return topicName
+}
 
-func doReads(t *testing.T, numReads *int) {
-	c, err := kafka.NewConsumer()
+func Test01(t *testing.T) {
+	const M1 = "message one"
+	const M2 = "message two"
+
+	var producer sarama.AsyncProducer
+	var consumer sarama.Consumer
+	var partitionConsumer sarama.PartitionConsumer
+
+	var err error
+
+	topicName := makeTopicName()
+
+	{
+		config := sarama.NewConfig()
+		config.Producer.Return.Successes = false
+		config.Producer.Return.Errors = false
+
+		producer, err = sarama.NewAsyncProducer([]string{kafkaHost}, config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer close(t, producer)
+
+		producer.Input() <- &sarama.ProducerMessage{
+			Topic: topicName,
+			Key:   nil,
+			Value: sarama.StringEncoder(M1)}
+
+		producer.Input() <- &sarama.ProducerMessage{
+			Topic: topicName,
+			Key:   nil,
+			Value: sarama.StringEncoder(M2)}
+	}
+
+	{
+		consumer, err = sarama.NewConsumer([]string{kafkaHost}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer close(t, consumer)
+
+		var offsetNewest int64 = 0
+		var partition int32 = 0
+		partitionConsumer, err = consumer.ConsumePartition(topicName, partition, offsetNewest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer close(t, partitionConsumer)
+	}
+
+	{
+		mssg1 := <-partitionConsumer.Messages()
+		t.Logf("Consumed: offset:%d  value:%v", mssg1.Offset, string(mssg1.Value))
+		mssg2 := <-partitionConsumer.Messages()
+		t.Logf("Consumed: offset:%d  value:%v", mssg2.Offset, string(mssg2.Value))
+
+		if M1 != string(mssg1.Value) {
+			t.Errorf("expected %s, got %s", string(M1), mssg1.Value)
+		}
+		if M2 != string(mssg2.Value) {
+			t.Errorf("expected %s, got %s", string(M2), mssg2.Value)
+		}
+	}
+}
+
+func doReads(t *testing.T, topicName string, numReads *int) {
+	consumer, err := sarama.NewConsumer([]string{kafkaHost}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer close(t, consumer)
 
-	defer func() {
-		if err := c.Close(); err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	partitionConsumer, err := c.ConsumePartition(topicName, 0, OffsetNewest)
+	var offsetNewest int64 = 0
+	var partition int32 = 0
+	partitionConsumer, err := consumer.ConsumePartition(topicName, partition, offsetNewest)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-
-	defer func() {
-		if err := partitionConsumer.Close(); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer close(t, partitionConsumer)
 
 	for {
 		msg := <-partitionConsumer.Messages()
@@ -62,43 +132,42 @@ func doReads(t *testing.T, numReads *int) {
 	//t.Logf("Reader done: %d", *numReads)
 }
 
-func doWrites(t *testing.T, id int, count int) {
+func doWrites(t *testing.T, topicName string, id int, count int) {
 
-	p, err := kafka.NewProducer()
+	config := sarama.NewConfig()
+	config.Producer.Return.Successes = false
+	config.Producer.Return.Errors = false
+
+	producer, err := sarama.NewAsyncProducer([]string{kafkaHost}, config)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	defer func() {
-		if err := p.Close(); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer close(t, producer)
 
 	// TODO: handle "err := <-w.Errors():"
 
 	for n := 0; n < count; n++ {
-		p.Input() <- NewMessage(topicName, fmt.Sprintf("mssg %d from %d", n, id))
+		producer.Input() <- &sarama.ProducerMessage{
+			Topic: topicName,
+			Key:   nil,
+			Value: sarama.StringEncoder(fmt.Sprintf("mssg %d from %d", n, id)),
+		}
 	}
 
 	t.Logf("Writer done: %d", count)
 }
 
-func TestKafka(t *testing.T) {
-	kafka = &Kafka{host: kafkaHost}
-
-	rand.Seed(int64(time.Now().Nanosecond()))
-	topicName += fmt.Sprintf("%x", rand.Uint32())
-	log.Printf("topic: %s", topicName)
+func Test02(t *testing.T) {
+	topicName := makeTopicName()
 
 	var numReads1, numReads2 int
 
-	go doReads(t, &numReads1)
-	go doReads(t, &numReads2)
+	go doReads(t, topicName, &numReads1)
+	go doReads(t, topicName, &numReads2)
 
 	n := 3
-	go doWrites(t, 1, n)
-	go doWrites(t, 2, n)
+	go doWrites(t, topicName, 1, n)
+	go doWrites(t, topicName, 2, n)
 
 	time.Sleep(1 * time.Second)
 
