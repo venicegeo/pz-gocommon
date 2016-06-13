@@ -1,3 +1,1 @@
 # pz-gocommon
-
-test
