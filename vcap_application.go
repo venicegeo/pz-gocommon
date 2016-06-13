@@ -40,6 +40,7 @@ package piazza
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -64,14 +65,6 @@ type VcapApplication struct {
 
 // if running on laptop, we'll use this
 var localVcapApplication = &VcapApplication{
-	ApplicationName: "myapplicationname",
-	ApplicationURIs: []string{"localhost:0"},
-	bindToPort:      "localhost:0",
-	domain:          ".stage.geointservices.io",
-}
-
-// if running on Jenkins, use this
-var jenkinsVcap = &VcapApplication{
 	ApplicationName: "myapplicationname",
 	ApplicationURIs: []string{"localhost:0"},
 	bindToPort:      "localhost:0",
@@ -104,12 +97,11 @@ func NewVcapApplication() (*VcapApplication, error) {
 		full := vcap.GetAddress()
 		dot := strings.Index(full, ".")
 		if dot == -1 {
-			return nil, NewErrorf("error extracting domain from address %s", full)
+			return nil, errors.New(fmt.Sprintf("error extracting domain from address %s", full))
 		}
 		vcap.domain = full[dot+1:]
 
 	} else {
-		// TODO: differentiate between local and Jenkins?
 		vcap = localVcapApplication
 	}
 

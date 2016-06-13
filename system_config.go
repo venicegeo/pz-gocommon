@@ -15,6 +15,7 @@
 package piazza
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -172,11 +173,11 @@ func (sys *SystemConfig) runHealthChecks() error {
 
 		resp, err := http.Get(url)
 		if err != nil {
-			return NewErrorf("Health check errored for service: %s at %s <%#v>", name, url, resp)
+			return errors.New(fmt.Sprintf("Health check errored for service: %s at %s <%#v>", name, url, resp))
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			return NewErrorf("Health check failed for service: %s at %s <%#v>", name, url, resp)
+			return errors.New(fmt.Sprintf("Health check failed for service: %s at %s <%#v>", name, url, resp))
 		}
 
 		log.Printf("Service healthy: %s at %s", name, url)
@@ -203,7 +204,7 @@ func (sys *SystemConfig) AddService(name ServiceName, address string) {
 func (sys *SystemConfig) GetAddress(name ServiceName) (string, error) {
 	addr, ok := sys.endpoints[name]
 	if !ok {
-		return "", NewErrorf("Unknown service: %s", name)
+		return "", errors.New(fmt.Sprintf("Unknown service: %s", name))
 	}
 
 	return addr, nil
