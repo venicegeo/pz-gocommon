@@ -1093,7 +1093,9 @@ func (suite *EsTester) Test11Pagination() {
 	time.Sleep(1 * time.Second)
 
 	{
-		format := QueryFormat{Size: 4, From: 0, Order: SortAscending, Key: "id3"}
+		page := 0
+		size := 4
+		format := QueryFormat{Size: size, From: page * size, Order: SortAscending, Key: "id3"}
 		getResult, err := esi.FilterByMatchAll("Obj3", format)
 		assert.NoError(err)
 		assert.Len(*getResult.GetHits(), 4)
@@ -1104,7 +1106,9 @@ func (suite *EsTester) Test11Pagination() {
 	}
 
 	{
-		format := QueryFormat{Size: 3, From: 3, Order: SortAscending, Key: "id3"}
+		page := 1
+		size := 3
+		format := QueryFormat{Size: size, From: page * size, Order: SortAscending, Key: "id3"}
 		getResult, err := esi.FilterByMatchAll("Obj3", format)
 		assert.NoError(err)
 		assert.Len(*getResult.GetHits(), 3)
