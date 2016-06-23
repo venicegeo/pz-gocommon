@@ -1108,7 +1108,6 @@ func (suite *EsTester) Test11Pagination() {
 	{
 		page := 1
 		size := 3
-		log.Printf("*** new vars ***")
 		format := QueryFormat{Size: size, From: page * size, Order: SortAscending, Key: "id3"}
 		getResult, err := esi.FilterByMatchAll("Obj3", format)
 		assert.NoError(err)
