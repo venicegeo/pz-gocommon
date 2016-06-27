@@ -266,6 +266,24 @@ func (esi *Index) FilterByTermQuery(typ string, name string, value interface{}) 
 	return NewSearchResult(searchResult), err
 }
 
+func (esi *Index) FilterByMatchQuery(typ string, name string, value interface{}) (*SearchResult, error) {
+
+	ok := typ != "" && esi.TypeExists(typ)
+	if !ok {
+		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
+	}
+
+	termQuery := elastic.NewMatchQuery(name, value)
+	searchResult, err := esi.lib.Search().
+		Index(esi.index).
+		Type(typ).
+		Query(termQuery).
+		//Sort("id", true).
+		Do()
+
+	return NewSearchResult(searchResult), err
+}
+
 func (esi *Index) SearchByJSON(typ string, jsn string) (*SearchResult, error) {
 
 	ok := typ != "" && esi.TypeExists(typ)

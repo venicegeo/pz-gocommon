@@ -211,6 +211,22 @@ func (esi *MockIndex) FilterByMatchAll(typ string, format QueryFormat) (*SearchR
 	return resp, nil
 }
 
+
+func (esi *MockIndex) FilterByMatchQuery(typ string, name string, value interface{}) (*SearchResult, error) {
+
+	/*termQuery := NewTermQuery(name, value)
+	searchResult, err := esi.lib.Search().
+		Index(esi.index).
+		Type(typ).
+		Query(termQuery).
+		Do()
+	return searchResult, err*/
+
+	////resp := &SearchResult{}
+	////return resp, nil
+	return nil, errors.New("FilterByMatchQuery not supported under mocking")
+}
+
 func (esi *MockIndex) FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error) {
 
 	/*termQuery := NewTermQuery(name, value)

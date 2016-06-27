@@ -71,6 +71,7 @@ type IIndex interface {
 	DeleteByID(typ string, id string) (*DeleteResponse, error)
 	FilterByMatchAll(typ string, format QueryFormat) (*SearchResult, error)
 	FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error)
+	FilterByMatchQuery(typ string, name string, value interface{}) (*SearchResult, error)
 	SearchByJSON(typ string, jsn string) (*SearchResult, error)
 	SetMapping(typename string, jsn piazza.JsonString) error
 	GetTypes() ([]string, error)
