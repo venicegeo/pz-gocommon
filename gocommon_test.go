@@ -19,37 +19,17 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
 )
-
-type CommonTester struct {
-	suite.Suite
-	sys *SystemConfig
-}
-
-func TestRunSuite(t *testing.T) {
-	s := &CommonTester{}
-	suite.Run(t, s)
-}
-
-func (suite *CommonTester) SetupSuite() {
-	//t := suite.T()
-}
-
-func (suite *CommonTester) TearDownSuite() {
-}
 
 //--------------------------
 
-func (suite *CommonTester) Test00Nop() {
-	t := suite.T()
+func Test00Nop(t *testing.T) {
 	assert := assert.New(t)
 
 	assert.True(!false)
 }
 
-func (suite *CommonTester) Test01ObjToString() {
-	t := suite.T()
+func Test01ObjToString(t *testing.T) {
 	assert := assert.New(t)
 
 	type Foo struct {
@@ -75,8 +55,7 @@ func (suite *CommonTester) Test01ObjToString() {
 	assert.EqualValues(expected, jsn)
 }
 
-func (suite *CommonTester) Test02CompactJson() {
-	t := suite.T()
+func Test02CompactJson(t *testing.T) {
 	assert := assert.New(t)
 
 	src := JsonString("{\n    \"bb\": true,\n    \"nn\": {\n        \"ff\": 1.2,\n        \"gg\": 2.3\n    }\n}")
@@ -88,8 +67,7 @@ func (suite *CommonTester) Test02CompactJson() {
 	assert.EqualValues(expected, jsn)
 }
 
-func (suite *CommonTester) Test03SystemConfig() {
-	t := suite.T()
+func Test03SystemConfig(t *testing.T) {
 	assert := assert.New(t)
 
 	required := []ServiceName{}
@@ -98,8 +76,7 @@ func (suite *CommonTester) Test03SystemConfig() {
 	assert.NoError(err)
 }
 
-func (suite *CommonTester) Test04Services() {
-	t := suite.T()
+func Test04Services(t *testing.T) {
 	assert := assert.New(t)
 
 	var err error
@@ -147,8 +124,7 @@ func (suite *CommonTester) Test04Services() {
 	}
 }
 
-func (suite *CommonTester) Test05VcapApplication() {
-	t := suite.T()
+func Test05VcapApplication(t *testing.T) {
 	assert := assert.New(t)
 
 	os.Unsetenv("VCAP_APPLICATION")
@@ -199,8 +175,7 @@ func (suite *CommonTester) Test05VcapApplication() {
 	assert.EqualValues("pz-workflow", vcap.GetName())
 }
 
-func (suite *CommonTester) Test06VcapServices() {
-	t := suite.T()
+func Test06VcapServices(t *testing.T) {
 	assert := assert.New(t)
 
 	os.Unsetenv("VCAP_SERVICES")

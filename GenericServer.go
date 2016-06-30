@@ -15,6 +15,7 @@
 package piazza
 
 import (
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -30,16 +31,15 @@ import (
 const ginHammerTime = 3
 
 type GenericServer struct {
-	sys    *SystemConfig
+	Sys    *SystemConfig
 	pid    int
 	router http.Handler
 }
 
 type RouteData struct {
-	Get    map[string]gin.HandlerFunc
-	Post   map[string]gin.HandlerFunc
-	Put    map[string]gin.HandlerFunc
-	Delete map[string]gin.HandlerFunc
+	Verb    string
+	Path    string
+	Handler gin.HandlerFunc
 }
 
 // ServerLogHandler adds traditional logging support to the http server handlers.
@@ -57,7 +57,7 @@ func (server *GenericServer) Stop() error {
 
 func (server *GenericServer) Start() chan error {
 
-	sys := server.sys
+	sys := server.Sys
 
 	done := make(chan error)
 
@@ -65,7 +65,7 @@ func (server *GenericServer) Start() chan error {
 
 	endless.DefaultHammerTime = ginHammerTime * time.Second
 
-	ginServer := endless.NewServer(server.sys.BindTo, server.router)
+	ginServer := endless.NewServer(server.Sys.BindTo, server.router)
 
 	ginServer.BeforeBegin = func(_ string) {
 		server.pid = syscall.Getpid()
@@ -95,7 +95,7 @@ func (server *GenericServer) Start() chan error {
 	return done
 }
 
-func (server *GenericServer) Configure(rd *RouteData) error {
+func (server *GenericServer) Configure(routeData []RouteData) error {
 	gin.SetMode(gin.ReleaseMode)
 
 	router := gin.New()
@@ -103,17 +103,16 @@ func (server *GenericServer) Configure(rd *RouteData) error {
 	//router.Use(gin.Logger())
 	//router.Use(gin.Recovery())
 
-	for k, v := range rd.Get {
-		router.GET(k, v)
-	}
-	for k, v := range rd.Post {
-		router.POST(k, v)
-	}
-	for k, v := range rd.Put {
-		router.PUT(k, v)
-	}
-	for k, v := range rd.Delete {
-		router.DELETE(k, v)
+	for _, data := range routeData {
+		switch data.Verb {
+		case "GET":
+			router.GET(data.Path, data.Handler)
+		case "POST":
+		case "PUT":
+		case "DELETE":
+		default:
+			return errors.New("Invalid verb: " + data.Verb)
+		}
 	}
 
 	server.router = router

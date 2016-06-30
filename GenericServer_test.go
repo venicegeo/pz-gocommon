@@ -32,23 +32,21 @@ func Test07Server(t *testing.T) {
 	sys, err := NewSystemConfig(PzGoCommon, required)
 	assert.NoError(err)
 
-	server := GenericServer{sys: sys}
+	server := GenericServer{Sys: sys}
 
 	handleGetRoot := func(c *gin.Context) {
 		log.Print("got health-check request")
 		c.String(http.StatusOK, "Hi. I'm pz-gocommon.")
 	}
 
-	routeData := RouteData{
-		Get: map[string]gin.HandlerFunc{
-			"/": handleGetRoot,
-		},
+	routeData := []RouteData{
+		{"GET", "/", handleGetRoot},
 	}
 
 	_, err = http.Get("http://" + sys.BindTo)
 	assert.Error(err)
 
-	err = server.Configure(&routeData)
+	err = server.Configure(routeData)
 	assert.NoError(err)
 	_ = server.Start()
 
