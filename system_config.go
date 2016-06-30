@@ -26,7 +26,7 @@ import (
 
 const DefaultElasticsearchAddress = "localhost:9200"
 const DefaultKafkaAddress = "localhost:9092"
-const DefaultDomain = ".stage.geointservices.io"
+const DefaultDomain = ".int.geointservices.io"
 const DefaultProtocol = "http"
 
 type ServiceName string

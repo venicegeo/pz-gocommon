@@ -166,7 +166,7 @@ func (suite *CommonTester) Test05VcapApplication() {
          "application_id": "14fca253-8087-402e-abf5-8fd40ddda81f",
          "application_name": "pz-workflow",
          "application_uris": [
-             "pz-workflow.stage.geointservices.io"
+             "pz-workflow.int.geointservices.io"
          ],
          "application_version": "5f0ee99d-252c-4f8d-b241-bc3e22534afc",
          "limits": {
@@ -178,7 +178,7 @@ func (suite *CommonTester) Test05VcapApplication() {
          "space_id": "d65a0987-df00-4d69-a50b-657e52cb2f8e",
          "space_name": "simulator-stage",
          "uris": [
-             "pz-workflow.stage.geointservices.io"
+             "pz-workflow.int.geointservices.io"
          ],
          "users": null,
          "version": "5f0ee99d-252c-4f8d-b241-bc3e22534afc"
