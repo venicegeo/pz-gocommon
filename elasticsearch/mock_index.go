@@ -19,7 +19,7 @@ import (
 	"errors"
 	"sort"
 
-	"github.com/venicegeo/pz-gocommon"
+	"github.com/venicegeo/pz-gocommon/gocommon"
 )
 
 type MockIndex struct {

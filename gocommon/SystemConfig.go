@@ -29,6 +29,9 @@ const DefaultKafkaAddress = "localhost:9092"
 const DefaultDomain = ".int.geointservices.io"
 const DefaultProtocol = "http"
 
+const waitTimeout = 1000
+const waitSleep = 100
+
 type ServiceName string
 
 const (

@@ -18,12 +18,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"log"
-	"net"
 	"net/http"
-	"time"
-
-	"github.com/fvbock/endless"
 )
 
 const (
@@ -136,48 +131,4 @@ func SafeDelete(url string, out interface{}) (*SafeResponse, error) {
 		StatusCode:   resp.StatusCode,
 		StatusString: resp.Status,
 	}, nil
-}
-
-//---------------------------------------------------------------------------
-
-const waitTimeout = 1000
-const waitSleep = 100
-const hammerTime = 3
-
-// ServerLogHandler adds traditional logging support to the http server handlers.
-func ServerLogHandler(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
-		handler.ServeHTTP(w, r)
-	})
-}
-
-func (sys *SystemConfig) StartServer(routes http.Handler) chan error {
-	done := make(chan error)
-
-	ready := make(chan bool)
-
-	endless.DefaultHammerTime = hammerTime * time.Second
-	server := endless.NewServer(sys.BindTo, routes)
-	server.BeforeBegin = func(_ string) {
-		sys.BindTo = server.EndlessListener.Addr().(*net.TCPAddr).String()
-		ready <- true
-	}
-	go func() {
-		err := server.ListenAndServe()
-		done <- err
-	}()
-
-	<-ready
-
-	err := sys.WaitForServiceByAddress(sys.Name, sys.BindTo)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Printf("Server %s started on %s (%s)", sys.Name, sys.Address, sys.BindTo)
-
-	sys.AddService(sys.Name, sys.BindTo)
-
-	return done
 }
