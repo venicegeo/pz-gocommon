@@ -132,3 +132,25 @@ func SafeDelete(url string, out interface{}) (*SafeResponse, error) {
 		StatusString: resp.Status,
 	}, nil
 }
+
+type JsonPaginationResponse struct {
+	Count   int    `json:"count" binding:"required"`
+	Page    int    `json:"page" binding:"required"`
+	PerPage int    `json:"perPage" binding:"required"`
+	SortBy  string `json:"sortBy" binding:"required"`
+	Order   string `json:"order" binding:"required"` // "asc" or "desc"
+}
+
+type JsonResponse struct {
+	StatusCode int
+	Data       interface{}            `json:"data" binding:"required"`
+	Pagination JsonPaginationResponse `json:"pagination,omitempty"`
+	Metadata   interface{}            `json:"metadata,omitempty"`
+}
+
+type JsonErrorResponse struct {
+	StatusCode int
+	Message    string      `json:"data" binding:"required"`
+	Origin     string      `json:"origin,omitempty"`
+	Metadata   interface{} `json:"metadata,omitempty"`
+}
