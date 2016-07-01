@@ -108,7 +108,7 @@ func (esi *Index) ItemExists(typ string, id string) bool {
 }
 
 // if index already exists, does nothing
-func (esi *Index) Create() error {
+func (esi *Index) Create(settings string) error {
 
 	ok := esi.IndexExists()
 	if ok {
@@ -116,7 +116,14 @@ func (esi *Index) Create() error {
 		return nil
 	}
 
-	createIndex, err := esi.lib.CreateIndex(esi.index).Do()
+	var createIndex *elastic.IndicesCreateResult
+	var err error
+	if settings == "" {
+		createIndex, err = esi.lib.CreateIndex(esi.index).Do()
+	} else {
+		createIndex, err = esi.lib.CreateIndex(esi.index).Body(settings).Do()
+	}
+
 	if err != nil {
 		return err
 	}
@@ -255,6 +262,9 @@ func (esi *Index) FilterByTermQuery(typ string, name string, value interface{}) 
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
 	}
 
+	// Returns a query of the form {"term":{"name":"value"}}
+	// The value parameter is typically sent in as a string rather than an interface,
+	// but technically value can be an interface.
 	termQuery := elastic.NewTermQuery(name, value)
 	searchResult, err := esi.lib.Search().
 		Index(esi.index).
@@ -273,11 +283,11 @@ func (esi *Index) FilterByMatchQuery(typ string, name string, value interface{})
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
 	}
 
-	termQuery := elastic.NewMatchQuery(name, value)
+	matchQuery := elastic.NewMatchQuery(name, value)
 	searchResult, err := esi.lib.Search().
 		Index(esi.index).
 		Type(typ).
-		Query(termQuery).
+		Query(matchQuery).
 		//Sort("id", true).
 		Do()
 
