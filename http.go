@@ -15,6 +15,8 @@
 package piazza
 
 import (
+	"bytes"
+	"encoding/json"
 	"io"
 	"log"
 	"net"
@@ -53,6 +55,87 @@ func HTTPDelete(url string) (*http.Response, error) {
 
 	client := &http.Client{}
 	return client.Do(req)
+}
+
+type SafeResponse struct {
+	StatusCode   int
+	StatusString string
+}
+
+func SafeGet(url string, out interface{}) (*SafeResponse, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	dec := json.NewDecoder(resp.Body)
+	defer resp.Body.Close()
+	err = dec.Decode(out)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SafeResponse{
+		StatusCode:   resp.StatusCode,
+		StatusString: resp.Status,
+	}, nil
+}
+
+func safePostOrPut(doPost bool, url string, in interface{}, out interface{}) (*SafeResponse, error) {
+	byts, err := json.Marshal(in)
+	if err != nil {
+		return nil, err
+	}
+
+	reader := bytes.NewReader(byts)
+	var resp *http.Response
+	if doPost {
+		resp, err = http.Post(url, ContentTypeJSON, reader)
+	} else {
+		resp, err = HTTPPut(url, ContentTypeJSON, reader)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	dec := json.NewDecoder(resp.Body)
+	defer resp.Body.Close()
+	err = dec.Decode(out)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SafeResponse{
+		StatusCode:   resp.StatusCode,
+		StatusString: resp.Status,
+	}, nil
+}
+
+func SafePost(url string, in interface{}, out interface{}) (*SafeResponse, error) {
+	return safePostOrPut(true, url, in, out)
+}
+
+func SafePut(url string, in interface{}, out interface{}) (*SafeResponse, error) {
+	return safePostOrPut(false, url, in, out)
+}
+
+func SafeDelete(url string, out interface{}) (*SafeResponse, error) {
+	resp, err := HTTPDelete(url)
+	if err != nil {
+		return nil, err
+	}
+
+	dec := json.NewDecoder(resp.Body)
+	defer resp.Body.Close()
+	err = dec.Decode(out)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SafeResponse{
+		StatusCode:   resp.StatusCode,
+		StatusString: resp.Status,
+	}, nil
 }
 
 //---------------------------------------------------------------------------

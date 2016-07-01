@@ -15,7 +15,6 @@
 package piazza
 
 import (
-	"log"
 	"net/http"
 	"testing"
 
@@ -34,29 +33,90 @@ func Test07Server(t *testing.T) {
 
 	server := GenericServer{Sys: sys}
 
-	handleGetRoot := func(c *gin.Context) {
-		log.Print("got health-check request")
-		c.String(http.StatusOK, "Hi. I'm pz-gocommon.")
+	type T struct{ Id int }
+	handleGet := func(c *gin.Context) {
+		t := T{Id: 17}
+		c.JSON(http.StatusOK, t)
+	}
+	handlePost := func(c *gin.Context) {
+		var t T
+		err := c.BindJSON(&t)
+		assert.NoError(err)
+		assert.Equal(7, t.Id)
+		c.JSON(http.StatusCreated, T{Id: 13})
+	}
+	handlePut := func(c *gin.Context) {
+		var t T
+		err := c.BindJSON(&t)
+		assert.NoError(err)
+		assert.Equal(32, t.Id)
+		c.JSON(http.StatusOK, T{Id: 63})
+	}
+	handleDelete := func(c *gin.Context) {
+		c.JSON(http.StatusOK, T{Id: 45})
 	}
 
 	routeData := []RouteData{
-		{"GET", "/", handleGetRoot},
+		{"GET", "/", handleGet},
+		{"POST", "/", handlePost},
+		{"PUT", "/", handlePut},
+		{"DELETE", "/", handleDelete},
 	}
 
-	_, err = http.Get("http://" + sys.BindTo)
-	assert.Error(err)
+	url := ""
 
-	err = server.Configure(routeData)
-	assert.NoError(err)
-	_ = server.Start()
+	{
+		err = server.Configure(routeData)
+		if err != nil {
+			assert.FailNow("server failed to configure: %s", err.Error())
+		}
+		_, err = server.Start()
+		if err != nil {
+			assert.FailNow("server failed to start: %s", err.Error())
+		}
 
-	resp, err := http.Get("http://" + sys.BindTo)
-	assert.NoError(err)
-	assert.Equal(200, resp.StatusCode)
+		url = "http://" + sys.BindTo
+	}
 
-	err = server.Stop()
-	assert.NoError(err)
+	{
+		output := &T{}
+		resp, err := SafeGet(url, output)
+		assert.NoError(err)
+		assert.Equal(200, resp.StatusCode)
+		assert.Equal(17, output.Id)
+	}
 
-	_, err = http.Get("http://" + sys.BindTo)
-	assert.Error(err)
+	{
+		input := &T{Id: 7}
+		output := &T{}
+		resp, err := SafePost(url, input, output)
+		assert.NoError(err)
+		assert.Equal(201, resp.StatusCode)
+		assert.Equal(13, output.Id)
+	}
+
+	{
+		input := &T{Id: 32}
+		output := &T{}
+		resp, err := SafePut(url, input, output)
+		assert.NoError(err)
+		assert.Equal(200, resp.StatusCode)
+		assert.Equal(63, output.Id)
+	}
+
+	{
+		output := &T{}
+		resp, err := SafeDelete(url, output)
+		assert.NoError(err)
+		assert.Equal(200, resp.StatusCode)
+		assert.Equal(45, output.Id)
+	}
+
+	{
+		err = server.Stop()
+		assert.NoError(err)
+
+		_, err := http.Get(url)
+		assert.Error(err)
+	}
 }

@@ -51,11 +51,22 @@ func (server *GenericServer) LogHandler(handler http.Handler) http.Handler {
 }
 
 func (server *GenericServer) Stop() error {
+	sys := server.Sys
+
 	err := syscall.Kill(server.pid, syscall.SIGINT)
-	return err
+	if err != nil {
+		return err
+	}
+
+	err = sys.WaitForServiceToDieByAddress(sys.Name, sys.BindTo)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (server *GenericServer) Start() chan error {
+func (server *GenericServer) Start() (chan error, error) {
 
 	sys := server.Sys
 
@@ -85,14 +96,14 @@ func (server *GenericServer) Start() chan error {
 
 	err := sys.WaitForServiceByAddress(sys.Name, sys.BindTo)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	log.Printf("Server %s started on %s (%s)", sys.Name, sys.Address, sys.BindTo)
 
 	sys.AddService(sys.Name, sys.BindTo)
 
-	return done
+	return done, nil
 }
 
 func (server *GenericServer) Configure(routeData []RouteData) error {
@@ -108,8 +119,11 @@ func (server *GenericServer) Configure(routeData []RouteData) error {
 		case "GET":
 			router.GET(data.Path, data.Handler)
 		case "POST":
+			router.POST(data.Path, data.Handler)
 		case "PUT":
+			router.PUT(data.Path, data.Handler)
 		case "DELETE":
+			router.DELETE(data.Path, data.Handler)
 		default:
 			return errors.New("Invalid verb: " + data.Verb)
 		}
