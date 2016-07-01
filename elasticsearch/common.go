@@ -170,11 +170,11 @@ func GetFormatParamsV2(c *gin.Context,
 		return SortOrder(value)
 	}
 
-	size := paramInt("per_page", defaultSize)
+	size := paramInt("perPage", defaultSize)
 	format := QueryFormat{
 		Size:  size,
 		From:  paramInt("page", defaultFrom) * size,
-		Key:   paramString("sort_by", defaultKey),
+		Key:   paramString("sortBy", defaultKey),
 		Order: paramOrder("order", defaultOrder),
 	}
 
