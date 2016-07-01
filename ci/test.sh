@@ -1,11 +1,12 @@
-#!/bin/bash -ex
+#!/bin/bash
+set -e
 
-pushd `dirname $0`/.. > /dev/null
+pushd "$(dirname "$0")/.." > /dev/null
 root=$(pwd -P)
 popd > /dev/null
 
 export GOPATH=$root/gogo
-mkdir -p $GOPATH
+mkdir -p "$GOPATH"
 
 ###
 

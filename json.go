@@ -24,8 +24,8 @@ type JsonString string
 type Pagination struct {
 	Count   int64  `json:"count" binding:"required"`
 	Page    int    `json:"page" binding:"required"`
-	PerPage int    `json:"per_page" binding:"required"`
-	SortBy  string `json:"sort_by,omitempty"`
+	PerPage int    `json:"perPage" binding:"required"`
+	SortBy  string `json:"sortBy,omitempty"`
 	Order   string `json:"order,omitempty"`
 }
 

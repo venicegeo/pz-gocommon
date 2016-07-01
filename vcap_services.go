@@ -16,13 +16,13 @@
 "VCAP_SERVICES": {
   "user-provided": [
    {
-    "credentials": {
-     "host": "172.32.125.109:9200"
-    },
-    "label": "user-provided",
-    "name": "pz-elasticsearch",
-    "syslog_drain_url": "",
-    "tags": []
+	"credentials": {
+	 "host": "172.32.125.109:9200"
+	},
+	"label": "user-provided",
+	"name": "pz-elasticsearch",
+	"syslog_drain_url": "",
+	"tags": []
    }
   ]
  }

@@ -76,7 +76,7 @@ func (esi *MockIndex) ItemExists(typ string, id string) bool {
 }
 
 // if index already exists, does nothing
-func (esi *MockIndex) Create() error {
+func (esi *MockIndex) Create(settings string) error {
 	esi.exists = true
 	return nil
 }
@@ -210,7 +210,6 @@ func (esi *MockIndex) FilterByMatchAll(typ string, format QueryFormat) (*SearchR
 
 	return resp, nil
 }
-
 
 func (esi *MockIndex) FilterByMatchQuery(typ string, name string, value interface{}) (*SearchResult, error) {
 

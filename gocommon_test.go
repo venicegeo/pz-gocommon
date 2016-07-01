@@ -58,7 +58,7 @@ func Test01ObjToString(t *testing.T) {
 func Test02CompactJson(t *testing.T) {
 	assert := assert.New(t)
 
-	src := JsonString("{\n    \"bb\": true,\n    \"nn\": {\n        \"ff\": 1.2,\n        \"gg\": 2.3\n    }\n}")
+	src := JsonString("{\n  \"bb\": true,\n  \"nn\": {\n        \"ff\": 1.2,\n     \"gg\": 2.3\n    }\n}")
 	expected := JsonString("{\"bb\":true,\"nn\":{\"ff\":1.2,\"gg\":2.3}}")
 
 	jsn, err := src.ToCompactJson()
@@ -194,8 +194,8 @@ func Test06VcapServices(t *testing.T) {
 						"host": "172.32.125.109:9200"
 					},
 					"label": "user-provided",
-    				"name": "pz-elasticsearch",
-    				"syslog_drain_url": "",
+					"name": "pz-elasticsearch",
+					"syslog_drain_url": "",
 					"tags": []
 				}
 				]

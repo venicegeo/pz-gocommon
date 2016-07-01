@@ -63,7 +63,7 @@ type IIndex interface {
 	IndexExists() bool
 	TypeExists(typ string) bool
 	ItemExists(typ string, id string) bool
-	Create() error
+	Create(settings string) error
 	Close() error
 	Delete() error
 	PostData(typ string, id string, obj interface{}) (*IndexResponse, error)
@@ -110,9 +110,9 @@ func ConstructMappingSchema(name string, items map[string]MappingElementTypeName
 		"%s":{
 			"properties":{
 				%s
-		    }
-	    }
-    }`
+			}
+		}
+	}`
 
 	stuff := make([]string, len(items))
 	i := 0
@@ -170,11 +170,11 @@ func GetFormatParamsV2(c *gin.Context,
 		return SortOrder(value)
 	}
 
-	size := paramInt("per_page", defaultSize)
+	size := paramInt("perPage", defaultSize)
 	format := QueryFormat{
 		Size:  size,
 		From:  paramInt("page", defaultFrom) * size,
-		Key:   paramString("sort_by", defaultKey),
+		Key:   paramString("sortBy", defaultKey),
 		Order: paramOrder("order", defaultOrder),
 	}
 
