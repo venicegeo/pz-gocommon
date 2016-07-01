@@ -68,7 +68,7 @@ var localVcapApplication = &VcapApplication{
 	ApplicationName: "myapplicationname",
 	ApplicationURIs: []string{"localhost:0"},
 	bindToPort:      "localhost:0",
-	domain:          ".stage.geointservices.io",
+	domain:          ".int.geointservices.io",
 }
 
 func NewVcapApplication() (*VcapApplication, error) {

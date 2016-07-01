@@ -19,37 +19,17 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
 )
-
-type CommonTester struct {
-	suite.Suite
-	sys *SystemConfig
-}
-
-func TestRunSuite(t *testing.T) {
-	s := &CommonTester{}
-	suite.Run(t, s)
-}
-
-func (suite *CommonTester) SetupSuite() {
-	//t := suite.T()
-}
-
-func (suite *CommonTester) TearDownSuite() {
-}
 
 //--------------------------
 
-func (suite *CommonTester) Test00Nop() {
-	t := suite.T()
+func Test00Nop(t *testing.T) {
 	assert := assert.New(t)
 
 	assert.True(!false)
 }
 
-func (suite *CommonTester) Test01ObjToString() {
-	t := suite.T()
+func Test01ObjToString(t *testing.T) {
 	assert := assert.New(t)
 
 	type Foo struct {
@@ -75,8 +55,7 @@ func (suite *CommonTester) Test01ObjToString() {
 	assert.EqualValues(expected, jsn)
 }
 
-func (suite *CommonTester) Test02CompactJson() {
-	t := suite.T()
+func Test02CompactJson(t *testing.T) {
 	assert := assert.New(t)
 
 	src := JsonString("{\n  \"bb\": true,\n  \"nn\": {\n        \"ff\": 1.2,\n     \"gg\": 2.3\n    }\n}")
@@ -88,8 +67,7 @@ func (suite *CommonTester) Test02CompactJson() {
 	assert.EqualValues(expected, jsn)
 }
 
-func (suite *CommonTester) Test03SystemConfig() {
-	t := suite.T()
+func Test03SystemConfig(t *testing.T) {
 	assert := assert.New(t)
 
 	required := []ServiceName{}
@@ -98,8 +76,7 @@ func (suite *CommonTester) Test03SystemConfig() {
 	assert.NoError(err)
 }
 
-func (suite *CommonTester) Test04Services() {
-	t := suite.T()
+func Test04Services(t *testing.T) {
 	assert := assert.New(t)
 
 	var err error
@@ -147,8 +124,7 @@ func (suite *CommonTester) Test04Services() {
 	}
 }
 
-func (suite *CommonTester) Test05VcapApplication() {
-	t := suite.T()
+func Test05VcapApplication(t *testing.T) {
 	assert := assert.New(t)
 
 	os.Unsetenv("VCAP_APPLICATION")
@@ -161,28 +137,29 @@ func (suite *CommonTester) Test05VcapApplication() {
 	assert.EqualValues("localhost:0", vcap.GetBindToPort())
 	assert.EqualValues("myapplicationname", vcap.GetName())
 
-	env := `{
-		"application_id": "14fca253-8087-402e-abf5-8fd40ddda81f",
-		"application_name": "pz-workflow",
-		"application_uris": [
-			"pz-workflow.stage.geointservices.io"
-		],
-		"application_version": "5f0ee99d-252c-4f8d-b241-bc3e22534afc",
-		"limits": {
-			"disk": 1024,
-			"fds": 16384,
-			"mem": 512
-		},
-		"name": "pz-workflow",
-		"space_id": "d65a0987-df00-4d69-a50b-657e52cb2f8e",
-		"space_name": "simulator-stage",
-		"uris": [
-			"pz-workflow.stage.geointservices.io"
-		],
-		"users": null,
-		"version": "5f0ee99d-252c-4f8d-b241-bc3e22534afc"
-	} `
-
+	env :=
+		`{
+         "application_id": "14fca253-8087-402e-abf5-8fd40ddda81f",
+         "application_name": "pz-workflow",
+         "application_uris": [
+             "pz-workflow.int.geointservices.io"
+         ],
+         "application_version": "5f0ee99d-252c-4f8d-b241-bc3e22534afc",
+         "limits": {
+             "disk": 1024,
+             "fds": 16384,
+             "mem": 512
+         },
+         "name": "pz-workflow",
+         "space_id": "d65a0987-df00-4d69-a50b-657e52cb2f8e",
+         "space_name": "simulator-stage",
+         "uris": [
+             "pz-workflow.int.geointservices.io"
+         ],
+         "users": null,
+         "version": "5f0ee99d-252c-4f8d-b241-bc3e22534afc"
+     }
+`
 	err = os.Setenv("VCAP_APPLICATION", env)
 	assert.NoError(err)
 	defer os.Unsetenv("VCAP_APPLICATION")
@@ -198,8 +175,7 @@ func (suite *CommonTester) Test05VcapApplication() {
 	assert.EqualValues("pz-workflow", vcap.GetName())
 }
 
-func (suite *CommonTester) Test06VcapServices() {
-	t := suite.T()
+func Test06VcapServices(t *testing.T) {
 	assert := assert.New(t)
 
 	os.Unsetenv("VCAP_SERVICES")
