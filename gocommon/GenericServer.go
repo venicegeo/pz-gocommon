@@ -42,14 +42,6 @@ type RouteData struct {
 	Handler gin.HandlerFunc
 }
 
-// ServerLogHandler adds traditional logging support to the http server handlers.
-func (server *GenericServer) LogHandler(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
-		handler.ServeHTTP(w, r)
-	})
-}
-
 func (server *GenericServer) Stop() error {
 	sys := server.Sys
 
