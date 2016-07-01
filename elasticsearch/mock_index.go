@@ -211,7 +211,6 @@ func (esi *MockIndex) FilterByMatchAll(typ string, format QueryFormat) (*SearchR
 	return resp, nil
 }
 
-
 func (esi *MockIndex) FilterByMatchQuery(typ string, name string, value interface{}) (*SearchResult, error) {
 
 	/*termQuery := NewTermQuery(name, value)

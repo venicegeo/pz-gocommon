@@ -79,7 +79,7 @@ func (suite *CommonTester) Test02CompactJson() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	src := JsonString("{\n    \"bb\": true,\n    \"nn\": {\n        \"ff\": 1.2,\n        \"gg\": 2.3\n    }\n}")
+	src := JsonString("{\n  \"bb\": true,\n  \"nn\": {\n        \"ff\": 1.2,\n     \"gg\": 2.3\n    }\n}")
 	expected := JsonString("{\"bb\":true,\"nn\":{\"ff\":1.2,\"gg\":2.3}}")
 
 	jsn, err := src.ToCompactJson()
@@ -161,29 +161,28 @@ func (suite *CommonTester) Test05VcapApplication() {
 	assert.EqualValues("localhost:0", vcap.GetBindToPort())
 	assert.EqualValues("myapplicationname", vcap.GetName())
 
-	env :=
-		`{
-         "application_id": "14fca253-8087-402e-abf5-8fd40ddda81f",
-         "application_name": "pz-workflow",
-         "application_uris": [
-             "pz-workflow.stage.geointservices.io"
-         ],
-         "application_version": "5f0ee99d-252c-4f8d-b241-bc3e22534afc",
-         "limits": {
-             "disk": 1024,
-             "fds": 16384,
-             "mem": 512
-         },
-         "name": "pz-workflow",
-         "space_id": "d65a0987-df00-4d69-a50b-657e52cb2f8e",
-         "space_name": "simulator-stage",
-         "uris": [
-             "pz-workflow.stage.geointservices.io"
-         ],
-         "users": null,
-         "version": "5f0ee99d-252c-4f8d-b241-bc3e22534afc"
-     }
-`
+	env := `{
+		"application_id": "14fca253-8087-402e-abf5-8fd40ddda81f",
+		"application_name": "pz-workflow",
+		"application_uris": [
+			"pz-workflow.stage.geointservices.io"
+		],
+		"application_version": "5f0ee99d-252c-4f8d-b241-bc3e22534afc",
+		"limits": {
+			"disk": 1024,
+			"fds": 16384,
+			"mem": 512
+		},
+		"name": "pz-workflow",
+		"space_id": "d65a0987-df00-4d69-a50b-657e52cb2f8e",
+		"space_name": "simulator-stage",
+		"uris": [
+			"pz-workflow.stage.geointservices.io"
+		],
+		"users": null,
+		"version": "5f0ee99d-252c-4f8d-b241-bc3e22534afc"
+	} `
+
 	err = os.Setenv("VCAP_APPLICATION", env)
 	assert.NoError(err)
 	defer os.Unsetenv("VCAP_APPLICATION")
@@ -219,8 +218,8 @@ func (suite *CommonTester) Test06VcapServices() {
 						"host": "172.32.125.109:9200"
 					},
 					"label": "user-provided",
-    				"name": "pz-elasticsearch",
-    				"syslog_drain_url": "",
+					"name": "pz-elasticsearch",
+					"syslog_drain_url": "",
 					"tags": []
 				}
 				]

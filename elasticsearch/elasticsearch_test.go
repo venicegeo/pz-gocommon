@@ -59,7 +59,7 @@ type Obj struct {
 }
 
 const objMapping = `{
-	 "Obj":{
+	"Obj":{
 		"properties":{
 			"id": {
 				"type":"string"
@@ -364,10 +364,10 @@ func (suite *EsTester) Test04JsonOperations() {
 	{
 		str :=
 			`{
-		      "query": {
-			        "match_all": {}
-    	        }
-            }`
+				"query": {
+					"match_all": {}
+				}
+			}`
 
 		searchResult, err = esi.SearchByJSON(mapping, str)
 		assert.NoError(err)
@@ -384,10 +384,10 @@ func (suite *EsTester) Test04JsonOperations() {
 	{
 		str :=
 			`{
-    	        "query": {
-	    	        "term": {"id":"id1"}
-	            }
-            }`
+				"query": {
+					"term": {"id":"id1"}
+				}
+			}`
 
 		searchResult, err = esi.SearchByJSON(mapping, str)
 		assert.NoError(err)
@@ -405,10 +405,10 @@ func (suite *EsTester) Test04JsonOperations() {
 	{
 		str :=
 			`{
-	            "query": {
-		            "term": {"tags":"foo"}
-	            } 
-            }`
+				"query": {
+					"term": {"tags":"foo"}
+				}
+			}`
 
 		searchResult, err = esi.SearchByJSON(mapping, str)
 		assert.NoError(err)
@@ -456,15 +456,15 @@ func (suite *EsTester) Test05Mapping() {
 
 	mapping :=
 		`{
-		    "tweetdoc":{
-			    "properties":{
-				    "message":{
-					    "type":"string",
-					    "store":true
-    			    }
-	    	    }
-	        }
-        }`
+			"tweetdoc":{
+				"properties":{
+					"message":{
+						"type":"string",
+						"store":true
+					}
+				}
+			}
+		}`
 
 	err = esi.SetMapping("tweetdoc", piazza.JsonString(mapping))
 	assert.NoError(err)
@@ -611,13 +611,13 @@ func (suite *EsTester) Test08Percolation() {
 
 	query1 :=
 		`{
- 	 	"query": {
-    		"match": {
-      			"tag": {
-        			"query": "kitten"
-      			}
-    		}
-  		}
+		"query": {
+			"match": {
+				"tag": {
+					"query": "kitten"
+				}
+			}
+		}
 	}`
 	query2 :=
 		`{
@@ -778,14 +778,14 @@ func (suite *EsTester) Test09FullPercolation() {
 
 	q1 :=
 		`{
- 	        "query": {
-		    	"match": {
-			    	"str": {
-				    	"query": "kitten"
-    				}
-	    		}
-		    }
-	    }`
+			"query": {
+				"match": {
+					"str": {
+						"query": "kitten"
+					}
+				}
+			}
+		}`
 	q2 :=
 		`{
 			"query" : {
@@ -920,35 +920,35 @@ func (suite *EsTester) Test10GetAll() {
 
 	schema1 :=
 		`{
-		    "schema1":{
-			    "properties":{
-				    "data1":{
-					    "type":"string",
-					    "store":true
-    			    },
-				    "extra1":{
-					    "type":"string",
-					    "store":true
-    			    }
-	    	    }
-	        }
-        }`
+			"schema1":{
+				"properties":{
+					"data1":{
+						"type":"string",
+						"store":true
+					},
+					"extra1":{
+						"type":"string",
+						"store":true
+					}
+				}
+			}
+		}`
 
 	schema2 :=
 		`{
-		    "schema2":{
-			    "properties":{
-				    "data2":{
-					    "type":"integer",
-					    "store":true
-    			    },
-				    "extra2":{
-					    "type":"string",
-					    "store":true
-    			    }
-	    	    }
-	        }
-        }`
+			"schema2":{
+				"properties":{
+					"data2":{
+						"type":"integer",
+						"store":true
+					},
+					"extra2":{
+						"type":"string",
+						"store":true
+					}
+				}
+			}
+		}`
 
 	err = esi.SetMapping("schema1", piazza.JsonString(schema1))
 	assert.NoError(err)
@@ -1062,15 +1062,15 @@ func (suite *EsTester) Test11Pagination() {
 		Data int    `json:"data3" binding:"required"`
 	}
 	obj3Mapping := `{
-	 "Obj3":{
+	"Obj3":{
 		"properties":{
 			"id3": {
 				"type":"string",
-                "store":true
+				"store":true
 			},
 			"data3": {
 				"type":"integer",
-                "store": true
+				"store": true
 			}
 		}
 	}
