@@ -26,7 +26,7 @@ import (
 
 const DefaultElasticsearchAddress = "localhost:9200"
 const DefaultKafkaAddress = "localhost:9092"
-const DefaultDomain = ".stage.geointservices.io"
+const DefaultDomain = ".int.geointservices.io"
 const DefaultProtocol = "http"
 
 type ServiceName string
@@ -252,6 +252,39 @@ func (sys *SystemConfig) WaitForServiceByAddress(name ServiceName, address strin
 		}
 		if msTime >= waitTimeout {
 			return fmt.Errorf("timed out waiting for service: %s at %s", name, url)
+		}
+		time.Sleep(waitSleep * time.Millisecond)
+		msTime += waitSleep
+	}
+	/* notreached */
+}
+
+func (sys *SystemConfig) WaitForServiceToDie(name ServiceName) error {
+	addr, err := sys.GetAddress(name)
+	if err != nil {
+		return err
+	}
+
+	err = sys.WaitForServiceToDieByAddress(name, addr)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sys *SystemConfig) WaitForServiceToDieByAddress(name ServiceName, address string) error {
+	url := fmt.Sprintf("%s://%s", DefaultProtocol, address)
+
+	msTime := 0
+
+	for {
+		_, err := http.Get(url)
+		if err != nil {
+			return nil
+		}
+		if msTime >= waitTimeout {
+			return fmt.Errorf("timed out waiting for service to die: %s at %s", name, url)
 		}
 		time.Sleep(waitSleep * time.Millisecond)
 		msTime += waitSleep
