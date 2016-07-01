@@ -17,7 +17,7 @@ go get gopkg.in/olivere/elastic.v3
 go get github.com/gin-gonic/gin
 
 # ourself
-go get github.com/venicegeo/pz-gocommon
+go get github.com/venicegeo/pz-gocommon/gocommon
 
 # run tests
 go test -v -coverprofile=common.cov github.com/venicegeo/pz-gocommon/gocommon
