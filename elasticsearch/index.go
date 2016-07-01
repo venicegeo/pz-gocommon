@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/venicegeo/pz-gocommon"
+	"github.com/venicegeo/pz-gocommon/gocommon"
 
 	"gopkg.in/olivere/elastic.v3"
 )
