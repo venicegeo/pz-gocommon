@@ -15,6 +15,7 @@
 package piazza
 
 import (
+	"log"
 	"net/http"
 	"testing"
 
@@ -24,6 +25,45 @@ import (
 
 //--------------------------
 
+type Thing struct {
+}
+
+type T struct {
+	Id int
+}
+
+/*
+func (thing *Thing) Get(c *gin.Context, assert *assert.Assertions) *JsonResponse {
+	r := &JsonResponse{StatusCode: http.StatusOK, Data: T{Id: 17}}
+	return r
+
+}
+
+func (thing *Thing) Post(c *gin.Context, assert *assert.Assertions) *JsonResponse {
+	var t T
+	err := c.BindJSON(&t)
+	assert.NoError(err)
+	var r *JsonResponse
+	if t.Id == 7 {
+		r = &JsonResponse{StatusCode: http.StatusOK, Data: T{Id: 13}}
+	} else {
+		r = &JsonResponse{StatusCode: http.StatusBadRequest, Message: "eleven"}
+	}
+	return r
+}
+
+func (thing *Thing) Put(c *gin.Context, assert *assert.Assertions) *JsonResponse {
+	var t T
+	err := c.BindJSON(&t)
+	assert.NoError(err)
+	assert.Equal(32, t.Id)
+	return &JsonResponse{StatusCode: http.StatusOK, Data: T{Id: 63}}
+}
+
+func (thing *Thing) Delete(c *gin.Context, assert *assert.Assertions) *JsonResponse {
+	return &JsonResponse{StatusCode: http.StatusOK}
+}
+*/
 func Test07Server(t *testing.T) {
 	assert := assert.New(t)
 
@@ -33,27 +73,43 @@ func Test07Server(t *testing.T) {
 
 	server := GenericServer{Sys: sys}
 
-	type T struct{ Id int }
+	type T struct {
+		Id int `json:"id"`
+	}
 	handleGet := func(c *gin.Context) {
 		t := T{Id: 17}
-		c.JSON(http.StatusOK, t)
+		j := JsonResponse{StatusCode: http.StatusOK, Data: t}
+		log.Printf("YYYY %#v     %#v", j, j.Data)
+		c.JSON(200, &j)
 	}
 	handlePost := func(c *gin.Context) {
 		var t T
 		err := c.BindJSON(&t)
 		assert.NoError(err)
-		assert.Equal(7, t.Id)
-		c.JSON(http.StatusCreated, T{Id: 13})
+		if t.Id == 7 {
+			j := &JsonResponse{StatusCode: http.StatusCreated, Data: T{Id: 13}}
+			c.JSON(201, j)
+		} else {
+			assert.Equal(1237, t.Id)
+			j := &JsonResponse{StatusCode: http.StatusBadRequest, Data: T{Id: 12313}}
+			j.Message = "oops"
+			c.JSON(400, j)
+		}
+
 	}
 	handlePut := func(c *gin.Context) {
 		var t T
 		err := c.BindJSON(&t)
 		assert.NoError(err)
 		assert.Equal(32, t.Id)
-		c.JSON(http.StatusOK, T{Id: 63})
+		j := &JsonResponse{StatusCode: http.StatusOK, Data: T{Id: 63}}
+		c.JSON(200, j)
+
 	}
 	handleDelete := func(c *gin.Context) {
-		c.JSON(http.StatusOK, T{Id: 45})
+		j := &JsonResponse{StatusCode: http.StatusOK, Data: T{Id: 45}}
+		c.JSON(200, j)
+
 	}
 
 	routeData := []RouteData{
@@ -79,37 +135,52 @@ func Test07Server(t *testing.T) {
 	}
 
 	{
-		output := &T{}
-		resp, err := SafeGet(url, output)
+		jresp := HttpGetJson(url)
+		assert.Equal(200, jresp.StatusCode)
+
+		var out T
+		err = SuperConverter(jresp.Data, &out)
 		assert.NoError(err)
-		assert.Equal(200, resp.StatusCode)
-		assert.Equal(17, output.Id)
+		assert.Equal(17, out.Id)
+
 	}
 
 	{
 		input := &T{Id: 7}
-		output := &T{}
-		resp, err := SafePost(url, input, output)
-		assert.NoError(err)
-		assert.Equal(201, resp.StatusCode)
-		assert.Equal(13, output.Id)
+		jresp := HttpPostJson(url, input)
+		assert.Equal(201, jresp.StatusCode)
+
+		var out T
+		err = SuperConverter(jresp.Data, &out)
+		assert.Equal(13, out.Id)
 	}
 
 	{
-		input := &T{Id: 32}
-		output := &T{}
-		resp, err := SafePut(url, input, output)
-		assert.NoError(err)
-		assert.Equal(200, resp.StatusCode)
-		assert.Equal(63, output.Id)
+		in := &T{Id: 1237}
+		jresp := HttpPostJson(url, in)
+		assert.Equal(400, jresp.StatusCode)
+		assert.EqualValues("oops", jresp.Message)
+
+		var out T
+		err = SuperConverter(jresp.Data, &out)
+		assert.Equal(12313, out.Id)
 	}
 
 	{
-		output := &T{}
-		resp, err := SafeDelete(url, output)
-		assert.NoError(err)
-		assert.Equal(200, resp.StatusCode)
-		assert.Equal(45, output.Id)
+		in := &T{Id: 32}
+		jresp := HttpPutJson(url, in)
+		assert.Equal(200, jresp.StatusCode)
+		var out T
+		err = SuperConverter(jresp.Data, &out)
+		assert.Equal(63, out.Id)
+	}
+
+	{
+		jresp := HttpDeleteJson(url)
+		assert.Equal(200, jresp.StatusCode)
+		var out T
+		err = SuperConverter(jresp.Data, &out)
+		assert.Equal(45, out.Id)
 	}
 
 	{
