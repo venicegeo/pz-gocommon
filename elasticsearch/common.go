@@ -126,27 +126,28 @@ func ConstructMappingSchema(name string, items map[string]MappingElementTypeName
 	return piazza.JsonString(json), nil
 }
 
-func GetFormatParamsV2(c *gin.Context,
-	defaultSize int, defaultFrom int, defaultKey string, defaultOrder SortOrder) QueryFormat {
+func GetFormatParamsV2(queryFunc piazza.QueryFunc,
+	defaultSize int, defaultFrom int, defaultKey string, defaultOrder SortOrder) (QueryFormat, error) {
 
-	paramInt := func(param string, defalt int) int {
-		str := c.Query(param)
+	paramInt := func(param string, defalt int) (int, error) {
+		str := queryFunc(param)
 		if str == "" {
-			return defalt
+			return defalt, nil
 		}
 
 		value64, err := strconv.ParseInt(str, 10, 0)
 		if err != nil {
-			c.String(http.StatusBadRequest, "query argument for '?%s' is invalid: %s", param, str)
-			return -1
+			s := fmt.Sprintf("query argument for '?%s' is invalid: %s (%s)", param, str, err.Error())
+			err := errors.New(s)
+			return -1, err
 		}
 		value := int(value64)
 
-		return value
+		return value, nil
 	}
 
 	paramString := func(param string, defalt string) string {
-		str := c.Query(param)
+		str := queryFunc(param)
 		if str == "" {
 			return defalt
 		}
@@ -154,7 +155,7 @@ func GetFormatParamsV2(c *gin.Context,
 	}
 
 	paramOrder := func(param string, defalt SortOrder) SortOrder {
-		str := c.Query(param)
+		str := queryFunc(param)
 		if str == "" {
 			return defalt
 		}
@@ -170,15 +171,26 @@ func GetFormatParamsV2(c *gin.Context,
 		return SortOrder(value)
 	}
 
-	size := paramInt("perPage", defaultSize)
+	size, err := paramInt("perPage", defaultSize)
+	if err != nil {
+		qf := QueryFormat{}
+		return qf, err
+	}
+
+	pi, err := paramInt("page", defaultFrom)
+	if err != nil {
+		qf := QueryFormat{}
+		return qf, err
+	}
+
 	format := QueryFormat{
 		Size:  size,
-		From:  paramInt("page", defaultFrom) * size,
+		From:  pi * size,
 		Key:   paramString("sortBy", defaultKey),
 		Order: paramOrder("order", defaultOrder),
 	}
 
-	return format
+	return format, nil
 }
 
 func GetFormatParams(c *gin.Context,

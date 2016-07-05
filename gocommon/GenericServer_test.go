@@ -26,15 +26,15 @@ import (
 
 //--------------------------
 
+type Thing struct {
+	Id    string `json:"id"`
+	Value string `json:"value"`
+}
+
 type ThingService struct {
 	assert  *assert.Assertions
 	Data    map[string]string `json:"data"`
 	IdCount int
-}
-
-type Thing struct {
-	Id    string `json:"id"`
-	Value string `json:"value"`
 }
 
 func (service *ThingService) GetThing(id string) *JsonResponse {
@@ -78,6 +78,73 @@ func (service *ThingService) DeleteThing(id string) *JsonResponse {
 	return &JsonResponse{StatusCode: http.StatusOK}
 }
 
+//---------------------------------------------------------------
+
+type ThingServer struct {
+	routes  []RouteData
+	service *ThingService
+}
+
+func (server *ThingServer) Init(service *ThingService) {
+
+	server.service = service
+
+	server.routes = []RouteData{
+		{"GET", "/", server.handleGetRoot},
+		{"GET", "/:id", server.handleGet},
+		{"POST", "/", server.handlePost},
+		{"PUT", "/:id", server.handlePut},
+		{"DELETE", "/:id", server.handleDelete},
+	}
+}
+
+func (server *ThingServer) handleGetRoot(c *gin.Context) {
+	type T struct {
+		Message string
+	}
+	message := "Hi."
+	resp := JsonResponse{StatusCode: http.StatusOK, Data: message}
+	c.JSON(resp.StatusCode, resp)
+}
+
+func (server *ThingServer) handleGet(c *gin.Context) {
+	id := c.Param("id")
+	resp := server.service.GetThing(id)
+	c.JSON(resp.StatusCode, resp)
+}
+
+func (server *ThingServer) handlePost(c *gin.Context) {
+	var thing Thing
+	err := c.BindJSON(&thing)
+	if err != nil {
+		resp := &JsonResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()}
+		c.JSON(resp.StatusCode, resp)
+	}
+	resp := server.service.PostThing(&thing)
+	c.JSON(resp.StatusCode, resp)
+}
+
+func (server *ThingServer) handlePut(c *gin.Context) {
+	id := c.Param("id")
+	var thing Thing
+	err := c.BindJSON(&thing)
+	if err != nil {
+		resp := &JsonResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()}
+		c.JSON(resp.StatusCode, resp)
+	}
+	thing.Id = id
+	resp := server.service.PutThing(id, &thing)
+	c.JSON(resp.StatusCode, resp)
+}
+
+func (server *ThingServer) handleDelete(c *gin.Context) {
+	id := c.Param("id")
+	resp := server.service.DeleteThing(id)
+	c.JSON(resp.StatusCode, resp)
+}
+
+//------------------------------------------
+
 func Test07Server(t *testing.T) {
 	assert := assert.New(t)
 
@@ -85,68 +152,25 @@ func Test07Server(t *testing.T) {
 	sys, err := NewSystemConfig(PzGoCommon, required)
 	assert.NoError(err)
 
-	server := GenericServer{Sys: sys}
+	genericServer := GenericServer{Sys: sys}
 
-	service := ThingService{
+	service := &ThingService{
 		assert:  assert,
 		IdCount: 0,
 		Data:    make(map[string]string),
 	}
 
-	handleGetRoot := func(c *gin.Context) {
-		type T struct {
-			Message string
-		}
-		message := "Hi."
-		resp := JsonResponse{StatusCode: http.StatusOK, Data: message}
-		c.JSON(resp.StatusCode, resp)
-	}
-	handleGet := func(c *gin.Context) {
-		id := c.Param("id")
-		resp := service.GetThing(id)
-		c.JSON(resp.StatusCode, resp)
-	}
-	handlePost := func(c *gin.Context) {
-		var thing Thing
-		err := c.BindJSON(&thing)
-		assert.NoError(err)
-		resp := service.PostThing(&thing)
-		c.JSON(resp.StatusCode, resp)
-	}
-	handlePut := func(c *gin.Context) {
-		id := c.Param("id")
-		var thing Thing
-		err := c.BindJSON(&thing)
-		assert.NoError(err)
-		thing.Id = id
-		log.Printf("AAA %s %#v", id, thing)
-		resp := service.PutThing(id, &thing)
-		log.Printf("CCC %s %#v", id, resp.Data)
-
-		c.JSON(resp.StatusCode, resp)
-	}
-	handleDelete := func(c *gin.Context) {
-		id := c.Param("id")
-		resp := service.DeleteThing(id)
-		c.JSON(resp.StatusCode, resp)
-	}
-
-	routeData := []RouteData{
-		{"GET", "/", handleGetRoot},
-		{"GET", "/:id", handleGet},
-		{"POST", "/", handlePost},
-		{"PUT", "/:id", handlePut},
-		{"DELETE", "/:id", handleDelete},
-	}
+	server := &ThingServer{}
+	server.Init(service)
 
 	url := ""
 
 	{
-		err = server.Configure(routeData)
+		err = genericServer.Configure(server.routes)
 		if err != nil {
 			assert.FailNow("server failed to configure: " + err.Error())
 		}
-		_, err = server.Start()
+		_, err = genericServer.Start()
 		if err != nil {
 			assert.FailNow("server failed to start: " + err.Error())
 		}
@@ -225,7 +249,7 @@ func Test07Server(t *testing.T) {
 		assert.Equal(404, jresp.StatusCode)
 	}
 	{
-		err = server.Stop()
+		err = genericServer.Stop()
 		assert.NoError(err)
 
 		_, err := http.Get(url)
