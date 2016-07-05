@@ -184,11 +184,6 @@ func (sys *SystemConfig) runHealthChecks() error {
 		}
 
 		log.Printf("Service healthy: %s at %s", name, url)
-		/*body, err := ReadFrom(resp.Body)
-		if err != nil {
-			return err
-		}
-		log.Printf(">>> %s <<<", string(body))*/
 	}
 
 	//log.Printf("SystemConfig.runHealthChecks: end")

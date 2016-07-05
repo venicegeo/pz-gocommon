@@ -154,75 +154,76 @@ func Test07Server(t *testing.T) {
 		url = "http://" + sys.BindTo
 	}
 
-	var input *Thing
-	var output *Thing
-	var jresp *JsonResponse
+	{
+		var input *Thing
+		var output *Thing
+		var jresp *JsonResponse
 
-	// GET bad
-	jresp = HttpGetJson(url + "/mpg")
-	assert.Equal(404, jresp.StatusCode)
+		// GET bad
+		jresp = HttpGetJson(url + "/mpg")
+		assert.Equal(404, jresp.StatusCode)
 
-	// POST 1
-	input = &Thing{Value: "17"}
-	jresp = HttpPostJson(url, input)
-	assert.Equal(201, jresp.StatusCode)
+		// POST 1
+		input = &Thing{Value: "17"}
+		jresp = HttpPostJson(url, input)
+		assert.Equal(201, jresp.StatusCode)
 
-	err = SuperConverter(jresp.Data, &output)
-	assert.EqualValues("1", output.Id)
-	assert.EqualValues("17", output.Value)
+		err = SuperConverter(jresp.Data, &output)
+		assert.EqualValues("1", output.Id)
+		assert.EqualValues("17", output.Value)
 
-	// POST bad
-	input = &Thing{Value: "NULL"}
-	jresp = HttpPostJson(url, input)
-	assert.Equal(400, jresp.StatusCode)
+		// POST bad
+		input = &Thing{Value: "NULL"}
+		jresp = HttpPostJson(url, input)
+		assert.Equal(400, jresp.StatusCode)
 
-	// POST 2
-	input = &Thing{Value: "18"}
-	jresp = HttpPostJson(url, input)
-	assert.Equal(201, jresp.StatusCode)
+		// POST 2
+		input = &Thing{Value: "18"}
+		jresp = HttpPostJson(url, input)
+		assert.Equal(201, jresp.StatusCode)
 
-	err = SuperConverter(jresp.Data, &output)
-	assert.EqualValues("2", output.Id)
-	assert.EqualValues("18", output.Value)
+		err = SuperConverter(jresp.Data, &output)
+		assert.EqualValues("2", output.Id)
+		assert.EqualValues("18", output.Value)
 
-	// GET 2
-	jresp = HttpGetJson(url + "/2")
-	assert.Equal(200, jresp.StatusCode)
+		// GET 2
+		jresp = HttpGetJson(url + "/2")
+		assert.Equal(200, jresp.StatusCode)
 
-	err = SuperConverter(jresp.Data, &output)
-	assert.NoError(err)
-	assert.EqualValues("2", output.Id)
-	assert.EqualValues("18", output.Value)
+		err = SuperConverter(jresp.Data, &output)
+		assert.NoError(err)
+		assert.EqualValues("2", output.Id)
+		assert.EqualValues("18", output.Value)
 
-	// PUT 1
-	input = &Thing{Value: "71"}
-	jresp = HttpPutJson(url+"/1", input)
-	assert.Equal(200, jresp.StatusCode)
-	err = SuperConverter(jresp.Data, &output)
-	assert.NoError(err)
-	assert.EqualValues("71", output.Value)
+		// PUT 1
+		input = &Thing{Value: "71"}
+		jresp = HttpPutJson(url+"/1", input)
+		assert.Equal(200, jresp.StatusCode)
+		err = SuperConverter(jresp.Data, &output)
+		assert.NoError(err)
+		assert.EqualValues("71", output.Value)
 
-	// GET 1
-	jresp = HttpGetJson(url + "/1")
-	assert.Equal(200, jresp.StatusCode)
+		// GET 1
+		jresp = HttpGetJson(url + "/1")
+		assert.Equal(200, jresp.StatusCode)
 
-	err = SuperConverter(jresp.Data, &output)
-	assert.NoError(err)
-	assert.EqualValues("1", output.Id)
-	assert.EqualValues("71", output.Value)
+		err = SuperConverter(jresp.Data, &output)
+		assert.NoError(err)
+		assert.EqualValues("1", output.Id)
+		assert.EqualValues("71", output.Value)
 
-	// DELETE 3
-	jresp = HttpDeleteJson(url + "/3")
-	assert.Equal(404, jresp.StatusCode)
+		// DELETE 3
+		jresp = HttpDeleteJson(url + "/3")
+		assert.Equal(404, jresp.StatusCode)
 
-	// DELETE 1
-	jresp = HttpDeleteJson(url + "/1")
-	assert.Equal(200, jresp.StatusCode)
+		// DELETE 1
+		jresp = HttpDeleteJson(url + "/1")
+		assert.Equal(200, jresp.StatusCode)
 
-	// GET 1
-	jresp = HttpGetJson(url + "/1")
-	assert.Equal(404, jresp.StatusCode)
-
+		// GET 1
+		jresp = HttpGetJson(url + "/1")
+		assert.Equal(404, jresp.StatusCode)
+	}
 	{
 		err = server.Stop()
 		assert.NoError(err)

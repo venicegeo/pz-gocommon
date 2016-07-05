@@ -105,7 +105,6 @@ func ToJsonResponse(resp *http.Response) *JsonResponse {
 	}
 
 	var err error
-	//	var msg json.RawMessage
 	jresp := JsonResponse{}
 
 	raw := make([]byte, resp.ContentLength)
@@ -118,8 +117,6 @@ func ToJsonResponse(resp *http.Response) *JsonResponse {
 		return newJsonResponse500(err)
 	}
 
-	//jresp.Data = obj
-
 	if jresp.StatusCode != resp.StatusCode {
 		s := fmt.Sprintf("Unmatched status codes: expected %d, got %d",
 			resp.StatusCode, jresp.StatusCode)
@@ -127,27 +124,6 @@ func ToJsonResponse(resp *http.Response) *JsonResponse {
 	}
 
 	return &jresp
-
-	/*	switch {
-		case resp.StatusCode >= 200 && resp.StatusCode <= 299:
-			return &JsonResponse{
-				StatusCode: resp.StatusCode,
-				RawData:    raw,
-			}
-		case resp.StatusCode >= 400 && resp.StatusCode <= 499:
-			return &JsonResponse{
-				StatusCode: resp.StatusCode,
-				Message:    resp.Status,
-			}
-		case resp.StatusCode >= 500 && resp.StatusCode <= 599:
-			return &JsonResponse{
-				StatusCode: resp.StatusCode,
-				Message:    resp.Status,
-			}
-		}
-
-		err = errors.New(fmt.Sprintf("Unknown internal error, status code %d", resp.StatusCode))
-		return newJsonResponse500(err)*/
 }
 
 // given an input which is some messy type like "map[string]interface{}",
