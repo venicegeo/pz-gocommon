@@ -26,8 +26,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-//const waitTimeout = 1000
-//const waitSleep = 100
 const ginHammerTime = 3
 
 type GenericServer struct {
