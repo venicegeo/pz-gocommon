@@ -73,8 +73,8 @@ type JsonResponse struct {
 	StatusCode int `json:"statusCode" binding:"required"`
 
 	// only 2xxx
-	Data       interface{}            `json:"data"`
-	Pagination JsonPaginationResponse `json:"pagination,omitempty"` // optional
+	Data       interface{}             `json:"data"`
+	Pagination *JsonPaginationResponse `json:"pagination,omitempty"` // optional
 
 	// only 4xx and 5xx
 	Message string        `json:"message" binding:"required"`
