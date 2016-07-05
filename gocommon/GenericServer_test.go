@@ -15,6 +15,7 @@
 package piazza
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"testing"
@@ -25,45 +26,58 @@ import (
 
 //--------------------------
 
+type ThingService struct {
+	assert  *assert.Assertions
+	Data    map[string]string `json:"data"`
+	IdCount int
+}
+
 type Thing struct {
+	Id    string `json:"id"`
+	Value string `json:"value"`
 }
 
-type T struct {
-	Id int
-}
-
-/*
-func (thing *Thing) Get(c *gin.Context, assert *assert.Assertions) *JsonResponse {
-	r := &JsonResponse{StatusCode: http.StatusOK, Data: T{Id: 17}}
-	return r
-
-}
-
-func (thing *Thing) Post(c *gin.Context, assert *assert.Assertions) *JsonResponse {
-	var t T
-	err := c.BindJSON(&t)
-	assert.NoError(err)
-	var r *JsonResponse
-	if t.Id == 7 {
-		r = &JsonResponse{StatusCode: http.StatusOK, Data: T{Id: 13}}
-	} else {
-		r = &JsonResponse{StatusCode: http.StatusBadRequest, Message: "eleven"}
+func (service *ThingService) GetThing(id string) *JsonResponse {
+	val, ok := service.Data[id]
+	if !ok {
+		return &JsonResponse{StatusCode: http.StatusNotFound}
 	}
-	return r
+	return &JsonResponse{StatusCode: http.StatusOK, Data: Thing{Id: id, Value: val}}
 }
 
-func (thing *Thing) Put(c *gin.Context, assert *assert.Assertions) *JsonResponse {
-	var t T
-	err := c.BindJSON(&t)
-	assert.NoError(err)
-	assert.Equal(32, t.Id)
-	return &JsonResponse{StatusCode: http.StatusOK, Data: T{Id: 63}}
+func (service *ThingService) PostThing(thing *Thing) *JsonResponse {
+	if thing.Value == "NULL" {
+		resp := &JsonResponse{StatusCode: http.StatusBadRequest, Message: "oops"}
+		return resp
+	}
+	service.IdCount++
+	thing.Id = fmt.Sprintf("%d", service.IdCount)
+	service.Data[thing.Id] = thing.Value
+	return &JsonResponse{StatusCode: http.StatusCreated, Data: thing}
 }
 
-func (thing *Thing) Delete(c *gin.Context, assert *assert.Assertions) *JsonResponse {
+func (service *ThingService) PutThing(id string, thing *Thing) *JsonResponse {
+	if thing.Value == "NULL" {
+		return &JsonResponse{StatusCode: http.StatusBadRequest, Message: "oops"}
+	}
+	if thing.Id != id {
+		return &JsonResponse{StatusCode: http.StatusBadRequest, Message: "oops - id mismatch"}
+	}
+	service.Data[thing.Id] = thing.Value
+	log.Printf("BBB %s %#v", id, thing)
+
+	return &JsonResponse{StatusCode: http.StatusOK, Data: thing}
+}
+
+func (service *ThingService) DeleteThing(id string) *JsonResponse {
+	_, ok := service.Data[id]
+	if !ok {
+		return &JsonResponse{StatusCode: http.StatusNotFound}
+	}
+	delete(service.Data, id)
 	return &JsonResponse{StatusCode: http.StatusOK}
 }
-*/
+
 func Test07Server(t *testing.T) {
 	assert := assert.New(t)
 
@@ -73,50 +87,56 @@ func Test07Server(t *testing.T) {
 
 	server := GenericServer{Sys: sys}
 
-	type T struct {
-		Id int `json:"id"`
+	service := ThingService{
+		assert:  assert,
+		IdCount: 0,
+		Data:    make(map[string]string),
+	}
+
+	handleGetRoot := func(c *gin.Context) {
+		type T struct {
+			Message string
+		}
+		message := "Hi."
+		resp := JsonResponse{StatusCode: http.StatusOK, Data: message}
+		c.JSON(resp.StatusCode, resp)
 	}
 	handleGet := func(c *gin.Context) {
-		t := T{Id: 17}
-		j := JsonResponse{StatusCode: http.StatusOK, Data: t}
-		log.Printf("YYYY %#v     %#v", j, j.Data)
-		c.JSON(200, &j)
+		id := c.Param("id")
+		resp := service.GetThing(id)
+		c.JSON(resp.StatusCode, resp)
 	}
 	handlePost := func(c *gin.Context) {
-		var t T
-		err := c.BindJSON(&t)
+		var thing Thing
+		err := c.BindJSON(&thing)
 		assert.NoError(err)
-		if t.Id == 7 {
-			j := &JsonResponse{StatusCode: http.StatusCreated, Data: T{Id: 13}}
-			c.JSON(201, j)
-		} else {
-			assert.Equal(1237, t.Id)
-			j := &JsonResponse{StatusCode: http.StatusBadRequest, Data: T{Id: 12313}}
-			j.Message = "oops"
-			c.JSON(400, j)
-		}
-
+		resp := service.PostThing(&thing)
+		c.JSON(resp.StatusCode, resp)
 	}
 	handlePut := func(c *gin.Context) {
-		var t T
-		err := c.BindJSON(&t)
+		id := c.Param("id")
+		var thing Thing
+		err := c.BindJSON(&thing)
 		assert.NoError(err)
-		assert.Equal(32, t.Id)
-		j := &JsonResponse{StatusCode: http.StatusOK, Data: T{Id: 63}}
-		c.JSON(200, j)
+		thing.Id = id
+		log.Printf("AAA %s %#v", id, thing)
+		resp := service.PutThing(id, &thing)
+		log.Printf("CCC %s %#v", id, resp.Data)
 
+		c.JSON(resp.StatusCode, resp)
 	}
 	handleDelete := func(c *gin.Context) {
-		j := &JsonResponse{StatusCode: http.StatusOK, Data: T{Id: 45}}
-		c.JSON(200, j)
-
+		id := c.Param("id")
+		resp := service.DeleteThing(id)
+		c.JSON(resp.StatusCode, resp)
 	}
 
 	routeData := []RouteData{
-		{"GET", "/", handleGet},
+		{"GET", "/", handleGetRoot},
+		{"GET", "/:id", handleGet},
 		{"POST", "/", handlePost},
-		{"PUT", "/", handlePut},
-		{"DELETE", "/", handleDelete},
+		{"PUT", "/:id", handlePut},
+		{"DELETE", "/:id", handleDelete},
 	}
 
 	url := ""
@@ -124,64 +144,84 @@ func Test07Server(t *testing.T) {
 	{
 		err = server.Configure(routeData)
 		if err != nil {
-			assert.FailNow("server failed to configure: %s", err.Error())
+			assert.FailNow("server failed to configure: " + err.Error())
 		}
 		_, err = server.Start()
 		if err != nil {
-			assert.FailNow("server failed to start: %s", err.Error())
+			assert.FailNow("server failed to start: " + err.Error())
 		}
 
 		url = "http://" + sys.BindTo
 	}
 
-	{
-		jresp := HttpGetJson(url)
-		assert.Equal(200, jresp.StatusCode)
+	var input *Thing
+	var output *Thing
+	var jresp *JsonResponse
 
-		var out T
-		err = SuperConverter(jresp.Data, &out)
-		assert.NoError(err)
-		assert.Equal(17, out.Id)
+	// GET bad
+	jresp = HttpGetJson(url + "/mpg")
+	assert.Equal(404, jresp.StatusCode)
 
-	}
+	// POST 1
+	input = &Thing{Value: "17"}
+	jresp = HttpPostJson(url, input)
+	assert.Equal(201, jresp.StatusCode)
 
-	{
-		input := &T{Id: 7}
-		jresp := HttpPostJson(url, input)
-		assert.Equal(201, jresp.StatusCode)
+	err = SuperConverter(jresp.Data, &output)
+	assert.EqualValues("1", output.Id)
+	assert.EqualValues("17", output.Value)
 
-		var out T
-		err = SuperConverter(jresp.Data, &out)
-		assert.Equal(13, out.Id)
-	}
+	// POST bad
+	input = &Thing{Value: "NULL"}
+	jresp = HttpPostJson(url, input)
+	assert.Equal(400, jresp.StatusCode)
 
-	{
-		in := &T{Id: 1237}
-		jresp := HttpPostJson(url, in)
-		assert.Equal(400, jresp.StatusCode)
-		assert.EqualValues("oops", jresp.Message)
+	// POST 2
+	input = &Thing{Value: "18"}
+	jresp = HttpPostJson(url, input)
+	assert.Equal(201, jresp.StatusCode)
 
-		var out T
-		err = SuperConverter(jresp.Data, &out)
-		assert.Equal(12313, out.Id)
-	}
+	err = SuperConverter(jresp.Data, &output)
+	assert.EqualValues("2", output.Id)
+	assert.EqualValues("18", output.Value)
 
-	{
-		in := &T{Id: 32}
-		jresp := HttpPutJson(url, in)
-		assert.Equal(200, jresp.StatusCode)
-		var out T
-		err = SuperConverter(jresp.Data, &out)
-		assert.Equal(63, out.Id)
-	}
+	// GET 2
+	jresp = HttpGetJson(url + "/2")
+	assert.Equal(200, jresp.StatusCode)
 
-	{
-		jresp := HttpDeleteJson(url)
-		assert.Equal(200, jresp.StatusCode)
-		var out T
-		err = SuperConverter(jresp.Data, &out)
-		assert.Equal(45, out.Id)
-	}
+	err = SuperConverter(jresp.Data, &output)
+	assert.NoError(err)
+	assert.EqualValues("2", output.Id)
+	assert.EqualValues("18", output.Value)
+
+	// PUT 1
+	input = &Thing{Value: "71"}
+	jresp = HttpPutJson(url+"/1", input)
+	assert.Equal(200, jresp.StatusCode)
+	err = SuperConverter(jresp.Data, &output)
+	assert.NoError(err)
+	assert.EqualValues("71", output.Value)
+
+	// GET 1
+	jresp = HttpGetJson(url + "/1")
+	assert.Equal(200, jresp.StatusCode)
+
+	err = SuperConverter(jresp.Data, &output)
+	assert.NoError(err)
+	assert.EqualValues("1", output.Id)
+	assert.EqualValues("71", output.Value)
+
+	// DELETE 3
+	jresp = HttpDeleteJson(url + "/3")
+	assert.Equal(404, jresp.StatusCode)
+
+	// DELETE 1
+	jresp = HttpDeleteJson(url + "/1")
+	assert.Equal(200, jresp.StatusCode)
+
+	// GET 1
+	jresp = HttpGetJson(url + "/1")
+	assert.Equal(404, jresp.StatusCode)
 
 	{
 		err = server.Stop()
