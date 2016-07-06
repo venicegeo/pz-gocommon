@@ -85,24 +85,28 @@ type JsonResponse struct {
 	Metadata interface{} `json:"metadata,omitempty"`
 }
 
+func (resp *JsonResponse) String() string {
+	s := fmt.Sprintf("StatusCode: %d\nData: %#v\nMessage: %s",
+		resp.StatusCode, resp.Data, resp.Message)
+	return s
+}
+
+func (resp *JsonResponse) IsError() bool {
+	return resp.StatusCode >= 400 && resp.StatusCode <= 599
+}
+
+func (resp *JsonResponse) ToError() error {
+	if !resp.IsError() {
+		return nil
+	}
+	return errors.New(resp.String())
+}
+
 func newJsonResponse500(err error) *JsonResponse {
 	return &JsonResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()}
 }
 
-func ToTypedJsonResponse(resp *http.Response, obj interface{}) *JsonResponse {
-	jresp := ToJsonResponse(resp)
-
-	err := SuperConverter(jresp.Data, obj)
-	if err != nil {
-		j := newJsonResponse500(err)
-		j.Inner = jresp
-		return j
-	}
-
-	return jresp
-}
-
-func ToJsonResponse(resp *http.Response) *JsonResponse {
+func toJsonResponse(resp *http.Response) *JsonResponse {
 	if resp.ContentLength == 0 {
 		return &JsonResponse{StatusCode: resp.StatusCode}
 	}
@@ -129,6 +133,8 @@ func ToJsonResponse(resp *http.Response) *JsonResponse {
 	return &jresp
 }
 
+//----------------------------------------------------------
+
 // given an input which is some messy type like "map[string]interface{}",
 // convert it to the given output type
 func SuperConverter(input interface{}, output interface{}) error {
@@ -153,10 +159,11 @@ func HttpGetJson(url string) *JsonResponse {
 		return newJsonResponse500(err)
 	}
 
-	return ToJsonResponse(resp)
+	return toJsonResponse(resp)
 }
 
 func httpPostOrPutJson(doPost bool, url string, in interface{}) *JsonResponse {
+
 	byts, err := json.Marshal(in)
 	if err != nil {
 		return newJsonResponse500(err)
@@ -166,6 +173,7 @@ func httpPostOrPutJson(doPost bool, url string, in interface{}) *JsonResponse {
 	var resp *http.Response
 	if doPost {
 		resp, err = http.Post(url, ContentTypeJSON, reader)
+
 	} else {
 		resp, err = HTTPPut(url, ContentTypeJSON, reader)
 	}
@@ -173,7 +181,7 @@ func httpPostOrPutJson(doPost bool, url string, in interface{}) *JsonResponse {
 		return newJsonResponse500(err)
 	}
 
-	return ToJsonResponse(resp)
+	return toJsonResponse(resp)
 }
 
 func HttpPostJson(url string, in interface{}) *JsonResponse {
@@ -190,5 +198,5 @@ func HttpDeleteJson(url string) *JsonResponse {
 		return newJsonResponse500(err)
 	}
 
-	return ToJsonResponse(resp)
+	return toJsonResponse(resp)
 }

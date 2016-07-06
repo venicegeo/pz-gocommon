@@ -49,9 +49,9 @@ var EndpointPrefixes = map[ServiceName]string{
 	PzDiscover:      "",
 	PzElasticSearch: "",
 	PzKafka:         "",
-	PzLogger:        "/v1",
-	PzUuidgen:       "/v1",
-	PzWorkflow:      "/v1",
+	PzLogger:        "",
+	PzUuidgen:       "",
+	PzWorkflow:      "",
 	PzsvcHello:      "/v1",
 }
 
