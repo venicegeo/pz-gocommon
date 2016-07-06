@@ -25,8 +25,8 @@ import (
 func TestHttp(t *testing.T) {
 	assert := assert.New(t)
 
-	// testing of Safe{Get,Post,Put,Delete} covered by GenericServer_test.go
+	// testing of Http{Get,Post,Put,Delete}Json covered by GenericServer_test.go
 	// testing of HTTP{Put,Delete} covered by GenericServer_test.go
-	
+
 	assert.True(!false)
 }

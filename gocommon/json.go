@@ -21,19 +21,6 @@ import (
 
 type JsonString string
 
-type Pagination struct {
-	Count   int64  `json:"count" binding:"required"`
-	Page    int    `json:"page" binding:"required"`
-	PerPage int    `json:"perPage" binding:"required"`
-	SortBy  string `json:"sortBy,omitempty"`
-	Order   string `json:"order,omitempty"`
-}
-
-type Common18FListResponse struct {
-	Data       []interface{} `json:"data" binding:"required"`
-	Pagination Pagination    `json:"pagination" binding:"required"`
-}
-
 // converts an arbitrary object to a real json string
 func ConvertObjectToJsonString(obj interface{}, compact bool) (JsonString, error) {
 	var byts []byte

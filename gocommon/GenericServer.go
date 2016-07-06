@@ -26,8 +26,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-//const waitTimeout = 1000
-//const waitSleep = 100
 const ginHammerTime = 3
 
 type GenericServer struct {
@@ -40,14 +38,6 @@ type RouteData struct {
 	Verb    string
 	Path    string
 	Handler gin.HandlerFunc
-}
-
-// ServerLogHandler adds traditional logging support to the http server handlers.
-func (server *GenericServer) LogHandler(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
-		handler.ServeHTTP(w, r)
-	})
 }
 
 func (server *GenericServer) Stop() error {

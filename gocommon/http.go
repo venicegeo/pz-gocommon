@@ -17,6 +17,8 @@ package piazza
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 )
@@ -28,6 +30,8 @@ const (
 	// ContentTypeText is the http content-type for plain text.
 	ContentTypeText = "text/plain"
 )
+
+//----------------------------------------------------------
 
 // Put, because there is no http.Put.
 func HTTPPut(url string, contentType string, body io.Reader) (*http.Response, error) {
@@ -52,34 +56,110 @@ func HTTPDelete(url string) (*http.Response, error) {
 	return client.Do(req)
 }
 
-type SafeResponse struct {
-	StatusCode   int
-	StatusString string
+//----------------------------------------------------------
+
+type QueryFunc func(string) string
+type GetQueryFunc func(string) (string, bool)
+
+type JsonPaginationResponse struct {
+	Count   int    `json:"count" binding:"required"`
+	Page    int    `json:"page" binding:"required"`
+	PerPage int    `json:"perPage" binding:"required"`
+	SortBy  string `json:"sortBy" binding:"required"`
+	Order   string `json:"order" binding:"required"` // "asc" or "desc"
 }
 
-func SafeGet(url string, out interface{}) (*SafeResponse, error) {
+type JsonResponse struct {
+	StatusCode int `json:"statusCode" binding:"required"`
+
+	// only 2xxx
+	Data       interface{}             `json:"data"`
+	Pagination *JsonPaginationResponse `json:"pagination,omitempty"` // optional
+
+	// only 4xx and 5xx
+	Message string        `json:"message" binding:"required"`
+	Origin  string        `json:"origin,omitempty"` // optional
+	Inner   *JsonResponse `json:"inner,omitempty"`
+
+	// optional
+	Metadata interface{} `json:"metadata,omitempty"`
+}
+
+func newJsonResponse500(err error) *JsonResponse {
+	return &JsonResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()}
+}
+
+func ToTypedJsonResponse(resp *http.Response, obj interface{}) *JsonResponse {
+	jresp := ToJsonResponse(resp)
+
+	err := SuperConverter(jresp.Data, obj)
+	if err != nil {
+		j := newJsonResponse500(err)
+		j.Inner = jresp
+		return j
+	}
+
+	return jresp
+}
+
+func ToJsonResponse(resp *http.Response) *JsonResponse {
+	if resp.ContentLength == 0 {
+		return &JsonResponse{StatusCode: resp.StatusCode}
+	}
+
+	var err error
+	jresp := JsonResponse{}
+
+	raw := make([]byte, resp.ContentLength)
+	_, err = resp.Body.Read(raw)
+	if err != nil && err != io.EOF {
+		return newJsonResponse500(err)
+	}
+	err = json.Unmarshal(raw, &jresp)
+	if err != nil {
+		return newJsonResponse500(err)
+	}
+
+	if jresp.StatusCode != resp.StatusCode {
+		s := fmt.Sprintf("Unmatched status codes: expected %d, got %d",
+			resp.StatusCode, jresp.StatusCode)
+		return newJsonResponse500(errors.New(s))
+	}
+
+	return &jresp
+}
+
+// given an input which is some messy type like "map[string]interface{}",
+// convert it to the given output type
+func SuperConverter(input interface{}, output interface{}) error {
+	raw, err := json.Marshal(input)
+	if err != nil {
+		return nil
+	}
+
+	err = json.Unmarshal(raw, output)
+	if err != nil {
+		return nil
+	}
+
+	return nil
+}
+
+//----------------------------------------------------------
+
+func HttpGetJson(url string) *JsonResponse {
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, err
+		return newJsonResponse500(err)
 	}
 
-	dec := json.NewDecoder(resp.Body)
-	defer resp.Body.Close()
-	err = dec.Decode(out)
-	if err != nil {
-		return nil, err
-	}
-
-	return &SafeResponse{
-		StatusCode:   resp.StatusCode,
-		StatusString: resp.Status,
-	}, nil
+	return ToJsonResponse(resp)
 }
 
-func safePostOrPut(doPost bool, url string, in interface{}, out interface{}) (*SafeResponse, error) {
+func httpPostOrPutJson(doPost bool, url string, in interface{}) *JsonResponse {
 	byts, err := json.Marshal(in)
 	if err != nil {
-		return nil, err
+		return newJsonResponse500(err)
 	}
 
 	reader := bytes.NewReader(byts)
@@ -90,45 +170,25 @@ func safePostOrPut(doPost bool, url string, in interface{}, out interface{}) (*S
 		resp, err = HTTPPut(url, ContentTypeJSON, reader)
 	}
 	if err != nil {
-		return nil, err
+		return newJsonResponse500(err)
 	}
 
-	dec := json.NewDecoder(resp.Body)
-	defer resp.Body.Close()
-	err = dec.Decode(out)
-	if err != nil {
-		return nil, err
-	}
-
-	return &SafeResponse{
-		StatusCode:   resp.StatusCode,
-		StatusString: resp.Status,
-	}, nil
+	return ToJsonResponse(resp)
 }
 
-func SafePost(url string, in interface{}, out interface{}) (*SafeResponse, error) {
-	return safePostOrPut(true, url, in, out)
+func HttpPostJson(url string, in interface{}) *JsonResponse {
+	return httpPostOrPutJson(true, url, in)
 }
 
-func SafePut(url string, in interface{}, out interface{}) (*SafeResponse, error) {
-	return safePostOrPut(false, url, in, out)
+func HttpPutJson(url string, in interface{}) *JsonResponse {
+	return httpPostOrPutJson(false, url, in)
 }
 
-func SafeDelete(url string, out interface{}) (*SafeResponse, error) {
+func HttpDeleteJson(url string) *JsonResponse {
 	resp, err := HTTPDelete(url)
 	if err != nil {
-		return nil, err
+		return newJsonResponse500(err)
 	}
 
-	dec := json.NewDecoder(resp.Body)
-	defer resp.Body.Close()
-	err = dec.Decode(out)
-	if err != nil {
-		return nil, err
-	}
-
-	return &SafeResponse{
-		StatusCode:   resp.StatusCode,
-		StatusString: resp.Status,
-	}, nil
+	return ToJsonResponse(resp)
 }

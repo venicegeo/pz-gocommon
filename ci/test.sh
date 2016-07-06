@@ -23,4 +23,6 @@ go get github.com/venicegeo/pz-gocommon/gocommon
 go test -v -coverprofile=common.cov github.com/venicegeo/pz-gocommon/gocommon
 go test -v -coverprofile=elastic.cov github.com/venicegeo/pz-gocommon/elasticsearch
 
+#go tool cover -html=common.cov
+
 ###

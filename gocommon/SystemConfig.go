@@ -29,8 +29,8 @@ const DefaultKafkaAddress = "localhost:9092"
 const DefaultDomain = ".int.geointservices.io"
 const DefaultProtocol = "http"
 
-const waitTimeout = 1000
-const waitSleep = 100
+const waitTimeoutMs = 2000
+const waitSleepMs = 100
 
 type ServiceName string
 
@@ -184,11 +184,6 @@ func (sys *SystemConfig) runHealthChecks() error {
 		}
 
 		log.Printf("Service healthy: %s at %s", name, url)
-		/*body, err := ReadFrom(resp.Body)
-		if err != nil {
-			return err
-		}
-		log.Printf(">>> %s <<<", string(body))*/
 	}
 
 	//log.Printf("SystemConfig.runHealthChecks: end")
@@ -250,14 +245,14 @@ func (sys *SystemConfig) WaitForServiceByAddress(name ServiceName, address strin
 	for {
 		resp, err := http.Get(url)
 		if err == nil && resp.StatusCode == http.StatusOK {
-			//log.Printf("found service %s", name)
+			log.Printf("found service %s", name)
 			return nil
 		}
-		if msTime >= waitTimeout {
+		if msTime >= waitTimeoutMs {
 			return fmt.Errorf("timed out waiting for service: %s at %s", name, url)
 		}
-		time.Sleep(waitSleep * time.Millisecond)
-		msTime += waitSleep
+		time.Sleep(waitSleepMs * time.Millisecond)
+		msTime += waitSleepMs
 	}
 	/* notreached */
 }
@@ -286,11 +281,11 @@ func (sys *SystemConfig) WaitForServiceToDieByAddress(name ServiceName, address 
 		if err != nil {
 			return nil
 		}
-		if msTime >= waitTimeout {
+		if msTime >= waitTimeoutMs {
 			return fmt.Errorf("timed out waiting for service to die: %s at %s", name, url)
 		}
-		time.Sleep(waitSleep * time.Millisecond)
-		msTime += waitSleep
+		time.Sleep(waitSleepMs * time.Millisecond)
+		msTime += waitSleepMs
 	}
 	/* notreached */
 }
