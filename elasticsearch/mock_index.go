@@ -76,7 +76,7 @@ func (esi *MockIndex) ItemExists(typ string, id string) bool {
 }
 
 // if index already exists, does nothing
-func (esi *MockIndex) Create(settings string) error {
+func (esi *MockIndex) Create() error {
 	esi.exists = true
 	return nil
 }
