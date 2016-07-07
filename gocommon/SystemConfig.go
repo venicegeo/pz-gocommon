@@ -52,7 +52,7 @@ var EndpointPrefixes = map[ServiceName]string{
 	PzLogger:        "",
 	PzUuidgen:       "",
 	PzWorkflow:      "",
-	PzsvcHello:      "/v1",
+	PzsvcHello:      "",
 }
 
 var HealthcheckEndpoints = map[ServiceName]string{
