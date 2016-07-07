@@ -108,7 +108,7 @@ func (esi *Index) ItemExists(typ string, id string) bool {
 }
 
 // if index already exists, does nothing
-func (esi *Index) Create(settings string) error {
+func (esi *Index) Create() error {
 
 	ok := esi.IndexExists()
 	if ok {
@@ -116,13 +116,7 @@ func (esi *Index) Create(settings string) error {
 		return nil
 	}
 
-	var createIndex *elastic.IndicesCreateResult
-	var err error
-	if settings == "" {
-		createIndex, err = esi.lib.CreateIndex(esi.index).Do()
-	} else {
-		createIndex, err = esi.lib.CreateIndex(esi.index).Body(settings).Do()
-	}
+	createIndex, err := esi.lib.CreateIndex(esi.index).Do()
 
 	if err != nil {
 		return err

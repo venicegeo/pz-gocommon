@@ -63,7 +63,7 @@ type IIndex interface {
 	IndexExists() bool
 	TypeExists(typ string) bool
 	ItemExists(typ string, id string) bool
-	Create(settings string) error
+	Create() error
 	Close() error
 	Delete() error
 	PostData(typ string, id string, obj interface{}) (*IndexResponse, error)
