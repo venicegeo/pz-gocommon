@@ -1038,7 +1038,26 @@ func (suite *EsTester) Test10GetAll() {
 	}
 }
 
-func (suite *EsTester) Test11Pagination() {
+func (suite *EsTester) Test11Pagination1() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	p := piazza.JsonPagination{
+		PerPage: 10,
+		Page:    32,
+		Order:   piazza.PaginationOrderDescending,
+		SortBy:  "id",
+	}
+
+	q := NewQueryFormat(&p)
+
+	assert.Equal(10*32, q.From)
+	assert.Equal(10, q.Size)
+	assert.Equal(SortDescending, q.Order)
+	assert.EqualValues("id", q.Key)
+}
+
+func (suite *EsTester) Test11Pagination2() {
 	t := suite.T()
 	assert := assert.New(t)
 

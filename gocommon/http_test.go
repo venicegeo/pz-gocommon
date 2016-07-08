@@ -30,3 +30,83 @@ func TestHttp(t *testing.T) {
 
 	assert.True(!false)
 }
+
+func TestPagination(t *testing.T) {
+	assert := assert.New(t)
+
+	p := JsonPagination{
+		PerPage: 10,
+		Page:    32,
+		Order:   PaginationOrderDescending,
+		SortBy:  "id",
+	}
+
+	assert.Equal(320, p.StartIndex())
+	assert.Equal(330, p.EndIndex())
+}
+
+func TestPaginationParams(t *testing.T) {
+	assert := assert.New(t)
+
+	defaults := &JsonPagination{
+		PerPage: 10,
+		Page:    0,
+		Order:   PaginationOrderAscending,
+		SortBy:  "id",
+	}
+
+	// with no params specified
+	{
+		expected := defaults
+
+		paramStrings := map[string]string{}
+
+		actual := &JsonPagination{}
+		err := actual.ReadParams(paramStrings, defaults)
+		assert.NoError(err)
+		assert.EqualValues(*expected, *actual)
+	}
+
+	// with some params specified
+	{
+		expected := JsonPagination{
+			PerPage: 100,
+			Page:    17,
+			Order:   PaginationOrderAscending,
+			SortBy:  "id",
+		}
+
+		paramStrings := map[string]string{
+			"perPage": "100",
+			"page":    "17",
+		}
+
+		actual := JsonPagination{}
+		err := actual.ReadParams(paramStrings, defaults)
+		assert.NoError(err)
+		assert.EqualValues(expected, actual)
+	}
+
+	// with all params specified
+	{
+		expected := JsonPagination{
+			PerPage: 100,
+			Page:    17,
+			Order:   PaginationOrderDescending,
+			SortBy:  "foo",
+		}
+
+		paramStrings := map[string]string{
+			"perPage": "100",
+			"page":    "17",
+			"order":   "desc",
+			"sortBy":  "foo",
+		}
+
+		actual := JsonPagination{}
+		err := actual.ReadParams(paramStrings, defaults)
+		assert.NoError(err)
+		assert.EqualValues(expected, actual)
+	}
+
+}
