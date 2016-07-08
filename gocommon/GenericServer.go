@@ -16,7 +16,6 @@ package piazza
 
 import (
 	"errors"
-	"log"
 	"net"
 	"net/http"
 	"syscall"
@@ -70,7 +69,7 @@ func (server *GenericServer) Start() (chan error, error) {
 
 	ginServer.BeforeBegin = func(_ string) {
 		server.pid = syscall.Getpid()
-		log.Printf("Actual pid is %d", server.pid)
+		//log.Printf("Actual pid is %d", server.pid)
 
 		sys.BindTo = ginServer.EndlessListener.Addr().(*net.TCPAddr).String()
 
@@ -89,7 +88,7 @@ func (server *GenericServer) Start() (chan error, error) {
 		return nil, err
 	}
 
-	log.Printf("Server %s started on %s (%s)", sys.Name, sys.Address, sys.BindTo)
+	//log.Printf("Server %s started on %s (%s)", sys.Name, sys.Address, sys.BindTo)
 
 	sys.AddService(sys.Name, sys.BindTo)
 

@@ -16,7 +16,6 @@ package piazza
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"testing"
 
@@ -64,7 +63,6 @@ func (service *ThingService) PutThing(id string, thing *Thing) *JsonResponse {
 		return &JsonResponse{StatusCode: http.StatusBadRequest, Message: "oops - id mismatch"}
 	}
 	service.Data[thing.Id] = thing.Value
-	log.Printf("BBB %s %#v", id, thing)
 
 	return &JsonResponse{StatusCode: http.StatusOK, Data: thing}
 }
