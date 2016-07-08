@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package piazza
+package kafka
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"github.com/venicegeo/pz-gocommon"
+	"github.com/venicegeo/pz-gocommon/gocommon"
 
 	"github.com/Shopify/sarama"
 )
