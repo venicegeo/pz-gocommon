@@ -26,7 +26,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const ginHammerTime = 3
+const ginHammerTime = 3 * time.Second
 
 type GenericServer struct {
 	Sys    *SystemConfig
@@ -64,7 +64,7 @@ func (server *GenericServer) Start() (chan error, error) {
 
 	ready := make(chan bool)
 
-	endless.DefaultHammerTime = ginHammerTime * time.Second
+	endless.DefaultHammerTime = ginHammerTime
 
 	ginServer := endless.NewServer(server.Sys.BindTo, server.router)
 
