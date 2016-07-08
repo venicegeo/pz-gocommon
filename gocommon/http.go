@@ -60,6 +60,78 @@ func HTTPDelete(url string) (*http.Response, error) {
 
 //----------------------------------------------------------
 
+// We don't want to pass http.Request objects into the Services classes
+// (and certainly not a gin.Context!), so we provide a simple map.
+
+type HttpQueryParams map[string]string
+
+func NewQueryParams(request *http.Request) *HttpQueryParams {
+	params := new(HttpQueryParams)
+
+	for k, v := range request.URL.Query() {
+		params.Set(k, v[0])
+	}
+
+	return params
+}
+
+func (params *HttpQueryParams) Set(key string, value string) {
+	(*params)[key] = value
+}
+
+func (params *HttpQueryParams) IsPresent(key string) bool {
+	return (*params)[key] == ""
+}
+
+// returns "" if key not present OR if value not given (e.g. "foo=1&key=&bar=2")
+func (params *HttpQueryParams) Get(key string) string {
+	return (*params)[key]
+}
+
+func (params *HttpQueryParams) GetInt(key string, defalt int) (int, error) {
+	str := params.Get(key)
+	if str == "" {
+		return defalt, nil
+	}
+
+	value, err := strconv.Atoi(str)
+	if err != nil {
+		s := fmt.Sprintf("query argument for '?%s' is invalid: %s (%s)", key, str, err.Error())
+		err := errors.New(s)
+		return -1, err
+	}
+
+	return value, nil
+}
+
+func (params *HttpQueryParams) GetString(key string, defalt string) (string, error) {
+	str := params.Get(key)
+	if str == "" {
+		return defalt, nil
+	}
+	return str, nil
+}
+
+func (params *HttpQueryParams) GetOrder(key string, defalt PaginationOrder) (PaginationOrder, error) {
+	str := params.Get(key)
+	if str == "" {
+		return defalt, nil
+	}
+
+	switch strings.ToLower(str) {
+	case "desc":
+		return PaginationOrderDescending, nil
+	case "asc":
+		return PaginationOrderAscending, nil
+	}
+
+	s := fmt.Sprintf("query argument for '?%s' must be \"asc\" or \"desc\"", key)
+	err := errors.New(s)
+	return PaginationOrderAscending, err
+}
+
+//----------------------------------------------------------
+
 type PaginationOrder string
 
 const PaginationOrderAscending PaginationOrder = "asc" // (the default)
@@ -81,83 +153,39 @@ func (p *JsonPagination) EndIndex() int {
 	return p.StartIndex() + p.PerPage
 }
 
-func (p *JsonPagination) ReadParams(params map[string]string, defalt *JsonPagination) error {
+func NewJsonPagination(params *HttpQueryParams, defalt *JsonPagination) (*JsonPagination, error) {
 
-	getIntParam := func(key string, defalt int) (int, error) {
-		str := params[key]
-		if str == "" {
-			return defalt, nil
-		}
-
-		value, err := strconv.Atoi(str)
-		if err != nil {
-			s := fmt.Sprintf("query argument for '?%s' is invalid: %s (%s)", key, str, err.Error())
-			err := errors.New(s)
-			return -1, err
-		}
-
-		return value, nil
-	}
-
-	getStringParam := func(key string, defalt string) (string, error) {
-		str := params[key]
-		if str == "" {
-			return defalt, nil
-		}
-		return str, nil
-	}
-
-	getOrderParam := func(key string, defalt PaginationOrder) (PaginationOrder, error) {
-		str := params[key]
-		if str == "" {
-			return defalt, nil
-		}
-
-		switch strings.ToLower(str) {
-		case "desc":
-			return PaginationOrderDescending, nil
-		case "asc":
-			return PaginationOrderAscending, nil
-		}
-
-		s := fmt.Sprintf("query argument for '?%s' must be \"asc\" or \"desc\"", key)
-		err := errors.New(s)
-		return PaginationOrderAscending, err
-	}
-
-	perPage, err := getIntParam("perPage", defalt.PerPage)
+	perPage, err := params.GetInt("perPage", defalt.PerPage)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	page, err := getIntParam("page", defalt.Page)
+	page, err := params.GetInt("page", defalt.Page)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	sortBy, err := getStringParam("sortBy", defalt.SortBy)
+	sortBy, err := params.GetString("sortBy", defalt.SortBy)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	order, err := getOrderParam("order", defalt.Order)
+	order, err := params.GetOrder("order", defalt.Order)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	p.PerPage = perPage
-	p.Page = page
-	p.SortBy = sortBy
-	p.Order = order
+	p := &JsonPagination{
+		PerPage: perPage,
+		Page:    page,
+		SortBy:  sortBy,
+		Order:   order,
+	}
 
-	return nil
+	return p, nil
 }
 
 //----------------------------------------------------------
-
-// TODO: get rid of these, pass in the array of query params instead
-type QueryFunc func(string) string
-type GetQueryFunc func(string) (string, bool)
 
 type JsonString string
 

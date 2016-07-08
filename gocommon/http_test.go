@@ -15,6 +15,8 @@
 package piazza
 
 import (
+	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,6 +31,28 @@ func TestHttp(t *testing.T) {
 	// testing of HTTP{Put,Delete} covered by GenericServer_test.go
 
 	assert.True(!false)
+}
+
+func TestQueryParams(t *testing.T) {
+	assert := assert.New(t)
+
+	addr, err := url.Parse("http://example.com/index.html?a=1&b=2&c=&d=4")
+	assert.NoError(err)
+
+	req := http.Request{URL: addr}
+
+	params := NewQueryParams(&req)
+
+	assert.EqualValues(params.Get("a"), "1")
+	assert.EqualValues(params.Get("b"), "2")
+	assert.EqualValues(params.Get("c"), "")
+	assert.EqualValues(params.Get("d"), "4")
+	assert.EqualValues(params.Get("e"), "")
+
+	params.Set("f", "6")
+	params.Set("g", "")
+	assert.EqualValues(params.Get("f"), "6")
+	assert.EqualValues(params.Get("g"), "")
 }
 
 func TestPagination(t *testing.T) {
@@ -59,10 +83,9 @@ func TestPaginationParams(t *testing.T) {
 	{
 		expected := defaults
 
-		paramStrings := map[string]string{}
+		params := &HttpQueryParams{}
 
-		actual := &JsonPagination{}
-		err := actual.ReadParams(paramStrings, defaults)
+		actual, err := NewJsonPagination(params, defaults)
 		assert.NoError(err)
 		assert.EqualValues(*expected, *actual)
 	}
@@ -76,13 +99,11 @@ func TestPaginationParams(t *testing.T) {
 			SortBy:  "id",
 		}
 
-		paramStrings := map[string]string{
-			"perPage": "100",
-			"page":    "17",
-		}
+		params := &HttpQueryParams{}
+		params.Set("perPage", "100")
+		params.Set("page", "17")
 
-		actual := JsonPagination{}
-		err := actual.ReadParams(paramStrings, defaults)
+		actual, err := NewJsonPagination(params, defaults)
 		assert.NoError(err)
 		assert.EqualValues(expected, actual)
 	}
@@ -96,15 +117,13 @@ func TestPaginationParams(t *testing.T) {
 			SortBy:  "foo",
 		}
 
-		paramStrings := map[string]string{
-			"perPage": "100",
-			"page":    "17",
-			"order":   "desc",
-			"sortBy":  "foo",
-		}
+		params := &HttpQueryParams{}
+		params.Set("perPage", "100")
+		params.Set("page", "17")
+		params.Set("order", "desc")
+		params.Set("sortBy", "foo")
 
-		actual := JsonPagination{}
-		err := actual.ReadParams(paramStrings, defaults)
+		actual, err := NewJsonPagination(params, defaults)
 		assert.NoError(err)
 		assert.EqualValues(expected, actual)
 	}
