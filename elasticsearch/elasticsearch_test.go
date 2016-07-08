@@ -505,8 +505,8 @@ func (suite *EsTester) Test06SetMapping() {
 
 	var err error
 
-	data :=
-		`{
+	var expected piazza.JsonString
+	expected = `{
 			"MyTestObj": {
 				"properties":{
 					"bool1": {"type": "boolean"},
@@ -517,22 +517,16 @@ func (suite *EsTester) Test06SetMapping() {
 				}
 			}
 		}`
-	jsn := piazza.JsonString(data)
-	jsn, err = jsn.ToCompactJson()
-	assert.NoError(err)
 
-	expected := jsn
-
-	err = esi.SetMapping("MyTestObj", jsn)
+	err = esi.SetMapping("MyTestObj", expected)
 	assert.NoError(err)
 
 	mapobj, err := esi.GetMapping("MyTestObj")
 	assert.NoError(err)
 
-	actual, err := piazza.ConvertObjectToJsonString(mapobj, true)
+	actual, err := json.Marshal(mapobj)
 	assert.NoError(err)
-
-	assert.Equal(expected, actual)
+	assert.JSONEq(string(expected), string(actual))
 
 	mappings, err := esi.GetTypes()
 	assert.NoError(err)

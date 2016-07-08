@@ -61,6 +61,8 @@ func HTTPDelete(url string) (*http.Response, error) {
 type QueryFunc func(string) string
 type GetQueryFunc func(string) (string, bool)
 
+type JsonString string
+
 type JsonPaginationResponse struct {
 	Count   int    `json:"count" binding:"required"`
 	Page    int    `json:"page" binding:"required"`
