@@ -161,7 +161,9 @@ func srhSortMatches(matches []*SearchResultHit) []*SearchResultHit {
 	return matches
 }
 
-func (esi *MockIndex) FilterByMatchAll(typ string, format QueryFormat) (*SearchResult, error) {
+func (esi *MockIndex) FilterByMatchAll(typ string, realFormat *piazza.JsonPagination) (*SearchResult, error) {
+
+	format := NewQueryFormat(realFormat)
 
 	objs := make(map[string]*json.RawMessage)
 

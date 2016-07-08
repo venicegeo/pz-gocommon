@@ -218,7 +218,7 @@ func (esi *Index) DeleteByID(typ string, id string) (*DeleteResponse, error) {
 	return NewDeleteResponse(deleteResponse), err
 }
 
-func (esi *Index) FilterByMatchAll(typ string, format QueryFormat) (*SearchResult, error) {
+func (esi *Index) FilterByMatchAll(typ string, realFormat *piazza.JsonPagination) (*SearchResult, error) {
 	//q := elastic.NewBoolFilter()
 	//q.Must(elastic.NewTermFilter("a", 1))
 
@@ -227,6 +227,7 @@ func (esi *Index) FilterByMatchAll(typ string, format QueryFormat) (*SearchResul
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
 	}*/
 
+	format := NewQueryFormat(realFormat)
 	q := elastic.NewMatchAllQuery()
 	f := esi.lib.Search().Index(esi.index).Type(typ).Query(q)
 

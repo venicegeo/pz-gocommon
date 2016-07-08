@@ -268,8 +268,13 @@ func (suite *EsTester) Test03Operations() {
 		{
 			// SEARCH for everything
 			// TODO: exercise sortKey
-			format := QueryFormat{Size: 10, From: 0}
-			searchResult, err := esi.FilterByMatchAll(mapping, format)
+			realFormat := &piazza.JsonPagination{
+				Page:    0,
+				PerPage: 10,
+				Order:   piazza.PaginationOrderAscending,
+				SortBy:  "",
+			}
+			searchResult, err := esi.FilterByMatchAll(mapping, realFormat)
 			assert.NoError(err)
 			assert.NotNil(searchResult)
 
@@ -1003,8 +1008,13 @@ func (suite *EsTester) Test10GetAll() {
 	time.Sleep(1 * time.Second)
 
 	{
-		format := QueryFormat{Size: 10, From: 0, Order: SortAscending, Key: ""}
-		getResult, err := esi.FilterByMatchAll("", format)
+		realFormat := &piazza.JsonPagination{
+			PerPage: 10,
+			Page:    0,
+			Order:   piazza.PaginationOrderAscending,
+			SortBy:  "",
+		}
+		getResult, err := esi.FilterByMatchAll("", realFormat)
 		assert.NoError(err)
 		assert.NotNil(getResult)
 		assert.Len(*getResult.GetHits(), 2)
@@ -1106,10 +1116,13 @@ func (suite *EsTester) Test11Pagination2() {
 	time.Sleep(1 * time.Second)
 
 	{
-		page := 0
-		size := 4
-		format := QueryFormat{Size: size, From: page * size, Order: SortAscending, Key: "id3"}
-		getResult, err := esi.FilterByMatchAll("Obj3", format)
+		realFormat := &piazza.JsonPagination{
+			PerPage: 4,
+			Page:    0,
+			Order:   piazza.PaginationOrderAscending,
+			SortBy:  "id3",
+		}
+		getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
 		assert.NoError(err)
 		assert.Len(*getResult.GetHits(), 4)
 		assert.Equal("id0_"+p, getResult.GetHit(0).Id)
@@ -1119,10 +1132,13 @@ func (suite *EsTester) Test11Pagination2() {
 	}
 
 	{
-		page := 1
-		size := 3
-		format := QueryFormat{Size: size, From: page * size, Order: SortAscending, Key: "id3"}
-		getResult, err := esi.FilterByMatchAll("Obj3", format)
+		realFormat := &piazza.JsonPagination{
+			PerPage: 3,
+			Page:    1,
+			Order:   piazza.PaginationOrderAscending,
+			SortBy:  "",
+		}
+		getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
 		assert.NoError(err)
 		assert.Len(*getResult.GetHits(), 3)
 		assert.Equal("id3_"+p, getResult.GetHit(0).Id)

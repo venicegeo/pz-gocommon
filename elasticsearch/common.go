@@ -66,7 +66,7 @@ type IIndex interface {
 	PostData(typ string, id string, obj interface{}) (*IndexResponse, error)
 	GetByID(typ string, id string) (*GetResult, error)
 	DeleteByID(typ string, id string) (*DeleteResponse, error)
-	FilterByMatchAll(typ string, format QueryFormat) (*SearchResult, error)
+	FilterByMatchAll(typ string, format *piazza.JsonPagination) (*SearchResult, error)
 	FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error)
 	FilterByMatchQuery(typ string, name string, value interface{}) (*SearchResult, error)
 	SearchByJSON(typ string, jsn string) (*SearchResult, error)

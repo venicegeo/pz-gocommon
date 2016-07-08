@@ -66,13 +66,13 @@ func HTTPDelete(url string) (*http.Response, error) {
 type HttpQueryParams map[string]string
 
 func NewQueryParams(request *http.Request) *HttpQueryParams {
-	params := new(HttpQueryParams)
+	params := make(HttpQueryParams)
 
 	for k, v := range request.URL.Query() {
 		params.Set(k, v[0])
 	}
 
-	return params
+	return &params
 }
 
 func (params *HttpQueryParams) Set(key string, value string) {
