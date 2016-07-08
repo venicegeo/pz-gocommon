@@ -33,7 +33,6 @@ package piazza
 
 import (
 	"encoding/json"
-	"log"
 	"os"
 )
 
@@ -80,7 +79,7 @@ func NewVcapServices() (*VcapServices, error) {
 	str := os.Getenv("VCAP_SERVICES")
 	if str != "" {
 
-		log.Printf("VCAP_SERVICES:\n%s", str)
+		//log.Printf("VCAP_SERVICES:\n%s", str)
 		vcap = &VcapServices{}
 
 		err = json.Unmarshal([]byte(str), vcap)

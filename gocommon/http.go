@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -58,23 +60,141 @@ func HTTPDelete(url string) (*http.Response, error) {
 
 //----------------------------------------------------------
 
-type QueryFunc func(string) string
-type GetQueryFunc func(string) (string, bool)
+// We don't want to pass http.Request objects into the Services classes
+// (and certainly not a gin.Context!), so we provide a simple map.
 
-type JsonPaginationResponse struct {
-	Count   int    `json:"count" binding:"required"`
-	Page    int    `json:"page" binding:"required"`
-	PerPage int    `json:"perPage" binding:"required"`
-	SortBy  string `json:"sortBy" binding:"required"`
-	Order   string `json:"order" binding:"required"` // "asc" or "desc"
+type HttpQueryParams map[string]string
+
+func NewQueryParams(request *http.Request) *HttpQueryParams {
+	params := new(HttpQueryParams)
+
+	for k, v := range request.URL.Query() {
+		params.Set(k, v[0])
+	}
+
+	return params
 }
+
+func (params *HttpQueryParams) Set(key string, value string) {
+	(*params)[key] = value
+}
+
+func (params *HttpQueryParams) IsPresent(key string) bool {
+	return (*params)[key] == ""
+}
+
+// returns "" if key not present OR if value not given (e.g. "foo=1&key=&bar=2")
+func (params *HttpQueryParams) Get(key string) string {
+	return (*params)[key]
+}
+
+func (params *HttpQueryParams) GetInt(key string, defalt int) (int, error) {
+	str := params.Get(key)
+	if str == "" {
+		return defalt, nil
+	}
+
+	value, err := strconv.Atoi(str)
+	if err != nil {
+		s := fmt.Sprintf("query argument for '?%s' is invalid: %s (%s)", key, str, err.Error())
+		err := errors.New(s)
+		return -1, err
+	}
+
+	return value, nil
+}
+
+func (params *HttpQueryParams) GetString(key string, defalt string) (string, error) {
+	str := params.Get(key)
+	if str == "" {
+		return defalt, nil
+	}
+	return str, nil
+}
+
+func (params *HttpQueryParams) GetOrder(key string, defalt PaginationOrder) (PaginationOrder, error) {
+	str := params.Get(key)
+	if str == "" {
+		return defalt, nil
+	}
+
+	switch strings.ToLower(str) {
+	case "desc":
+		return PaginationOrderDescending, nil
+	case "asc":
+		return PaginationOrderAscending, nil
+	}
+
+	s := fmt.Sprintf("query argument for '?%s' must be \"asc\" or \"desc\"", key)
+	err := errors.New(s)
+	return PaginationOrderAscending, err
+}
+
+//----------------------------------------------------------
+
+type PaginationOrder string
+
+const PaginationOrderAscending PaginationOrder = "asc" // (the default)
+const PaginationOrderDescending PaginationOrder = "desc"
+
+type JsonPagination struct {
+	Count   int             `json:"count"` // only used when writing output
+	Page    int             `json:"page"`
+	PerPage int             `json:"perPage"`
+	SortBy  string          `json:"sortBy"`
+	Order   PaginationOrder `json:"order"`
+}
+
+func (p *JsonPagination) StartIndex() int {
+	return p.Page * p.PerPage
+}
+
+func (p *JsonPagination) EndIndex() int {
+	return p.StartIndex() + p.PerPage
+}
+
+func NewJsonPagination(params *HttpQueryParams, defalt *JsonPagination) (*JsonPagination, error) {
+
+	perPage, err := params.GetInt("perPage", defalt.PerPage)
+	if err != nil {
+		return nil, err
+	}
+
+	page, err := params.GetInt("page", defalt.Page)
+	if err != nil {
+		return nil, err
+	}
+
+	sortBy, err := params.GetString("sortBy", defalt.SortBy)
+	if err != nil {
+		return nil, err
+	}
+
+	order, err := params.GetOrder("order", defalt.Order)
+	if err != nil {
+		return nil, err
+	}
+
+	p := &JsonPagination{
+		PerPage: perPage,
+		Page:    page,
+		SortBy:  sortBy,
+		Order:   order,
+	}
+
+	return p, nil
+}
+
+//----------------------------------------------------------
+
+type JsonString string
 
 type JsonResponse struct {
 	StatusCode int `json:"statusCode" binding:"required"`
 
 	// only 2xxx
-	Data       interface{}             `json:"data"`
-	Pagination *JsonPaginationResponse `json:"pagination,omitempty"` // optional
+	Data       interface{}     `json:"data"`
+	Pagination *JsonPagination `json:"pagination,omitempty"` // optional
 
 	// only 4xx and 5xx
 	Message string        `json:"message" binding:"required"`

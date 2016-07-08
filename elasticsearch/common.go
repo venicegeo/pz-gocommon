@@ -17,11 +17,8 @@ package elasticsearch
 import (
 	"errors"
 	"fmt"
-	"net/http"
-	"strconv"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/venicegeo/pz-gocommon/gocommon"
 )
 
@@ -126,126 +123,14 @@ func ConstructMappingSchema(name string, items map[string]MappingElementTypeName
 	return piazza.JsonString(json), nil
 }
 
-func GetFormatParamsV2(queryFunc piazza.QueryFunc,
-	defaultSize int, defaultFrom int, defaultKey string, defaultOrder SortOrder) (QueryFormat, error) {
+func NewQueryFormat(params *piazza.JsonPagination) *QueryFormat {
 
-	paramInt := func(param string, defalt int) (int, error) {
-		str := queryFunc(param)
-		if str == "" {
-			return defalt, nil
-		}
-
-		value64, err := strconv.ParseInt(str, 10, 0)
-		if err != nil {
-			s := fmt.Sprintf("query argument for '?%s' is invalid: %s (%s)", param, str, err.Error())
-			err := errors.New(s)
-			return -1, err
-		}
-		value := int(value64)
-
-		return value, nil
-	}
-
-	paramString := func(param string, defalt string) string {
-		str := queryFunc(param)
-		if str == "" {
-			return defalt
-		}
-		return str
-	}
-
-	paramOrder := func(param string, defalt SortOrder) SortOrder {
-		str := queryFunc(param)
-		if str == "" {
-			return defalt
-		}
-
-		//value, err := strconv.ParseBool(str)
-		value := strings.ToLower(str) == "desc"
-
-		// if err != nil {
-		// 	c.String(http.StatusBadRequest, "query argument for '?%s' is invalid: %s", param, str)
-		// 	return defalt
-		// }
-
-		return SortOrder(value)
-	}
-
-	size, err := paramInt("perPage", defaultSize)
-	if err != nil {
-		qf := QueryFormat{}
-		return qf, err
-	}
-
-	pi, err := paramInt("page", defaultFrom)
-	if err != nil {
-		qf := QueryFormat{}
-		return qf, err
-	}
-
-	format := QueryFormat{
-		Size:  size,
-		From:  pi * size,
-		Key:   paramString("sortBy", defaultKey),
-		Order: paramOrder("order", defaultOrder),
-	}
-
-	return format, nil
-}
-
-func GetFormatParams(c *gin.Context,
-	defaultSize int, defaultFrom int, defaultKey string, defaultOrder SortOrder) QueryFormat {
-
-	paramInt := func(param string, defalt int) int {
-		str := c.Query(param)
-		if str == "" {
-			return defalt
-		}
-
-		value64, err := strconv.ParseInt(str, 10, 0)
-		if err != nil {
-			c.String(http.StatusBadRequest, "query argument for '?%s' is invalid: %s", param, str)
-			return -1
-		}
-		value := int(value64)
-
-		return value
-	}
-
-	paramString := func(param string, defalt string) string {
-		str := c.Query(param)
-		if str == "" {
-			return defalt
-		}
-		return str
-	}
-
-	paramOrder := func(param string, defalt SortOrder) SortOrder {
-		str := c.Query(param)
-		if str == "" {
-			return defalt
-		}
-
-		value, err := strconv.ParseBool(str)
-		if err != nil {
-			c.String(http.StatusBadRequest, "query argument for '?%s' is invalid: %s", param, str)
-			return defalt
-		}
-
-		return SortOrder(value)
-	}
-
-	format := QueryFormat{
-		Size:  paramInt("size", defaultSize),
-		From:  paramInt("from", defaultFrom),
-		Key:   paramString("key", defaultKey),
-		Order: paramOrder("order", defaultOrder),
+	format := &QueryFormat{
+		Size:  params.PerPage,
+		From:  params.Page * params.PerPage,
+		Key:   params.SortBy,
+		Order: (params.Order == piazza.PaginationOrderDescending),
 	}
 
 	return format
-}
-
-func (format QueryFormat) String() string {
-	return fmt.Sprintf("Size=%d, From=%d, Key=%s, Order=%t",
-		format.Size, format.From, format.Key, format.Order)
 }

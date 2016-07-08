@@ -15,6 +15,8 @@
 package piazza
 
 import (
+	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,4 +31,101 @@ func TestHttp(t *testing.T) {
 	// testing of HTTP{Put,Delete} covered by GenericServer_test.go
 
 	assert.True(!false)
+}
+
+func TestQueryParams(t *testing.T) {
+	assert := assert.New(t)
+
+	addr, err := url.Parse("http://example.com/index.html?a=1&b=2&c=&d=4")
+	assert.NoError(err)
+
+	req := http.Request{URL: addr}
+
+	params := NewQueryParams(&req)
+
+	assert.EqualValues(params.Get("a"), "1")
+	assert.EqualValues(params.Get("b"), "2")
+	assert.EqualValues(params.Get("c"), "")
+	assert.EqualValues(params.Get("d"), "4")
+	assert.EqualValues(params.Get("e"), "")
+
+	params.Set("f", "6")
+	params.Set("g", "")
+	assert.EqualValues(params.Get("f"), "6")
+	assert.EqualValues(params.Get("g"), "")
+}
+
+func TestPagination(t *testing.T) {
+	assert := assert.New(t)
+
+	p := JsonPagination{
+		PerPage: 10,
+		Page:    32,
+		Order:   PaginationOrderDescending,
+		SortBy:  "id",
+	}
+
+	assert.Equal(320, p.StartIndex())
+	assert.Equal(330, p.EndIndex())
+}
+
+func TestPaginationParams(t *testing.T) {
+	assert := assert.New(t)
+
+	defaults := &JsonPagination{
+		PerPage: 10,
+		Page:    0,
+		Order:   PaginationOrderAscending,
+		SortBy:  "id",
+	}
+
+	// with no params specified
+	{
+		expected := defaults
+
+		params := &HttpQueryParams{}
+
+		actual, err := NewJsonPagination(params, defaults)
+		assert.NoError(err)
+		assert.EqualValues(*expected, *actual)
+	}
+
+	// with some params specified
+	{
+		expected := JsonPagination{
+			PerPage: 100,
+			Page:    17,
+			Order:   PaginationOrderAscending,
+			SortBy:  "id",
+		}
+
+		params := &HttpQueryParams{}
+		params.Set("perPage", "100")
+		params.Set("page", "17")
+
+		actual, err := NewJsonPagination(params, defaults)
+		assert.NoError(err)
+		assert.EqualValues(expected, actual)
+	}
+
+	// with all params specified
+	{
+		expected := JsonPagination{
+			PerPage: 100,
+			Page:    17,
+			Order:   PaginationOrderDescending,
+			SortBy:  "foo",
+		}
+
+		params := &HttpQueryParams{}
+		params.Set("perPage", "100")
+		params.Set("page", "17")
+		params.Set("order", "desc")
+		params.Set("sortBy", "foo")
+
+		actual, err := NewJsonPagination(params, defaults)
+		assert.NoError(err)
+		assert.EqualValues(expected, actual)
+	}
+
 }

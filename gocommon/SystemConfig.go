@@ -245,7 +245,7 @@ func (sys *SystemConfig) WaitForServiceByAddress(name ServiceName, address strin
 	for {
 		resp, err := http.Get(url)
 		if err == nil && resp.StatusCode == http.StatusOK {
-			log.Printf("found service %s", name)
+			//log.Printf("found service %s", name)
 			return nil
 		}
 		if msTime >= waitTimeoutMs {
