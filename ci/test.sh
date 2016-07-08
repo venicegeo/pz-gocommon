@@ -15,6 +15,7 @@ go get github.com/stretchr/testify/suite
 go get github.com/stretchr/testify/assert
 go get gopkg.in/olivere/elastic.v3
 go get github.com/gin-gonic/gin
+go get github.com/Shopify/sarama
 
 # ourself
 go get github.com/venicegeo/pz-gocommon/gocommon
