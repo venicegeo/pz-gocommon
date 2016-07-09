@@ -25,6 +25,18 @@ import (
 	"strings"
 )
 
+//----------------------------------------------------------
+
+type Ident string
+
+const NoIdent Ident = ""
+
+func (id Ident) String() string {
+	return string(id)
+}
+
+//----------------------------------------------------------
+
 const (
 	// ContentTypeJSON is the http content-type for JSON.
 	ContentTypeJSON = "application/json"
