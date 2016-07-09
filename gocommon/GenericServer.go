@@ -16,6 +16,7 @@ package piazza
 
 import (
 	"errors"
+	"log"
 	"net"
 	"net/http"
 	"syscall"
@@ -88,7 +89,7 @@ func (server *GenericServer) Start() (chan error, error) {
 		return nil, err
 	}
 
-	//log.Printf("Server %s started on %s (%s)", sys.Name, sys.Address, sys.BindTo)
+	log.Printf("Server %s started on %s (%s)", sys.Name, sys.Address, sys.BindTo)
 
 	sys.AddService(sys.Name, sys.BindTo)
 
