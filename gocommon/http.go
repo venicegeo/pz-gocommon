@@ -132,6 +132,11 @@ func (params *HttpQueryParams) GetOrder(key string, defalt PaginationOrder) (Pag
 
 //----------------------------------------------------------
 
+// Elasticsearch, at least, does it this way:
+//  - perform the query, giving a huge result set
+//  - sort the result set
+//  - select out the page you want
+
 type PaginationOrder string
 
 const PaginationOrderAscending PaginationOrder = "asc" // (the default)
