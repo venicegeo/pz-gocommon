@@ -197,14 +197,14 @@ type JsonString string
 type JsonResponse struct {
 	StatusCode int `json:"statusCode" binding:"required"`
 
-	// only 2xxx
-	Data       interface{}     `json:"data"`
+	// only 2xxx -- Data is required
+	Data       interface{}     `json:"data,omitempty" binding:"required"`
 	Pagination *JsonPagination `json:"pagination,omitempty"` // optional
 
-	// only 4xx and 5xx
-	Message string        `json:"message" binding:"required"`
+	// only 4xx and 5xx -- Message is required
+	Message string        `json:"message,omitempty"`
 	Origin  string        `json:"origin,omitempty"` // optional
-	Inner   *JsonResponse `json:"inner,omitempty"`
+	Inner   *JsonResponse `json:"inner,omitempty"`  // optional
 
 	// optional
 	Metadata interface{} `json:"metadata,omitempty"`

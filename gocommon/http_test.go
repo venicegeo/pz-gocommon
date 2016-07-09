@@ -15,6 +15,8 @@
 package piazza
 
 import (
+	"encoding/json"
+	"log"
 	"net/http"
 	"net/url"
 	"testing"
@@ -31,6 +33,24 @@ func TestHttp(t *testing.T) {
 	// testing of HTTP{Put,Delete} covered by GenericServer_test.go
 
 	assert.True(!false)
+}
+
+func TestMarshalling(t *testing.T) {
+	assert := assert.New(t)
+
+	a := &JsonResponse{
+		StatusCode: 10,
+	}
+
+	byts, err := json.Marshal(a)
+	assert.NoError(err)
+	log.Printf("%s", string(byts))
+	assert.EqualValues("{\"statusCode\":10}", string(byts))
+
+	b := &JsonResponse{}
+	err = json.Unmarshal(byts, b)
+	assert.NoError(err)
+	assert.EqualValues(a, b)
 }
 
 func TestQueryParams(t *testing.T) {
