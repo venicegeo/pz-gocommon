@@ -15,6 +15,8 @@
 package piazza
 
 import (
+	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -22,8 +24,33 @@ import (
 
 //--------------------------
 
-func Test00Nop(t *testing.T) {
+func TestHttp(t *testing.T) {
 	assert := assert.New(t)
 
+	// testing of Http{Get,Post,Put,Delete}Json covered by GenericServer_test.go
+	// testing of HTTP{Put,Delete} covered by GenericServer_test.go
+
 	assert.True(!false)
+}
+
+func TestQueryParams(t *testing.T) {
+	assert := assert.New(t)
+
+	addr, err := url.Parse("http://example.com/index.html?a=1&b=2&c=&d=4")
+	assert.NoError(err)
+
+	req := http.Request{URL: addr}
+
+	params := NewQueryParams(&req)
+
+	assert.EqualValues(params.Get("a"), "1")
+	assert.EqualValues(params.Get("b"), "2")
+	assert.EqualValues(params.Get("c"), "")
+	assert.EqualValues(params.Get("d"), "4")
+	assert.EqualValues(params.Get("e"), "")
+
+	params.Set("f", "6")
+	params.Set("g", "")
+	assert.EqualValues(params.Get("f"), "6")
+	assert.EqualValues(params.Get("g"), "")
 }

@@ -15,65 +15,12 @@
 package piazza
 
 import (
-	"encoding/json"
-	"log"
-	"net/http"
-	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 //--------------------------
-
-func TestHttp(t *testing.T) {
-	assert := assert.New(t)
-
-	// testing of Http{Get,Post,Put,Delete}Json covered by GenericServer_test.go
-	// testing of HTTP{Put,Delete} covered by GenericServer_test.go
-
-	assert.True(!false)
-}
-
-func TestMarshalling(t *testing.T) {
-	assert := assert.New(t)
-
-	a := &JsonResponse{
-		StatusCode: 10,
-	}
-
-	byts, err := json.Marshal(a)
-	assert.NoError(err)
-	log.Printf("%s", string(byts))
-	assert.EqualValues("{\"statusCode\":10}", string(byts))
-
-	b := &JsonResponse{}
-	err = json.Unmarshal(byts, b)
-	assert.NoError(err)
-	assert.EqualValues(a, b)
-}
-
-func TestQueryParams(t *testing.T) {
-	assert := assert.New(t)
-
-	addr, err := url.Parse("http://example.com/index.html?a=1&b=2&c=&d=4")
-	assert.NoError(err)
-
-	req := http.Request{URL: addr}
-
-	params := NewQueryParams(&req)
-
-	assert.EqualValues(params.Get("a"), "1")
-	assert.EqualValues(params.Get("b"), "2")
-	assert.EqualValues(params.Get("c"), "")
-	assert.EqualValues(params.Get("d"), "4")
-	assert.EqualValues(params.Get("e"), "")
-
-	params.Set("f", "6")
-	params.Set("g", "")
-	assert.EqualValues(params.Get("f"), "6")
-	assert.EqualValues(params.Get("g"), "")
-}
 
 func TestPagination(t *testing.T) {
 	assert := assert.New(t)
