@@ -109,8 +109,8 @@ func (suite *EsTester) SetUpIndex() IIndex {
 	ok := esi.IndexExists()
 	assert.False(ok)
 
-	// make the index with no settings
-	err = esi.Create()
+	// make the index
+	err = esi.Create("")
 	assert.NoError(err)
 	ok = esi.IndexExists()
 	assert.True(ok)
@@ -691,7 +691,7 @@ func (suite *EsTester) Test09FullPercolation() {
 		assert.NoError(err)
 
 		// make the index
-		err = esi.Create()
+		err = esi.Create("")
 		assert.NoError(err)
 
 		ok := esi.IndexExists()
@@ -904,7 +904,7 @@ func (suite *EsTester) Test10GetAll() {
 	}()
 
 	// make the index
-	err = esi.Create()
+	err = esi.Create("")
 	assert.NoError(err)
 
 	type T1 struct {
