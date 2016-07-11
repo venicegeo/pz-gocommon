@@ -15,6 +15,8 @@
 package piazza
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -56,6 +58,124 @@ func HTTPDelete(url string) (*http.Response, error) {
 
 	client := &http.Client{}
 	return client.Do(req)
+}
+
+//----------------------------------------------------------
+
+// returns true, unless 4xx or 5xx
+func responseToObject(resp *http.Response, output interface{}) error {
+	output = nil
+
+	// no content is perfectly valid, not an error
+	if resp.ContentLength == 0 {
+		return nil
+	}
+
+	var err error
+
+	raw := make([]byte, resp.ContentLength)
+	_, err = resp.Body.Read(raw)
+	if err != nil && err != io.EOF {
+		return err
+	}
+	err = json.Unmarshal(raw, output)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func processInput(input interface{}) (io.Reader, error) {
+	byts, err := json.Marshal(input)
+	if err != nil {
+		return nil, err
+	}
+
+	reader := bytes.NewReader(byts)
+	return reader, nil
+}
+
+func processOutput(resp *http.Response, err error, output interface{}) (int, error) {
+	if err != nil {
+		return 0, err
+	}
+
+	if output != nil {
+		// note we decode the result even if not a 2xx status
+		err = responseToObject(resp, output)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return resp.StatusCode, nil
+}
+
+func HttpJsonGetObject(url string, output interface{}) (int, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return 0, err
+	}
+
+	code, err := processOutput(resp, err, output)
+	if err != nil {
+		return 0, err
+	}
+
+	return code, nil
+}
+
+func HttpJsonPostObject(url string, input interface{}, output interface{}) (int, error) {
+	reader, err := processInput(input)
+	if err != nil {
+		return 0, err
+	}
+
+	resp, err := http.Post(url, ContentTypeJSON, reader)
+	if err != nil {
+		return 0, err
+	}
+
+	code, err := processOutput(resp, err, output)
+	if err != nil {
+		return 0, err
+	}
+
+	return code, nil
+}
+
+func HttpJsonPutObject(url string, input interface{}, output interface{}) (int, error) {
+	reader, err := processInput(input)
+	if err != nil {
+		return 0, err
+	}
+
+	resp, err := HTTPPut(url, ContentTypeJSON, reader)
+	if err != nil {
+		return 0, err
+	}
+
+	code, err := processOutput(resp, err, output)
+	if err != nil {
+		return 0, err
+	}
+
+	return code, nil
+}
+
+func HttpJsonDeleteObject(url string) (int, error) {
+	resp, err := HTTPDelete(url)
+	if err != nil {
+		return 0, err
+	}
+
+	code, err := processOutput(resp, err, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	return code, nil
 }
 
 //----------------------------------------------------------
