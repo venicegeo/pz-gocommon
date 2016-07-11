@@ -64,8 +64,6 @@ func HTTPDelete(url string) (*http.Response, error) {
 
 // returns true, unless 4xx or 5xx
 func responseToObject(resp *http.Response, output interface{}) error {
-	output = nil
-
 	// no content is perfectly valid, not an error
 	if resp.ContentLength == 0 {
 		return nil
