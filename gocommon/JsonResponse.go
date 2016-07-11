@@ -15,11 +15,9 @@
 package piazza
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 )
 
@@ -76,33 +74,6 @@ func newJsonResponse500(err error) *JsonResponse {
 	return &JsonResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()}
 }
 
-func toJsonResponse(resp *http.Response) *JsonResponse {
-	if resp.ContentLength == 0 {
-		return &JsonResponse{StatusCode: resp.StatusCode}
-	}
-
-	var err error
-	jresp := JsonResponse{}
-
-	raw := make([]byte, resp.ContentLength)
-	_, err = resp.Body.Read(raw)
-	if err != nil && err != io.EOF {
-		return newJsonResponse500(err)
-	}
-	err = json.Unmarshal(raw, &jresp)
-	if err != nil {
-		return newJsonResponse500(err)
-	}
-
-	if jresp.StatusCode != resp.StatusCode {
-		s := fmt.Sprintf("Unmatched status codes: expected %d, got %d",
-			resp.StatusCode, jresp.StatusCode)
-		return newJsonResponse500(errors.New(s))
-	}
-
-	return &jresp
-}
-
 //----------------------------------------------------------
 
 // given an input which is some messy type like "map[string]interface{}",
@@ -124,49 +95,36 @@ func SuperConverter(input interface{}, output interface{}) error {
 //----------------------------------------------------------
 
 func HttpGetJson(url string) *JsonResponse {
-	resp, err := http.Get(url)
+	output := &JsonResponse{}
+	_, err := HttpJsonGetObject(url, output)
 	if err != nil {
 		return newJsonResponse500(err)
 	}
-
-	return toJsonResponse(resp)
+	return output
 }
 
-func httpPostOrPutJson(doPost bool, url string, in interface{}) *JsonResponse {
-
-	byts, err := json.Marshal(in)
+func HttpPostJson(url string, input interface{}) *JsonResponse {
+	output := &JsonResponse{}
+	_, err := HttpJsonPostObject(url, input, output)
 	if err != nil {
 		return newJsonResponse500(err)
 	}
+	return output
+}
 
-	reader := bytes.NewReader(byts)
-	var resp *http.Response
-	if doPost {
-		resp, err = http.Post(url, ContentTypeJSON, reader)
-
-	} else {
-		resp, err = HTTPPut(url, ContentTypeJSON, reader)
-	}
+func HttpPutJson(url string, input interface{}) *JsonResponse {
+	output := &JsonResponse{}
+	_, err := HttpJsonPutObject(url, input, output)
 	if err != nil {
 		return newJsonResponse500(err)
 	}
-
-	return toJsonResponse(resp)
-}
-
-func HttpPostJson(url string, in interface{}) *JsonResponse {
-	return httpPostOrPutJson(true, url, in)
-}
-
-func HttpPutJson(url string, in interface{}) *JsonResponse {
-	return httpPostOrPutJson(false, url, in)
+	return output
 }
 
 func HttpDeleteJson(url string) *JsonResponse {
-	resp, err := HTTPDelete(url)
+	code, err := HttpJsonDeleteObject(url)
 	if err != nil {
 		return newJsonResponse500(err)
 	}
-
-	return toJsonResponse(resp)
+	return &JsonResponse{StatusCode: code}
 }
