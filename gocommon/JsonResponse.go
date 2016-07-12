@@ -40,7 +40,9 @@ type JsonString string
 type JsonResponse struct {
 	StatusCode int `json:"statusCode" binding:"required"`
 
-	// only 2xxx -- Data is required
+	// only 2xxx -- Data is required (and Type too)
+	// Type is a string, taken from the Java model list
+	Type       string          `json:"type,omitempty"`
 	Data       interface{}     `json:"data,omitempty" binding:"required"`
 	Pagination *JsonPagination `json:"pagination,omitempty"` // optional
 
@@ -53,8 +55,10 @@ type JsonResponse struct {
 	Metadata interface{} `json:"metadata,omitempty"`
 }
 
+//var JsonResponseDataTypes map[string]string = map[string]string{}
+
 func (resp *JsonResponse) String() string {
-	s := fmt.Sprintf("StatusCode: %d\nData: %#v\nMessage: %s",
+	s := fmt.Sprintf("{StatusCode: %d, Data: %#v, Message: %s}",
 		resp.StatusCode, resp.Data, resp.Message)
 	return s
 }
@@ -67,12 +71,35 @@ func (resp *JsonResponse) ToError() error {
 	if !resp.IsError() {
 		return nil
 	}
-	return errors.New(resp.String())
+	s := fmt.Sprintf("{%d: %s}", resp.StatusCode, resp.Message)
+	return errors.New(s)
 }
 
 func newJsonResponse500(err error) *JsonResponse {
 	return &JsonResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()}
 }
+
+/*
+func (resp *JsonResponse) SetType() error {
+	var nilInterface interface{}
+	var nilInterfaceArray []interface{}
+	if resp.Data == nil ||
+		reflect.TypeOf(resp.Data) == reflect.TypeOf(nilInterface) ||
+		reflect.TypeOf(resp.Data) == reflect.TypeOf(nilInterfaceArray) {
+		resp.Type = ""
+		return nil
+	}
+
+	goName := reflect.TypeOf(resp.Data).String()
+	modelName, ok := JsonResponseDataTypes[goName]
+	if !ok {
+		s := fmt.Sprintf("Type %s is not a valid response type", goName)
+		return errors.New(s)
+	}
+	resp.Type = modelName
+	return nil
+}
+*/
 
 //----------------------------------------------------------
 
