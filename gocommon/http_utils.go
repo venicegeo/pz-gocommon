@@ -110,6 +110,7 @@ func processOutput(resp *http.Response, err error, output interface{}) (int, err
 	return resp.StatusCode, nil
 }
 
+// expects endpoint to return JSON
 func HttpJsonGetObject(url string, output interface{}) (int, error) {
 	resp, err := http.Get(url)
 	if err != nil {
@@ -124,6 +125,7 @@ func HttpJsonGetObject(url string, output interface{}) (int, error) {
 	return code, nil
 }
 
+// expects endpoint to take in and return JSON
 func HttpJsonPostObject(url string, input interface{}, output interface{}) (int, error) {
 	reader, err := processInput(input)
 	if err != nil {
@@ -143,6 +145,7 @@ func HttpJsonPostObject(url string, input interface{}, output interface{}) (int,
 	return code, nil
 }
 
+// expects endpoint to take in and return JSON
 func HttpJsonPutObject(url string, input interface{}, output interface{}) (int, error) {
 	reader, err := processInput(input)
 	if err != nil {
@@ -162,6 +165,7 @@ func HttpJsonPutObject(url string, input interface{}, output interface{}) (int, 
 	return code, nil
 }
 
+// expects endpoint to return JSON (or empty)
 func HttpJsonDeleteObject(url string) (int, error) {
 	resp, err := HTTPDelete(url)
 	if err != nil {
