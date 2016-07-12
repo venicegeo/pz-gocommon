@@ -172,7 +172,7 @@ func (sys *SystemConfig) runHealthChecks() error {
 
 		url := fmt.Sprintf("%s://%s%s", DefaultProtocol, addr, HealthcheckEndpoints[name])
 
-		//log.Printf("Service healthy? %s at %s (%s)", name, addr, url)
+		log.Printf("Service healthy? %s at %s (%s)", name, addr, url)
 
 		resp, err := http.Get(url)
 		if err != nil {
