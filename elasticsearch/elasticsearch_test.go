@@ -100,7 +100,7 @@ func (suite *EsTester) SetUpIndex() IIndex {
 
 	suite.sys = sys
 
-	esi, err := NewIndexInterface(sys, "estest$", MOCKING)
+	esi, err := NewIndexInterface(sys, "estest$", "", MOCKING)
 	assert.NoError(err)
 
 	err = esi.Delete()
@@ -182,7 +182,7 @@ func (suite *EsTester) Test01Client() {
 	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required)
 	assert.NoError(err)
 
-	esi, err := NewIndexInterface(sys, "estest01$", MOCKING)
+	esi, err := NewIndexInterface(sys, "estest01$", "", MOCKING)
 	assert.NoError(err)
 
 	version := esi.GetVersion()
@@ -687,7 +687,7 @@ func (suite *EsTester) Test09FullPercolation() {
 
 	// create index
 	{
-		esi, err = NewIndexInterface(suite.sys, "estest09$", MOCKING)
+		esi, err = NewIndexInterface(suite.sys, "estest09$", "", MOCKING)
 		assert.NoError(err)
 
 		// make the index
@@ -896,7 +896,7 @@ func (suite *EsTester) Test10GetAll() {
 		log.Fatal(err)
 	}
 
-	esi, err := NewIndexInterface(sys, "getall$", MOCKING)
+	esi, err := NewIndexInterface(sys, "getall$", "", MOCKING)
 	assert.NoError(err)
 	defer func() {
 		esi.Close()

@@ -32,7 +32,7 @@ type Index struct {
 	index   string
 }
 
-func NewIndex(sys *piazza.SystemConfig, index string) (*Index, error) {
+func NewIndex(sys *piazza.SystemConfig, index string, settings string) (*Index, error) {
 	var _ IIndex = new(Index)
 
 	if strings.HasSuffix(index, "$") {
@@ -40,6 +40,9 @@ func NewIndex(sys *piazza.SystemConfig, index string) (*Index, error) {
 	}
 
 	esi := &Index{index: index}
+
+	// This does nothing if the index is already created, but creates it if not
+	esi.Create(settings)
 
 	url, err := sys.GetURL(piazza.PzElasticSearch)
 	if err != nil {
