@@ -78,7 +78,7 @@ type IIndex interface {
 	AddPercolationDocument(typ string, doc interface{}) (*PercolateResponse, error)
 }
 
-func NewIndexInterface(sys *piazza.SystemConfig, index string, mocking bool) (IIndex, error) {
+func NewIndexInterface(sys *piazza.SystemConfig, index string, settings string, mocking bool) (IIndex, error) {
 	var esi IIndex
 	var err error
 
@@ -87,7 +87,7 @@ func NewIndexInterface(sys *piazza.SystemConfig, index string, mocking bool) (II
 		return esi, nil
 	}
 
-	esi, err = NewIndex(sys, index)
+	esi, err = NewIndex(sys, index, settings)
 	if err != nil {
 		return nil, err
 	}
