@@ -76,7 +76,7 @@ func (esi *MockIndex) ItemExists(typ string, id string) bool {
 }
 
 // if index already exists, does nothing
-func (esi *MockIndex) Create() error {
+func (esi *MockIndex) Create(settings string) error {
 	esi.exists = true
 	return nil
 }
@@ -161,7 +161,9 @@ func srhSortMatches(matches []*SearchResultHit) []*SearchResultHit {
 	return matches
 }
 
-func (esi *MockIndex) FilterByMatchAll(typ string, format QueryFormat) (*SearchResult, error) {
+func (esi *MockIndex) FilterByMatchAll(typ string, realFormat *piazza.JsonPagination) (*SearchResult, error) {
+
+	format := NewQueryFormat(realFormat)
 
 	objs := make(map[string]*json.RawMessage)
 

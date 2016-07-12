@@ -41,7 +41,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 )
@@ -78,7 +77,7 @@ func NewVcapApplication() (*VcapApplication, error) {
 
 	str := os.Getenv("VCAP_APPLICATION")
 	if str != "" {
-		log.Printf("VCAP_APPLICATION:\n%s", str)
+		//log.Printf("VCAP_APPLICATION:\n%s", str)
 		vcap = &VcapApplication{}
 
 		err = json.Unmarshal([]byte(str), vcap)
@@ -92,7 +91,7 @@ func NewVcapApplication() (*VcapApplication, error) {
 		}
 
 		vcap.bindToPort = ":" + vcap.bindToPort
-		log.Printf("PORT: %s", vcap.bindToPort)
+		//log.Printf("PORT: %s", vcap.bindToPort)
 
 		full := vcap.GetAddress()
 		dot := strings.Index(full, ".")

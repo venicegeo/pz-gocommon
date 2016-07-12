@@ -15,6 +15,7 @@
 package piazza
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -22,8 +23,19 @@ import (
 
 //--------------------------
 
-func Test00Nop(t *testing.T) {
+func TestMarshalling(t *testing.T) {
 	assert := assert.New(t)
 
-	assert.True(!false)
+	a := &JsonResponse{
+		StatusCode: 10,
+	}
+
+	byts, err := json.Marshal(a)
+	assert.NoError(err)
+	assert.EqualValues("{\"statusCode\":10}", string(byts))
+
+	b := &JsonResponse{}
+	err = json.Unmarshal(byts, b)
+	assert.NoError(err)
+	assert.EqualValues(a, b)
 }

@@ -32,7 +32,7 @@ type Index struct {
 	index   string
 }
 
-func NewIndex(sys *piazza.SystemConfig, index string) (*Index, error) {
+func NewIndex(sys *piazza.SystemConfig, index string, settings string) (*Index, error) {
 	var _ IIndex = new(Index)
 
 	if strings.HasSuffix(index, "$") {
@@ -61,6 +61,9 @@ func NewIndex(sys *piazza.SystemConfig, index string) (*Index, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// This does nothing if the index is already created, but creates it if not
+	esi.Create(settings)
 
 	return esi, nil
 }
@@ -108,7 +111,7 @@ func (esi *Index) ItemExists(typ string, id string) bool {
 }
 
 // if index already exists, does nothing
-func (esi *Index) Create() error {
+func (esi *Index) Create(settings string) error {
 
 	ok := esi.IndexExists()
 	if ok {
@@ -116,7 +119,7 @@ func (esi *Index) Create() error {
 		return nil
 	}
 
-	createIndex, err := esi.lib.CreateIndex(esi.index).Do()
+	createIndex, err := esi.lib.CreateIndex(esi.index).Body(settings).Do()
 
 	if err != nil {
 		return err
@@ -159,7 +162,6 @@ func (esi *Index) Delete() error {
 		return err
 	}
 
-	// TODO: is this check needed? should it also be on Create(), etc?
 	if !deleteIndex.Acknowledged {
 		return fmt.Errorf("Elasticsearch: delete index not acknowledged!")
 	}
@@ -218,7 +220,7 @@ func (esi *Index) DeleteByID(typ string, id string) (*DeleteResponse, error) {
 	return NewDeleteResponse(deleteResponse), err
 }
 
-func (esi *Index) FilterByMatchAll(typ string, format QueryFormat) (*SearchResult, error) {
+func (esi *Index) FilterByMatchAll(typ string, realFormat *piazza.JsonPagination) (*SearchResult, error) {
 	//q := elastic.NewBoolFilter()
 	//q.Must(elastic.NewTermFilter("a", 1))
 
@@ -227,6 +229,7 @@ func (esi *Index) FilterByMatchAll(typ string, format QueryFormat) (*SearchResul
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
 	}*/
 
+	format := NewQueryFormat(realFormat)
 	q := elastic.NewMatchAllQuery()
 	f := esi.lib.Search().Index(esi.index).Type(typ).Query(q)
 

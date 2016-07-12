@@ -76,6 +76,8 @@ type SystemConfig struct {
 	// our external services
 	endpoints ServicesMap
 
+	Space string // int or stage or prod or...
+
 	vcapApplication *VcapApplication
 	vcapServices    *VcapServices
 	domain          string
@@ -109,6 +111,11 @@ func NewSystemConfig(serviceName ServiceName,
 		if !strings.HasPrefix(sys.domain, ".") {
 			sys.domain = "." + sys.domain
 		}
+	}
+
+	sys.Space = os.Getenv("SPACE")
+	if sys.Space == "" {
+		sys.Space = "int"
 	}
 
 	// set some data about our own service first
@@ -245,7 +252,7 @@ func (sys *SystemConfig) WaitForServiceByAddress(name ServiceName, address strin
 	for {
 		resp, err := http.Get(url)
 		if err == nil && resp.StatusCode == http.StatusOK {
-			log.Printf("found service %s", name)
+			//log.Printf("found service %s", name)
 			return nil
 		}
 		if msTime >= waitTimeoutMs {

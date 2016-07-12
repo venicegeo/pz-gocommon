@@ -100,7 +100,7 @@ func (suite *EsTester) SetUpIndex() IIndex {
 
 	suite.sys = sys
 
-	esi, err := NewIndexInterface(sys, "estest$", MOCKING)
+	esi, err := NewIndexInterface(sys, "estest$", "", MOCKING)
 	assert.NoError(err)
 
 	err = esi.Delete()
@@ -109,8 +109,8 @@ func (suite *EsTester) SetUpIndex() IIndex {
 	ok := esi.IndexExists()
 	assert.False(ok)
 
-	// make the index with no settings
-	err = esi.Create()
+	// make the index
+	err = esi.Create("")
 	assert.NoError(err)
 	ok = esi.IndexExists()
 	assert.True(ok)
@@ -182,7 +182,7 @@ func (suite *EsTester) Test01Client() {
 	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required)
 	assert.NoError(err)
 
-	esi, err := NewIndexInterface(sys, "estest01$", MOCKING)
+	esi, err := NewIndexInterface(sys, "estest01$", "", MOCKING)
 	assert.NoError(err)
 
 	version := esi.GetVersion()
@@ -268,8 +268,13 @@ func (suite *EsTester) Test03Operations() {
 		{
 			// SEARCH for everything
 			// TODO: exercise sortKey
-			format := QueryFormat{Size: 10, From: 0}
-			searchResult, err := esi.FilterByMatchAll(mapping, format)
+			realFormat := &piazza.JsonPagination{
+				Page:    0,
+				PerPage: 10,
+				Order:   piazza.PaginationOrderAscending,
+				SortBy:  "",
+			}
+			searchResult, err := esi.FilterByMatchAll(mapping, realFormat)
 			assert.NoError(err)
 			assert.NotNil(searchResult)
 
@@ -505,8 +510,8 @@ func (suite *EsTester) Test06SetMapping() {
 
 	var err error
 
-	data :=
-		`{
+	var expected piazza.JsonString
+	expected = `{
 			"MyTestObj": {
 				"properties":{
 					"bool1": {"type": "boolean"},
@@ -517,22 +522,16 @@ func (suite *EsTester) Test06SetMapping() {
 				}
 			}
 		}`
-	jsn := piazza.JsonString(data)
-	jsn, err = jsn.ToCompactJson()
-	assert.NoError(err)
 
-	expected := jsn
-
-	err = esi.SetMapping("MyTestObj", jsn)
+	err = esi.SetMapping("MyTestObj", expected)
 	assert.NoError(err)
 
 	mapobj, err := esi.GetMapping("MyTestObj")
 	assert.NoError(err)
 
-	actual, err := piazza.ConvertObjectToJsonString(mapobj, true)
+	actual, err := json.Marshal(mapobj)
 	assert.NoError(err)
-
-	assert.Equal(expected, actual)
+	assert.JSONEq(string(expected), string(actual))
 
 	mappings, err := esi.GetTypes()
 	assert.NoError(err)
@@ -688,11 +687,11 @@ func (suite *EsTester) Test09FullPercolation() {
 
 	// create index
 	{
-		esi, err = NewIndexInterface(suite.sys, "estest09$", MOCKING)
+		esi, err = NewIndexInterface(suite.sys, "estest09$", "", MOCKING)
 		assert.NoError(err)
 
 		// make the index
-		err = esi.Create()
+		err = esi.Create("")
 		assert.NoError(err)
 
 		ok := esi.IndexExists()
@@ -897,7 +896,7 @@ func (suite *EsTester) Test10GetAll() {
 		log.Fatal(err)
 	}
 
-	esi, err := NewIndexInterface(sys, "getall$", MOCKING)
+	esi, err := NewIndexInterface(sys, "getall$", "", MOCKING)
 	assert.NoError(err)
 	defer func() {
 		esi.Close()
@@ -905,7 +904,7 @@ func (suite *EsTester) Test10GetAll() {
 	}()
 
 	// make the index
-	err = esi.Create()
+	err = esi.Create("")
 	assert.NoError(err)
 
 	type T1 struct {
@@ -1004,13 +1003,31 @@ func (suite *EsTester) Test10GetAll() {
 		}
 	}
 
-	// I have reason to suspect the ES indexing process for an item takes longer
-	// than just adding the item, so we enforce a delay here.
-	time.Sleep(1 * time.Second)
-
 	{
-		format := QueryFormat{Size: 10, From: 0, Order: SortAscending, Key: ""}
-		getResult, err := esi.FilterByMatchAll("", format)
+		realFormat := &piazza.JsonPagination{
+			PerPage: 10,
+			Page:    0,
+			Order:   piazza.PaginationOrderAscending,
+			SortBy:  "",
+		}
+		pollingFn := GetData(func() (bool, error){
+			getResult, err := esi.FilterByMatchAll("", realFormat)
+			if err != nil {
+				fmt.Println("error")
+				return false, err
+			} else {
+				if getResult != nil && len(*getResult.GetHits()) == 2 {
+					fmt.Println("validation passed")
+					return true, nil
+				}
+			}
+			fmt.Println("try again")
+			return false, nil
+		})
+
+		ok, err := PollFunction(pollingFn)
+		fmt.Print("******try actual filter******\n", ok, "\n")
+		getResult, err := esi.FilterByMatchAll("", realFormat)
 		assert.NoError(err)
 		assert.NotNil(getResult)
 		assert.Len(*getResult.GetHits(), 2)
@@ -1044,7 +1061,26 @@ func (suite *EsTester) Test10GetAll() {
 	}
 }
 
-func (suite *EsTester) Test11Pagination() {
+func (suite *EsTester) Test11Pagination1() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	p := piazza.JsonPagination{
+		PerPage: 10,
+		Page:    32,
+		Order:   piazza.PaginationOrderDescending,
+		SortBy:  "id",
+	}
+
+	q := NewQueryFormat(&p)
+
+	assert.Equal(10*32, q.From)
+	assert.Equal(10, q.Size)
+	assert.Equal(SortDescending, q.Order)
+	assert.EqualValues("id", q.Key)
+}
+
+func (suite *EsTester) Test11Pagination2() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -1093,10 +1129,13 @@ func (suite *EsTester) Test11Pagination() {
 	time.Sleep(1 * time.Second)
 
 	{
-		page := 0
-		size := 4
-		format := QueryFormat{Size: size, From: page * size, Order: SortAscending, Key: "id3"}
-		getResult, err := esi.FilterByMatchAll("Obj3", format)
+		realFormat := &piazza.JsonPagination{
+			PerPage: 4,
+			Page:    0,
+			Order:   piazza.PaginationOrderAscending,
+			SortBy:  "id3",
+		}
+		getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
 		assert.NoError(err)
 		assert.Len(*getResult.GetHits(), 4)
 		assert.Equal("id0_"+p, getResult.GetHit(0).Id)
@@ -1106,10 +1145,13 @@ func (suite *EsTester) Test11Pagination() {
 	}
 
 	{
-		page := 1
-		size := 3
-		format := QueryFormat{Size: size, From: page * size, Order: SortAscending, Key: "id3"}
-		getResult, err := esi.FilterByMatchAll("Obj3", format)
+		realFormat := &piazza.JsonPagination{
+			PerPage: 3,
+			Page:    1,
+			Order:   piazza.PaginationOrderAscending,
+			SortBy:  "",
+		}
+		getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
 		assert.NoError(err)
 		assert.Len(*getResult.GetHits(), 3)
 		assert.Equal("id3_"+p, getResult.GetHit(0).Id)
