@@ -60,7 +60,7 @@ type IIndex interface {
 	IndexExists() bool
 	TypeExists(typ string) bool
 	ItemExists(typ string, id string) bool
-	Create(settings string) error
+	Create() error
 	Close() error
 	Delete() error
 	PostData(typ string, id string, obj interface{}) (*IndexResponse, error)
@@ -78,7 +78,7 @@ type IIndex interface {
 	AddPercolationDocument(typ string, doc interface{}) (*PercolateResponse, error)
 }
 
-func NewIndexInterface(sys *piazza.SystemConfig, index string, settings string, mocking bool) (IIndex, error) {
+func NewIndexInterface(sys *piazza.SystemConfig, index string, mocking bool) (IIndex, error) {
 	var esi IIndex
 	var err error
 
@@ -87,7 +87,7 @@ func NewIndexInterface(sys *piazza.SystemConfig, index string, settings string, 
 		return esi, nil
 	}
 
-	esi, err = NewIndex(sys, index, settings)
+	esi, err = NewIndex(sys, index)
 	if err != nil {
 		return nil, err
 	}
