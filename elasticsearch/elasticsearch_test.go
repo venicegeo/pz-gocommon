@@ -100,7 +100,7 @@ func (suite *EsTester) SetUpIndex() IIndex {
 
 	suite.sys = sys
 
-	esi, err := NewIndexInterface(sys, "estest$", MOCKING)
+	esi, err := NewIndexInterface(sys, "estest$", "", MOCKING)
 	assert.NoError(err)
 
 	err = esi.Delete()
@@ -110,7 +110,7 @@ func (suite *EsTester) SetUpIndex() IIndex {
 	assert.False(ok)
 
 	// make the index
-	err = esi.Create()
+	err = esi.Create("")
 	assert.NoError(err)
 	ok = esi.IndexExists()
 	assert.True(ok)
@@ -182,7 +182,7 @@ func (suite *EsTester) Test01Client() {
 	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required)
 	assert.NoError(err)
 
-	esi, err := NewIndexInterface(sys, "estest01$", MOCKING)
+	esi, err := NewIndexInterface(sys, "estest01$", "", MOCKING)
 	assert.NoError(err)
 
 	version := esi.GetVersion()
@@ -687,11 +687,11 @@ func (suite *EsTester) Test09FullPercolation() {
 
 	// create index
 	{
-		esi, err = NewIndexInterface(suite.sys, "estest09$", MOCKING)
+		esi, err = NewIndexInterface(suite.sys, "estest09$", "", MOCKING)
 		assert.NoError(err)
 
 		// make the index
-		err = esi.Create()
+		err = esi.Create("")
 		assert.NoError(err)
 
 		ok := esi.IndexExists()
@@ -896,7 +896,7 @@ func (suite *EsTester) Test10GetAll() {
 		log.Fatal(err)
 	}
 
-	esi, err := NewIndexInterface(sys, "getall$", MOCKING)
+	esi, err := NewIndexInterface(sys, "getall$", "", MOCKING)
 	assert.NoError(err)
 	defer func() {
 		esi.Close()
@@ -904,7 +904,7 @@ func (suite *EsTester) Test10GetAll() {
 	}()
 
 	// make the index
-	err = esi.Create()
+	err = esi.Create("")
 	assert.NoError(err)
 
 	type T1 struct {
