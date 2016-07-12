@@ -186,7 +186,8 @@ func (esi *Index) PostData(typ string, id string, obj interface{}) (*IndexRespon
 		Id(id).
 		BodyJson(obj).
 		Do()
-
+	log.Printf("IndexResponse: %#v", indexResponse)
+	log.Printf("err: %#v", err)
 	return NewIndexResponse(indexResponse), err
 }
 
