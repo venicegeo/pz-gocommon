@@ -98,7 +98,7 @@ func NewVcapApplication() (*VcapApplication, error) {
 		if dot == -1 {
 			return nil, errors.New(fmt.Sprintf("error extracting domain from address %s", full))
 		}
-		vcap.domain = full[dot+1:]
+		vcap.domain = full[dot:]
 
 	} else {
 		vcap = localVcapApplication
