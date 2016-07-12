@@ -41,7 +41,12 @@ func (service *ThingService) GetThing(id string) *JsonResponse {
 	if !ok {
 		return &JsonResponse{StatusCode: http.StatusNotFound}
 	}
-	return &JsonResponse{StatusCode: http.StatusOK, Data: Thing{Id: id, Value: val}}
+	resp := &JsonResponse{StatusCode: http.StatusOK, Data: Thing{Id: id, Value: val}}
+	err := resp.SetType()
+	if err != nil {
+		return &JsonResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()}
+	}
+	return resp
 }
 
 func (service *ThingService) PostThing(thing *Thing) *JsonResponse {
@@ -52,7 +57,13 @@ func (service *ThingService) PostThing(thing *Thing) *JsonResponse {
 	service.IdCount++
 	thing.Id = fmt.Sprintf("%d", service.IdCount)
 	service.Data[thing.Id] = thing.Value
-	return &JsonResponse{StatusCode: http.StatusCreated, Data: thing}
+
+	resp := &JsonResponse{StatusCode: http.StatusCreated, Data: thing}
+	err := resp.SetType()
+	if err != nil {
+		return &JsonResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()}
+	}
+	return resp
 }
 
 func (service *ThingService) PutThing(id string, thing *Thing) *JsonResponse {
@@ -64,7 +75,12 @@ func (service *ThingService) PutThing(id string, thing *Thing) *JsonResponse {
 	}
 	service.Data[thing.Id] = thing.Value
 
-	return &JsonResponse{StatusCode: http.StatusOK, Data: thing}
+	resp := &JsonResponse{StatusCode: http.StatusOK, Data: thing}
+	err := resp.SetType()
+	if err != nil {
+		return &JsonResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()}
+	}
+	return resp
 }
 
 func (service *ThingService) DeleteThing(id string) *JsonResponse {
@@ -102,6 +118,10 @@ func (server *ThingServer) handleGetRoot(c *gin.Context) {
 	}
 	message := "Hi."
 	resp := JsonResponse{StatusCode: http.StatusOK, Data: message}
+	err := resp.SetType()
+	if err != nil {
+		resp = JsonResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()}
+	}
 	c.JSON(resp.StatusCode, resp)
 }
 
@@ -146,6 +166,10 @@ func (server *ThingServer) handleDelete(c *gin.Context) {
 func Test07Server(t *testing.T) {
 	assert := assert.New(t)
 
+	JsonResponseDataTypes["string"] = "string"
+	JsonResponseDataTypes["piazza.Thing"] = "thing"
+	JsonResponseDataTypes["*piazza.Thing"] = "thing"
+
 	required := []ServiceName{}
 	sys, err := NewSystemConfig(PzGoCommon, required)
 	assert.NoError(err)
@@ -181,6 +205,11 @@ func Test07Server(t *testing.T) {
 		var output Thing
 		var jresp *JsonResponse
 
+		// GET /
+		jresp = HttpGetJson(url + "/")
+		assert.Equal(200, jresp.StatusCode)
+		assert.EqualValues("string", jresp.Type)
+
 		// GET bad
 		jresp = HttpGetJson(url + "/mpg")
 		assert.Equal(404, jresp.StatusCode)
@@ -189,6 +218,7 @@ func Test07Server(t *testing.T) {
 		input = &Thing{Value: "17"}
 		jresp = HttpPostJson(url, input)
 		assert.Equal(201, jresp.StatusCode)
+		assert.EqualValues("thing", jresp.Type)
 
 		err = SuperConverter(jresp.Data, &output)
 		assert.EqualValues("1", output.Id)
@@ -203,6 +233,7 @@ func Test07Server(t *testing.T) {
 		input = &Thing{Value: "18"}
 		jresp = HttpPostJson(url, input)
 		assert.Equal(201, jresp.StatusCode)
+		assert.EqualValues("thing", jresp.Type)
 
 		err = SuperConverter(jresp.Data, &output)
 		assert.EqualValues("2", output.Id)
@@ -211,6 +242,7 @@ func Test07Server(t *testing.T) {
 		// GET 2
 		jresp = HttpGetJson(url + "/2")
 		assert.Equal(200, jresp.StatusCode)
+		assert.EqualValues("thing", jresp.Type)
 
 		err = SuperConverter(jresp.Data, &output)
 		assert.NoError(err)
@@ -221,6 +253,8 @@ func Test07Server(t *testing.T) {
 		input = &Thing{Value: "71"}
 		jresp = HttpPutJson(url+"/1", input)
 		assert.Equal(200, jresp.StatusCode)
+		assert.EqualValues("thing", jresp.Type)
+
 		err = SuperConverter(jresp.Data, &output)
 		assert.NoError(err)
 		assert.EqualValues("71", output.Value)
@@ -228,6 +262,7 @@ func Test07Server(t *testing.T) {
 		// GET 1
 		jresp = HttpGetJson(url + "/1")
 		assert.Equal(200, jresp.StatusCode)
+		assert.EqualValues("thing", jresp.Type)
 
 		err = SuperConverter(jresp.Data, &output)
 		assert.NoError(err)

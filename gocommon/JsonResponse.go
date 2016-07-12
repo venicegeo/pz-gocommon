@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 )
 
 //----------------------------------------------------------
@@ -55,7 +56,13 @@ type JsonResponse struct {
 	Metadata interface{} `json:"metadata,omitempty"`
 }
 
-//var JsonResponseDataTypes map[string]string = map[string]string{}
+var JsonResponseDataTypes map[string]string = map[string]string{}
+
+func init() {
+	// common types
+	JsonResponseDataTypes["string"] = "string"
+	JsonResponseDataTypes["int"] = "int"
+}
 
 func (resp *JsonResponse) String() string {
 	s := fmt.Sprintf("{StatusCode: %d, Data: %#v, Message: %s}",
@@ -79,7 +86,6 @@ func newJsonResponse500(err error) *JsonResponse {
 	return &JsonResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()}
 }
 
-/*
 func (resp *JsonResponse) SetType() error {
 	var nilInterface interface{}
 	var nilInterfaceArray []interface{}
@@ -99,7 +105,6 @@ func (resp *JsonResponse) SetType() error {
 	resp.Type = modelName
 	return nil
 }
-*/
 
 //----------------------------------------------------------
 

@@ -16,7 +16,6 @@ package piazza
 
 import (
 	"encoding/json"
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,7 +32,6 @@ func TestMarshalling(t *testing.T) {
 
 	byts, err := json.Marshal(a)
 	assert.NoError(err)
-	log.Printf("%s", string(byts))
 	assert.EqualValues("{\"statusCode\":10}", string(byts))
 
 	b := &JsonResponse{}
