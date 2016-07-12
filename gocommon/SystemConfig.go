@@ -193,7 +193,7 @@ func (sys *SystemConfig) runHealthChecks() error {
 		log.Printf("Service healthy: %s at %s", name, url)
 	}
 
-	//log.Printf("SystemConfig.runHealthChecks: end")
+	log.Printf("SystemConfig.runHealthChecks: end")
 	return nil
 }
 
