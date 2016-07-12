@@ -178,7 +178,7 @@ func Test07Server(t *testing.T) {
 
 	{
 		var input *Thing
-		var output *Thing
+		var output Thing
 		var jresp *JsonResponse
 
 		// GET bad
