@@ -1003,10 +1003,6 @@ func (suite *EsTester) Test10GetAll() {
 		}
 	}
 
-	// I have reason to suspect the ES indexing process for an item takes longer
-	// than just adding the item, so we enforce a delay here.
-	time.Sleep(1 * time.Second)
-
 	{
 		realFormat := &piazza.JsonPagination{
 			PerPage: 10,
@@ -1014,6 +1010,23 @@ func (suite *EsTester) Test10GetAll() {
 			Order:   piazza.PaginationOrderAscending,
 			SortBy:  "",
 		}
+		pollingFn := GetData(func() (bool, error){
+			getResult, err := esi.FilterByMatchAll("", realFormat)
+			if err != nil {
+				fmt.Println("error")
+				return false, err
+			} else {
+				if getResult != nil && len(*getResult.GetHits()) == 2 {
+					fmt.Println("validation passed")
+					return true, nil
+				}
+			}
+			fmt.Println("try again")
+			return false, nil
+		})
+
+		ok, err := PollFunction(pollingFn)
+		fmt.Print("******try actual filter******\n", ok, "\n")
 		getResult, err := esi.FilterByMatchAll("", realFormat)
 		assert.NoError(err)
 		assert.NotNil(getResult)

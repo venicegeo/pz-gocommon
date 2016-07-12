@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/venicegeo/pz-gocommon/gocommon"
+	"time"
 )
 
 // MappingElementTypeName is just an alias for a string.
@@ -133,4 +134,24 @@ func NewQueryFormat(params *piazza.JsonPagination) *QueryFormat {
 	}
 
 	return format
+}
+
+type GetData func() (bool, error)
+
+func PollFunction(fn GetData) (bool, error) {
+	timeout := time.After(5 * time.Second)
+	tick := time.Tick(250 * time.Millisecond)
+	for {
+		select {
+		case <-timeout:
+			return false, errors.New("timeout reached")
+		case <-tick:
+			ok, err := fn()
+			if err != nil {
+				return false, err
+			} else if ok {
+				return true, nil
+			}
+		}
+	}
 }
