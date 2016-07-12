@@ -30,7 +30,7 @@ import (
 	"github.com/venicegeo/pz-gocommon/gocommon"
 )
 
-const MOCKING = false
+const MOCKING = true
 
 type EsTester struct {
 	suite.Suite
