@@ -61,6 +61,7 @@ var JsonResponseDataTypes map[string]string = map[string]string{}
 func init() {
 	// common types
 	JsonResponseDataTypes["string"] = "string"
+	JsonResponseDataTypes["[]string"] = "string-list"
 	JsonResponseDataTypes["int"] = "int"
 }
 
