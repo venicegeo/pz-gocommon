@@ -128,7 +128,32 @@ func (suite *EsTester) SetUpIndex() IIndex {
 	}
 
 	// allow the database time to settle
-	time.Sleep(1 * time.Second)
+	realFormat := &piazza.JsonPagination{
+		PerPage: 10,
+		Page:    0,
+		Order:   piazza.PaginationOrderAscending,
+		SortBy:  "",
+	}
+	pollingFn := GetData(func() (bool, error){
+		getResult, err := esi.FilterByMatchAll(mapping, realFormat)
+		if err != nil {
+			fmt.Println("error")
+			return false, err
+		} else {
+			if getResult != nil && len(*getResult.GetHits()) == len(objs) {
+				fmt.Println("validation passed")
+				return true, nil
+			}
+		}
+		fmt.Println("try again")
+		return false, nil
+	})
+
+	pollOk, pollErr := PollFunction(pollingFn)
+	fmt.Print("SETUP INDEX\n", pollOk, "\n")
+	if pollErr != nil {
+		fmt.Println("Error: ", pollErr)
+	}
 
 	return esi
 }
@@ -1126,8 +1151,6 @@ func (suite *EsTester) Test11Pagination2() {
 		assert.EqualValues(id, indexResult.Id)
 	}
 
-	time.Sleep(1 * time.Second)
-
 	{
 		realFormat := &piazza.JsonPagination{
 			PerPage: 4,
@@ -1135,6 +1158,23 @@ func (suite *EsTester) Test11Pagination2() {
 			Order:   piazza.PaginationOrderAscending,
 			SortBy:  "id3",
 		}
+		pollingFn := GetData(func() (bool, error){
+			getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
+			if err != nil {
+				fmt.Println("error")
+				return false, err
+			} else {
+				if getResult != nil && len(*getResult.GetHits()) == 4 {
+					fmt.Println("validation passed")
+					return true, nil
+				}
+			}
+			fmt.Println("try again")
+			return false, nil
+		})
+
+		ok, err := PollFunction(pollingFn)
+		fmt.Print("******try actual filter******\n", ok, "\n")
 		getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
 		assert.NoError(err)
 		assert.Len(*getResult.GetHits(), 4)

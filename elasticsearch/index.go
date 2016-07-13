@@ -16,6 +16,7 @@ package elasticsearch
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -169,7 +170,7 @@ func (esi *Index) Delete() error {
 }
 
 func (esi *Index) PostData(typ string, id string, obj interface{}) (*IndexResponse, error) {
-	/*ok := esi.IndexExists()
+	/**/ ok := esi.IndexExists()
 	if !ok {
 		log.Printf("Index %s does not exist", esi.index)
 		return nil, errors.New(fmt.Sprintf("Index %s does not exist", esi.index))
@@ -178,7 +179,11 @@ func (esi *Index) PostData(typ string, id string, obj interface{}) (*IndexRespon
 	if !ok {
 		log.Printf("Index %s or type %s does not exist", esi.index, typ)
 		return nil, errors.New(fmt.Sprintf("Index %s or type %s does not exist", esi.index, typ))
-	}*/
+	} /**/
+
+	log.Printf("typ: %#v", typ)
+	log.Printf("id: %#v", id)
+	log.Printf("obj: %#v", obj)
 
 	indexResponse, err := esi.lib.Index().
 		Index(esi.index).
@@ -186,8 +191,12 @@ func (esi *Index) PostData(typ string, id string, obj interface{}) (*IndexRespon
 		Id(id).
 		BodyJson(obj).
 		Do()
-
-	return NewIndexResponse(indexResponse), err
+	log.Printf("IndexResponse: %#v", indexResponse)
+	log.Printf("err: %#v", err)
+	if err != nil {
+		return nil, err
+	}
+	return NewIndexResponse(indexResponse), nil
 }
 
 func (esi *Index) GetByID(typ string, id string) (*GetResult, error) {

@@ -61,6 +61,7 @@ var JsonResponseDataTypes map[string]string = map[string]string{}
 func init() {
 	// common types
 	JsonResponseDataTypes["string"] = "string"
+	JsonResponseDataTypes["[]string"] = "string-list"
 	JsonResponseDataTypes["int"] = "int"
 }
 
@@ -106,12 +107,11 @@ func (resp *JsonResponse) SetType() error {
 	return nil
 }
 
-//----------------------------------------------------------
-
-// given an input which is some messy type like "map[string]interface{}",
+// given a JsonResponse object returned from an http call, and with Data set
 // convert it to the given output type
-func SuperConverter(input interface{}, output interface{}) error {
-	raw, err := json.Marshal(input)
+// (formerly called SuperConverter)
+func (resp *JsonResponse) ExtractData(output interface{}) error {
+	raw, err := json.Marshal(resp.Data)
 	if err != nil {
 		return nil
 	}

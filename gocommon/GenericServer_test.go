@@ -220,7 +220,7 @@ func Test07Server(t *testing.T) {
 		assert.Equal(201, jresp.StatusCode)
 		assert.EqualValues("thing", jresp.Type)
 
-		err = SuperConverter(jresp.Data, &output)
+		err = jresp.ExtractData(&output)
 		assert.EqualValues("1", output.Id)
 		assert.EqualValues("17", output.Value)
 
@@ -235,7 +235,7 @@ func Test07Server(t *testing.T) {
 		assert.Equal(201, jresp.StatusCode)
 		assert.EqualValues("thing", jresp.Type)
 
-		err = SuperConverter(jresp.Data, &output)
+		err = jresp.ExtractData(&output)
 		assert.EqualValues("2", output.Id)
 		assert.EqualValues("18", output.Value)
 
@@ -244,7 +244,7 @@ func Test07Server(t *testing.T) {
 		assert.Equal(200, jresp.StatusCode)
 		assert.EqualValues("thing", jresp.Type)
 
-		err = SuperConverter(jresp.Data, &output)
+		err = jresp.ExtractData(&output)
 		assert.NoError(err)
 		assert.EqualValues("2", output.Id)
 		assert.EqualValues("18", output.Value)
@@ -255,7 +255,7 @@ func Test07Server(t *testing.T) {
 		assert.Equal(200, jresp.StatusCode)
 		assert.EqualValues("thing", jresp.Type)
 
-		err = SuperConverter(jresp.Data, &output)
+		err = jresp.ExtractData(&output)
 		assert.NoError(err)
 		assert.EqualValues("71", output.Value)
 
@@ -264,7 +264,7 @@ func Test07Server(t *testing.T) {
 		assert.Equal(200, jresp.StatusCode)
 		assert.EqualValues("thing", jresp.Type)
 
-		err = SuperConverter(jresp.Data, &output)
+		err = jresp.ExtractData(&output)
 		assert.NoError(err)
 		assert.EqualValues("1", output.Id)
 		assert.EqualValues("71", output.Value)
