@@ -63,6 +63,18 @@ var localVcapServices = &VcapServices{
 			},
 		},
 		VcapServiceEntry{
+			Name: " pz-logger",
+			Credentials: VcapCredentials{
+				Host: DefaultPzLoggerAddress,
+			},
+		},
+		VcapServiceEntry{
+			Name: " pz-uuidgen",
+			Credentials: VcapCredentials{
+				Host: DefaultPzUuidgenAddress,
+			},
+		},
+		VcapServiceEntry{
 			Name: "pz-kafka",
 			Credentials: VcapCredentials{
 				Host: DefaultKafkaAddress,
@@ -97,7 +109,7 @@ func NewVcapServices() (*VcapServices, error) {
 		name := ServiceName(serviceEntry.Name)
 		addr := serviceEntry.Credentials.Host
 		vcap.Services[name] = addr
-		//log.Printf("VcapServices: added %s for %s", name, addr)
+		log.Printf("VcapServices: added %s for %s", name, addr)
 	}
 
 	return vcap, nil
