@@ -63,6 +63,12 @@ var localVcapServices = &VcapServices{
 			},
 		},
 		VcapServiceEntry{
+			Name: "pz-kafka",
+			Credentials: VcapCredentials{
+				Host: DefaultKafkaAddress,
+			},
+		},
+		VcapServiceEntry{
 			Name: " pz-logger",
 			Credentials: VcapCredentials{
 				Host: DefaultPzLoggerAddress,
@@ -72,12 +78,6 @@ var localVcapServices = &VcapServices{
 			Name: " pz-uuidgen",
 			Credentials: VcapCredentials{
 				Host: DefaultPzUuidgenAddress,
-			},
-		},
-		VcapServiceEntry{
-			Name: "pz-kafka",
-			Credentials: VcapCredentials{
-				Host: DefaultKafkaAddress,
 			},
 		},
 	},
