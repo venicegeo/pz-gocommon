@@ -128,8 +128,32 @@ func (suite *EsTester) SetUpIndex() IIndex {
 	}
 
 	// allow the database time to settle
-	// Will this do or is there a way to check if it has settled?
-	time.Sleep(1 * time.Second)
+	realFormat := &piazza.JsonPagination{
+		PerPage: 10,
+		Page:    0,
+		Order:   piazza.PaginationOrderAscending,
+		SortBy:  "",
+	}
+	pollingFn := GetData(func() (bool, error){
+		getResult, err := esi.FilterByMatchAll(mapping, realFormat)
+		if err != nil {
+			fmt.Println("error")
+			return false, err
+		} else {
+			if getResult != nil && len(*getResult.GetHits()) == len(objs) {
+				fmt.Println("validation passed")
+				return true, nil
+			}
+		}
+		fmt.Println("try again")
+		return false, nil
+	})
+
+	pollOk, pollErr := PollFunction(pollingFn)
+	fmt.Print("SETUP INDEX\n", pollOk, "\n")
+	if pollErr != nil {
+		fmt.Println("Error: ", pollErr)
+	}
 
 	return esi
 }
