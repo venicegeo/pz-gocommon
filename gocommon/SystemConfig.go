@@ -258,7 +258,6 @@ func (sys *SystemConfig) WaitForServiceByAddress(name ServiceName, address strin
 		if msTime >= waitTimeoutMs {
 			return fmt.Errorf("timed out waiting for service: %s at %s", name, url)
 		}
-		// Is this sufficient?
 		time.Sleep(waitSleepMs * time.Millisecond)
 		msTime += waitSleepMs
 	}
@@ -292,7 +291,6 @@ func (sys *SystemConfig) WaitForServiceToDieByAddress(name ServiceName, address 
 		if msTime >= waitTimeoutMs {
 			return fmt.Errorf("timed out waiting for service to die: %s at %s", name, url)
 		}
-		// Is this sufficient?
 		time.Sleep(waitSleepMs * time.Millisecond)
 		msTime += waitSleepMs
 	}
