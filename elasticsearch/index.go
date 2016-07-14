@@ -244,10 +244,9 @@ func (esi *Index) FilterByMatchAll(typ string, realFormat *piazza.JsonPagination
 
 	f = f.From(format.From)
 	f = f.Size(format.Size)
+	f = f.Sort(format.Key, !bool(format.Order))
 
-	if format.Key != "" {
-		f = f.Sort(format.Key, !bool(format.Order))
-	}
+	log.Printf("FilterByMatchAll: %#v", format)
 
 	searchResult, err := f.Do()
 	if err != nil {
