@@ -47,33 +47,41 @@ func (p *JsonPagination) EndIndex() int {
 func NewJsonPagination(params *HttpQueryParams, defalt *JsonPagination) (*JsonPagination, error) {
 	log.Printf("NewJsonPagination/1: %#v", params)
 
-	perPage, err := params.GetInt("perPage", defalt.PerPage)
+	jp := &JsonPagination{}
+
+	perPage, err := params.GetPerPage(&defalt.PerPage)
 	if err != nil {
 		return nil, err
 	}
+	if perPage != nil {
+		jp.PerPage = *perPage
+	}
 
-	page, err := params.GetInt("page", defalt.Page)
+	page, err := params.GetPage(&defalt.Page)
 	if err != nil {
 		return nil, err
 	}
+	if page != nil {
+		jp.Page = *page
+	}
 
-	sortBy, err := params.GetString("sortBy", defalt.SortBy)
+	sortBy, err := params.GetSortBy(&defalt.SortBy)
 	if err != nil {
 		return nil, err
 	}
+	if sortBy != nil {
+		jp.SortBy = *sortBy
+	}
 
-	order, err := params.GetOrder("order", string(defalt.Order))
+	order, err := params.GetOrder(&defalt.Order)
 	if err != nil {
 		return nil, err
 	}
-
-	p := &JsonPagination{
-		PerPage: perPage,
-		Page:    page,
-		SortBy:  sortBy,
-		Order:   PaginationOrder(order),
+	if order != nil {
+		jp.Order = *order
 	}
-	log.Printf("NewJsonPagination/2: %#v", p)
 
-	return p, nil
+	log.Printf("NewJsonPagination/2: %#v", jp)
+
+	return jp, nil
 }
