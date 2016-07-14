@@ -48,42 +48,35 @@ func TestPaginationParams(t *testing.T) {
 
 	// with no params specified
 	{
-		expected := defaults
-
 		params := &HttpQueryParams{}
 
 		actual, err := NewJsonPagination(params, defaults)
 		assert.NoError(err)
+
+		expected := defaults
 		assert.EqualValues(expected, actual)
 	}
 
 	// with some params specified
 	{
-		expected := &JsonPagination{
-			PerPage: 100,
-			Page:    17,
-			Order:   PaginationOrderAscending,
-			SortBy:  "id",
-		}
-
 		params := &HttpQueryParams{}
 		params.Set("perPage", "100")
 		params.Set("page", "17")
 
 		actual, err := NewJsonPagination(params, defaults)
 		assert.NoError(err)
+
+		expected := &JsonPagination{
+			PerPage: 100,
+			Page:    17,
+			Order:   PaginationOrderAscending,
+			SortBy:  "id",
+		}
 		assert.EqualValues(expected, actual)
 	}
 
 	// with all params specified
 	{
-		expected := &JsonPagination{
-			PerPage: 100,
-			Page:    17,
-			Order:   PaginationOrderDescending,
-			SortBy:  "foo",
-		}
-
 		params := &HttpQueryParams{}
 		params.Set("perPage", "100")
 		params.Set("page", "17")
@@ -92,6 +85,13 @@ func TestPaginationParams(t *testing.T) {
 
 		actual, err := NewJsonPagination(params, defaults)
 		assert.NoError(err)
+
+		expected := &JsonPagination{
+			PerPage: 100,
+			Page:    17,
+			Order:   PaginationOrderDescending,
+			SortBy:  "foo",
+		}
 		assert.EqualValues(expected, actual)
 	}
 
