@@ -14,6 +14,8 @@
 
 package piazza
 
+import "log"
+
 //----------------------------------------------------------
 
 // Elasticsearch, at least, does it this way:
@@ -43,6 +45,7 @@ func (p *JsonPagination) EndIndex() int {
 }
 
 func NewJsonPagination(params *HttpQueryParams, defalt *JsonPagination) (*JsonPagination, error) {
+	log.Printf("NewJsonPagination/1: %#v", params)
 
 	perPage, err := params.GetInt("perPage", defalt.PerPage)
 	if err != nil {
@@ -70,6 +73,7 @@ func NewJsonPagination(params *HttpQueryParams, defalt *JsonPagination) (*JsonPa
 		SortBy:  sortBy,
 		Order:   PaginationOrder(order),
 	}
+	log.Printf("NewJsonPagination/2: %#v", p)
 
 	return p, nil
 }
