@@ -15,6 +15,8 @@
 package piazza
 
 import (
+	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,20 +50,25 @@ func TestPaginationParams(t *testing.T) {
 
 	// with no params specified
 	{
-		params := &HttpQueryParams{}
+		url, err := url.Parse("http://example.com")
+		assert.NoError(err)
+		req := http.Request{URL: url}
+
+		params := NewQueryParams(&req)
 
 		actual, err := NewJsonPagination(params, defaults)
 		assert.NoError(err)
-
 		expected := defaults
 		assert.EqualValues(expected, actual)
 	}
 
 	// with some params specified
 	{
-		params := &HttpQueryParams{}
-		params.Set("perPage", "100")
-		params.Set("page", "17")
+		url, err := url.Parse("http://example.com?perPage=100&page=17")
+		assert.NoError(err)
+		req := http.Request{URL: url}
+
+		params := NewQueryParams(&req)
 
 		actual, err := NewJsonPagination(params, defaults)
 		assert.NoError(err)
@@ -77,11 +84,11 @@ func TestPaginationParams(t *testing.T) {
 
 	// with all params specified
 	{
-		params := &HttpQueryParams{}
-		params.Set("perPage", "100")
-		params.Set("page", "17")
-		params.Set("order", "desc")
-		params.Set("sortBy", "foo")
+		url, err := url.Parse("http://example.com?perPage=100&page=17&order=desc&sortBy=foo")
+		assert.NoError(err)
+		req := http.Request{URL: url}
+
+		params := NewQueryParams(&req)
 
 		actual, err := NewJsonPagination(params, defaults)
 		assert.NoError(err)

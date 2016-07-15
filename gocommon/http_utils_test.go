@@ -36,21 +36,40 @@ func TestHttp(t *testing.T) {
 func TestQueryParams(t *testing.T) {
 	assert := assert.New(t)
 
-	addr, err := url.Parse("http://example.com/index.html?a=1&b=2&c=&d=4")
+	addr, err := url.Parse("http://example.com/index.html?a=1&b=foo&c=&d=4")
 	assert.NoError(err)
 
 	req := http.Request{URL: addr}
 
 	params := NewQueryParams(&req)
 
-	assert.EqualValues(params.Get("a"), "1")
-	assert.EqualValues(params.Get("b"), "2")
-	assert.EqualValues(params.Get("c"), "")
-	assert.EqualValues(params.Get("d"), "4")
-	assert.EqualValues(params.Get("e"), "")
+	a, err := params.AsInt("a", nil)
+	assert.NoError(err)
+	assert.NotNil(a)
+	assert.Equal(1, *a)
 
-	params.Set("f", "6")
-	params.Set("g", "")
-	assert.EqualValues(params.Get("f"), "6")
-	assert.EqualValues(params.Get("g"), "")
+	b, err := params.AsString("b", nil)
+	assert.NoError(err)
+	assert.NotNil(b)
+	assert.EqualValues("foo", *b)
+
+	bb, err := params.AsString("bb", nil)
+	assert.NoError(err)
+	assert.Nil(bb)
+
+	s := "bar"
+	bbb, err := params.AsString("bbb", &s)
+	assert.NoError(err)
+	assert.NotNil(bbb)
+	assert.EqualValues("bar", *bbb)
+
+	c, err := params.AsInt("c", nil)
+	assert.NoError(err)
+	assert.Nil(c)
+
+	i := 7
+	cc, err := params.AsInt("c", &i)
+	assert.NoError(err)
+	assert.NotNil(cc)
+	assert.EqualValues(7, *cc)
 }

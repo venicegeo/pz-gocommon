@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 //----------------------------------------------------------
@@ -183,71 +184,122 @@ func HttpJsonDeleteObject(url string) (int, error) {
 //----------------------------------------------------------
 
 // We don't want to pass http.Request objects into the Services classes
-// (and certainly not a gin.Context!), so we provide a simple map.
+// (and certainly not a gin.Context!), and we need this kind of information
+// a lot, so we'll keep a special data structure which actually understands
+// the semantics as well as the syntax.
 
-type HttpQueryParams map[string]string
+type HttpQueryParams struct {
+	raw map[string]string
+}
 
 func NewQueryParams(request *http.Request) *HttpQueryParams {
-	params := make(HttpQueryParams)
+	params := HttpQueryParams{raw: make(map[string]string)}
 
 	for k, v := range request.URL.Query() {
-		params.Set(k, v[0])
+		params.raw[k] = v[0]
 	}
-
 	return &params
 }
 
-func (params *HttpQueryParams) Set(key string, value string) {
-	(*params)[key] = value
-}
-
-func (params *HttpQueryParams) IsPresent(key string) bool {
-	return (*params)[key] == ""
-}
-
-// returns "" if key not present OR if value not given (e.g. "foo=1&key=&bar=2")
-func (params *HttpQueryParams) Get(key string) string {
-	return (*params)[key]
-}
-
-func (params *HttpQueryParams) GetInt(key string, defalt int) (int, error) {
-	str := params.Get(key)
-	if str == "" {
+func (params *HttpQueryParams) AsInt(key string, defalt *int) (*int, error) {
+	if key == "" {
 		return defalt, nil
 	}
 
-	value, err := strconv.Atoi(str)
+	value, ok := params.raw[key]
+	if !ok || value == "" {
+		return defalt, nil
+	}
+
+	i, err := strconv.Atoi(value)
 	if err != nil {
-		s := fmt.Sprintf("query argument for '?%s' is invalid: %s (%s)", key, str, err.Error())
-		err := errors.New(s)
-		return -1, err
+		return nil, err
 	}
 
-	return value, nil
+	return &i, nil
 }
 
-func (params *HttpQueryParams) GetString(key string, defalt string) (string, error) {
-	str := params.Get(key)
-	if str == "" {
-		return defalt, nil
-	}
-	return str, nil
-}
-
-func (params *HttpQueryParams) GetOrder(key string, defalt string) (string, error) {
-	str := params.Get(key)
-	if str == "" {
+func (params *HttpQueryParams) AsString(key string, defalt *string) (*string, error) {
+	if key == "" {
 		return defalt, nil
 	}
 
-	switch strings.ToLower(str) {
+	value, ok := params.raw[key]
+	if !ok || value == "" {
+		return defalt, nil
+	}
+
+	s := value
+	return &s, nil
+}
+
+func (params *HttpQueryParams) AsOrder(key string, defalt *PaginationOrder) (*PaginationOrder, error) {
+	if key == "" {
+		return defalt, nil
+	}
+
+	value, ok := params.raw[key]
+	if !ok || value == "" {
+		return defalt, nil
+	}
+
+	var order PaginationOrder
+	switch strings.ToLower(value) {
 	case "desc":
-		return "desc", nil
+		order = PaginationOrderDescending
 	case "asc":
-		return "asc", nil
+		order = PaginationOrderDescending
+	default:
+		s := fmt.Sprintf("query argument for '?%s' must be \"asc\" or \"desc\"", value)
+		err := errors.New(s)
+		return nil, err
 	}
 
-	s := fmt.Sprintf("query argument for '?%s' must be \"asc\" or \"desc\"", key)
-	err := errors.New(s)
-	return "", err
+	return &order, nil
+}
+
+func (params *HttpQueryParams) AsTime(key string, defalt *time.Time) (*time.Time, error) {
+	if key == "" {
+		return defalt, nil
+	}
+
+	value, ok := params.raw[key]
+	if !ok || value == "" {
+		return defalt, nil
+	}
+
+	t, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		return nil, err
+	}
+
+	return &t, nil
+}
+
+func (params *HttpQueryParams) GetAfter(defalt *time.Time) (*time.Time, error) {
+	return params.AsTime("after", defalt)
+}
+
+func (params *HttpQueryParams) GetBefore(defalt *time.Time) (*time.Time, error) {
+	return params.AsTime("before", defalt)
+}
+
+func (params *HttpQueryParams) GetCount(defalt *int) (*int, error) {
+	return params.AsInt("count", defalt)
+}
+
+func (params *HttpQueryParams) GetOrder(defalt *PaginationOrder) (*PaginationOrder, error) {
+	return params.AsOrder("order", defalt)
+}
+
+func (params *HttpQueryParams) GetPage(defalt *int) (*int, error) {
+	return params.AsInt("page", defalt)
+}
+
+func (params *HttpQueryParams) GetPerPage(defalt *int) (*int, error) {
+	return params.AsInt("perPage", defalt)
+}
+
+func (params *HttpQueryParams) GetSortBy(defalt *string) (*string, error) {
+	return params.AsString("sortBy", defalt)
 }
