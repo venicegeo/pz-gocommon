@@ -319,5 +319,5 @@ func GinReturnJson(c *gin.Context, resp *JsonResponse) {
 		log.Fatalf("Internal Error: marshalling of %#v", resp)
 	}
 	log.Printf("%s", string(raw))
-	c.String(resp.StatusCode, string(raw))
+	c.Data(resp.StatusCode, ContentTypeJSON, raw)
 }
