@@ -20,10 +20,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 //----------------------------------------------------------
@@ -64,6 +67,10 @@ func HTTPDelete(url string) (*http.Response, error) {
 //----------------------------------------------------------
 
 func responseToObject(resp *http.Response, output interface{}) error {
+	if resp.ContentLength < 0 {
+		return errors.New(fmt.Sprintf("Content-Length is %d", resp.ContentLength))
+	}
+
 	// no content is perfectly valid, not an error
 	if resp.ContentLength == 0 {
 		return nil
@@ -302,4 +309,15 @@ func (params *HttpQueryParams) GetPerPage(defalt *int) (*int, error) {
 
 func (params *HttpQueryParams) GetSortBy(defalt *string) (*string, error) {
 	return params.AsString("sortBy", defalt)
+}
+
+//---------------------------------------------------------------------
+
+func GinReturnJson(c *gin.Context, resp *JsonResponse) {
+	raw, err := json.MarshalIndent(resp, "", "  ")
+	if err != nil {
+		log.Fatalf("Internal Error: marshalling of %#v", resp)
+	}
+	log.Printf("%s", string(raw))
+	c.String(resp.StatusCode, string(raw))
 }

@@ -88,11 +88,7 @@ func newJsonResponse500(err error) *JsonResponse {
 }
 
 func (resp *JsonResponse) SetType() error {
-	var nilInterface interface{}
-	var nilInterfaceArray []interface{}
-	if resp.Data == nil ||
-		reflect.TypeOf(resp.Data) == reflect.TypeOf(nilInterface) ||
-		reflect.TypeOf(resp.Data) == reflect.TypeOf(nilInterfaceArray) {
+	if resp.Data == nil {
 		resp.Type = ""
 		return nil
 	}
@@ -129,6 +125,7 @@ func (resp *JsonResponse) ExtractData(output interface{}) error {
 func HttpGetJson(url string) *JsonResponse {
 	output := &JsonResponse{}
 	_, err := HttpJsonGetObject(url, output)
+
 	if err != nil {
 		return newJsonResponse500(err)
 	}
