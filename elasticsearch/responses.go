@@ -114,11 +114,13 @@ func NewPercolateResponse(percolateResponse *elastic.PercolateResponse) *Percola
 	return resp
 }
 
+// DeleteResponse is the response when a deletion of a document or type occurs
 type DeleteResponse struct {
 	Found bool
 	Id    string
 }
 
+// NewDeleteResponse is the initializing constructor for DeleteResponse
 func NewDeleteResponse(deleteResponse *elastic.DeleteResponse) *DeleteResponse {
 	resp := &DeleteResponse{
 		Found: deleteResponse.Found,

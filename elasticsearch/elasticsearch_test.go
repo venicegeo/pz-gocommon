@@ -134,16 +134,15 @@ func (suite *EsTester) SetUpIndex() IIndex {
 		Order:   piazza.PaginationOrderAscending,
 		SortBy:  "",
 	}
-	pollingFn := GetData(func() (bool, error){
+	pollingFn := GetData(func() (bool, error) {
 		getResult, err := esi.FilterByMatchAll(mapping, realFormat)
 		if err != nil {
 			fmt.Println("error")
 			return false, err
-		} else {
-			if getResult != nil && len(*getResult.GetHits()) == len(objs) {
-				fmt.Println("validation passed")
-				return true, nil
-			}
+		}
+		if getResult != nil && len(*getResult.GetHits()) == len(objs) {
+			fmt.Println("validation passed")
+			return true, nil
 		}
 		fmt.Println("try again")
 		return false, nil
@@ -1035,16 +1034,15 @@ func (suite *EsTester) Test10GetAll() {
 			Order:   piazza.PaginationOrderAscending,
 			SortBy:  "",
 		}
-		pollingFn := GetData(func() (bool, error){
+		pollingFn := GetData(func() (bool, error) {
 			getResult, err := esi.FilterByMatchAll("", realFormat)
 			if err != nil {
 				fmt.Println("error")
 				return false, err
-			} else {
-				if getResult != nil && len(*getResult.GetHits()) == 2 {
-					fmt.Println("validation passed")
-					return true, nil
-				}
+			}
+			if getResult != nil && len(*getResult.GetHits()) == 2 {
+				fmt.Println("validation passed")
+				return true, nil
 			}
 			fmt.Println("try again")
 			return false, nil
@@ -1158,16 +1156,15 @@ func (suite *EsTester) Test11Pagination2() {
 			Order:   piazza.PaginationOrderAscending,
 			SortBy:  "id3",
 		}
-		pollingFn := GetData(func() (bool, error){
+		pollingFn := GetData(func() (bool, error) {
 			getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
 			if err != nil {
 				fmt.Println("error")
 				return false, err
-			} else {
-				if getResult != nil && len(*getResult.GetHits()) == 4 {
-					fmt.Println("validation passed")
-					return true, nil
-				}
+			}
+			if getResult != nil && len(*getResult.GetHits()) == 4 {
+				fmt.Println("validation passed")
+				return true, nil
 			}
 			fmt.Println("try again")
 			return false, nil

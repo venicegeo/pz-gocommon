@@ -16,7 +16,6 @@ package elasticsearch
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -27,15 +26,15 @@ import (
 	"gopkg.in/olivere/elastic.v3"
 )
 
+// Index is the representation of the Elasticsearch index used by the
 type Index struct {
 	lib     *elastic.Client
 	version string
 	index   string
 }
 
+// NewIndex is the initializing constructor for the type Index
 func NewIndex(sys *piazza.SystemConfig, index string, settings string) (*Index, error) {
-	var _ IIndex = new(Index)
-
 	if strings.HasSuffix(index, "$") {
 		index = fmt.Sprintf("%s.%x", index[0:len(index)-1], time.Now().Nanosecond())
 	}
@@ -69,14 +68,17 @@ func NewIndex(sys *piazza.SystemConfig, index string, settings string) (*Index, 
 	return esi, nil
 }
 
+// GetVersion returns the Elasticsearch version
 func (esi *Index) GetVersion() string {
 	return esi.version
 }
 
+// IndexName returns the name of the index
 func (esi *Index) IndexName() string {
 	return esi.index
 }
 
+// IndexExists checks to see if the index exists
 func (esi *Index) IndexExists() bool {
 	ok, err := esi.lib.IndexExists(esi.index).Do()
 	if err != nil {
@@ -85,6 +87,7 @@ func (esi *Index) IndexExists() bool {
 	return ok
 }
 
+// TypeExists checks to see if the specified type exists within the index
 func (esi *Index) TypeExists(typ string) bool {
 	ok := esi.IndexExists()
 	if !ok {
@@ -98,6 +101,7 @@ func (esi *Index) TypeExists(typ string) bool {
 	return ok
 }
 
+// ItemExists checks to see if the specified item exists within the type and index specified
 func (esi *Index) ItemExists(typ string, id string) bool {
 	ok := esi.TypeExists(typ)
 	if !ok {
@@ -111,7 +115,7 @@ func (esi *Index) ItemExists(typ string, id string) bool {
 	return ok
 }
 
-// if index already exists, does nothing
+// Create the index; if index already exists, does nothing
 func (esi *Index) Create(settings string) error {
 
 	ok := esi.IndexExists()
@@ -133,7 +137,7 @@ func (esi *Index) Create(settings string) error {
 	return nil
 }
 
-// if index doesn't already exist, does nothing
+// Close the index; if index doesn't already exist, does nothing
 func (esi *Index) Close() error {
 
 	// TODO: the caller should enforce this instead
@@ -150,7 +154,7 @@ func (esi *Index) Close() error {
 	return nil
 }
 
-// if index doesn't already exist, does nothing
+// Delete the index; if index doesn't already exist, does nothing
 func (esi *Index) Delete() error {
 
 	ok := esi.IndexExists()
@@ -169,17 +173,18 @@ func (esi *Index) Delete() error {
 	return nil
 }
 
+// PostData send JSON data to the index.
 func (esi *Index) PostData(typ string, id string, obj interface{}) (*IndexResponse, error) {
-	/**/ ok := esi.IndexExists()
+	ok := esi.IndexExists()
 	if !ok {
 		log.Printf("Index %s does not exist", esi.index)
-		return nil, errors.New(fmt.Sprintf("Index %s does not exist", esi.index))
+		return nil, fmt.Errorf("Index %s does not exist", esi.index)
 	}
 	ok = esi.TypeExists(typ)
 	if !ok {
 		log.Printf("Index %s or type %s does not exist", esi.index, typ)
-		return nil, errors.New(fmt.Sprintf("Index %s or type %s does not exist", esi.index, typ))
-	} /**/
+		return nil, fmt.Errorf("Index %s or type %s does not exist", esi.index, typ)
+	}
 
 	log.Printf("typ: %#v", typ)
 	log.Printf("id: %#v", id)
@@ -191,14 +196,17 @@ func (esi *Index) PostData(typ string, id string, obj interface{}) (*IndexRespon
 		Id(id).
 		BodyJson(obj).
 		Do()
+
 	log.Printf("IndexResponse: %#v", indexResponse)
 	log.Printf("err: %#v", err)
+
 	if err != nil {
 		return nil, err
 	}
 	return NewIndexResponse(indexResponse), nil
 }
 
+// GetByID returns a document by ID within the specified index and type
 func (esi *Index) GetByID(typ string, id string) (*GetResult, error) {
 	// TODO: the caller should enforce this instead (here and elsewhere)
 	ok := esi.ItemExists(typ, id)
@@ -215,6 +223,7 @@ func (esi *Index) GetByID(typ string, id string) (*GetResult, error) {
 	return NewGetResult(getResult), nil
 }
 
+// DeleteByID deletes a document by ID within a specified index and type
 func (esi *Index) DeleteByID(typ string, id string) (*DeleteResponse, error) {
 	ok := esi.ItemExists(typ, id)
 	if !ok {
@@ -229,14 +238,12 @@ func (esi *Index) DeleteByID(typ string, id string) (*DeleteResponse, error) {
 	return NewDeleteResponse(deleteResponse), err
 }
 
+// FilterByMatchAll returns all documents of a specified type
 func (esi *Index) FilterByMatchAll(typ string, realFormat *piazza.JsonPagination) (*SearchResult, error) {
-	//q := elastic.NewBoolFilter()
-	//q.Must(elastic.NewTermFilter("a", 1))
-
-	/*ok := typ != "" && esi.TypeExists(typ)
-	if !ok {
-		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
-	}*/
+	// ok := typ != "" && esi.TypeExists(typ)
+	// if !ok {
+	// 	return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
+	// }
 
 	format := NewQueryFormat(realFormat)
 	q := elastic.NewMatchAllQuery()
@@ -260,8 +267,10 @@ func (esi *Index) FilterByMatchAll(typ string, realFormat *piazza.JsonPagination
 	return resp, nil
 }
 
+// FilterByTermQuery creates an Elasticsearch term query and performs the query over the specified type.
+// For more information on term queries, see
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-term-query.html
 func (esi *Index) FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error) {
-
 	ok := typ != "" && esi.TypeExists(typ)
 	if !ok {
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
@@ -281,8 +290,10 @@ func (esi *Index) FilterByTermQuery(typ string, name string, value interface{}) 
 	return NewSearchResult(searchResult), err
 }
 
+// FilterByMatchQuery creates an Elasticsearch match query and performs the query over the specified type.
+// For more information on match queries, see
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-query.html
 func (esi *Index) FilterByMatchQuery(typ string, name string, value interface{}) (*SearchResult, error) {
-
 	ok := typ != "" && esi.TypeExists(typ)
 	if !ok {
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
@@ -293,12 +304,12 @@ func (esi *Index) FilterByMatchQuery(typ string, name string, value interface{})
 		Index(esi.index).
 		Type(typ).
 		Query(matchQuery).
-		//Sort("id", true).
 		Do()
 
 	return NewSearchResult(searchResult), err
 }
 
+// SearchByJSON performs a search over the index via raw JSON
 func (esi *Index) SearchByJSON(typ string, jsn string) (*SearchResult, error) {
 
 	ok := typ != "" && esi.TypeExists(typ)
@@ -315,11 +326,16 @@ func (esi *Index) SearchByJSON(typ string, jsn string) (*SearchResult, error) {
 	searchResult, err := esi.lib.Search().
 		Index(esi.index).
 		Type(typ).
-		Source(obj).Do()
+		Source(obj).
+		Do()
+	if err != nil {
+		return nil, err
+	}
 
-	return NewSearchResult(searchResult), err
+	return NewSearchResult(searchResult), nil
 }
 
+// SetMapping sets the _mapping field for a new type
 func (esi *Index) SetMapping(typename string, jsn piazza.JsonString) error {
 
 	ok := esi.IndexExists()
@@ -341,6 +357,7 @@ func (esi *Index) SetMapping(typename string, jsn piazza.JsonString) error {
 	return nil
 }
 
+// GetTypes returns the list of types within the index
 func (esi *Index) GetTypes() ([]string, error) {
 
 	ok := esi.IndexExists()
@@ -365,6 +382,7 @@ func (esi *Index) GetTypes() ([]string, error) {
 	return result, nil
 }
 
+// GetMapping returns the _mapping of a type
 func (esi *Index) GetMapping(typ string) (interface{}, error) {
 
 	ok := esi.TypeExists(typ)
@@ -389,6 +407,9 @@ func (esi *Index) GetMapping(typ string) (interface{}, error) {
 	return props2["mappings"], nil
 }
 
+// AddPercolationQuery adds a percolation query to the index
+// For more detail on percolation, see
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/search-percolate.html
 func (esi *Index) AddPercolationQuery(id string, query piazza.JsonString) (*IndexResponse, error) {
 
 	ok := esi.IndexExists()
@@ -410,6 +431,7 @@ func (esi *Index) AddPercolationQuery(id string, query piazza.JsonString) (*Inde
 	return NewIndexResponse(indexResponse), nil
 }
 
+// DeletePercolationQuery removes a percolation query from the index
 func (esi *Index) DeletePercolationQuery(id string) (*DeleteResponse, error) {
 	typ := ".percolator"
 	ok := esi.ItemExists(typ, id)
@@ -429,6 +451,9 @@ func (esi *Index) DeletePercolationQuery(id string) (*DeleteResponse, error) {
 	return NewDeleteResponse(deleteResponse), nil
 }
 
+// AddPercolationDocument adds a document to the index that is to be percolated
+// For more detail on percolation, see
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/search-percolate.html
 func (esi *Index) AddPercolationDocument(typ string, doc interface{}) (*PercolateResponse, error) {
 	ok := esi.TypeExists(typ)
 	if !ok {
@@ -440,7 +465,6 @@ func (esi *Index) AddPercolationDocument(typ string, doc interface{}) (*Percolat
 		Index(esi.index).
 		Type(typ).
 		Doc(doc).
-		//Pretty(true).
 		Do()
 	if err != nil {
 		return nil, err
