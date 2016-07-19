@@ -19,8 +19,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/venicegeo/pz-gocommon/gocommon"
 	"time"
+
+	"github.com/venicegeo/pz-gocommon/gocommon"
 )
 
 // MappingElementTypeName is just an alias for a string.
@@ -54,6 +55,7 @@ const (
 	MappingElementTypeLong    MappingElementTypeName = "long"
 )
 
+// IIndex is an interface to Elasticsearch Index methods
 type IIndex interface {
 	GetVersion() string
 
@@ -79,6 +81,7 @@ type IIndex interface {
 	AddPercolationDocument(typ string, doc interface{}) (*PercolateResponse, error)
 }
 
+// NewIndexInterface constructs an IIndex
 func NewIndexInterface(sys *piazza.SystemConfig, index string, settings string, mocking bool) (IIndex, error) {
 	var esi IIndex
 	var err error
@@ -124,6 +127,7 @@ func ConstructMappingSchema(name string, items map[string]MappingElementTypeName
 	return piazza.JsonString(json), nil
 }
 
+// NewQueryFormat constructs a QueryFormat
 func NewQueryFormat(params *piazza.JsonPagination) *QueryFormat {
 
 	format := &QueryFormat{
