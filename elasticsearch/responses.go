@@ -26,18 +26,17 @@ type SearchResultHit struct {
 }
 
 type SearchResult struct {
-	numberMatched int64
-	totalHits     int64
-	hits          []*SearchResultHit
+	totalHits int64 // total number of hits overall
+	hits      []*SearchResultHit
 }
 
 func NewSearchResult(searchResult *elastic.SearchResult) *SearchResult {
-	count := len(searchResult.Hits.Hits)
+	numHits := len(searchResult.Hits.Hits)
+	totalHits := searchResult.Hits.TotalHits
 
 	resp := &SearchResult{
-		numberMatched: searchResult.Hits.TotalHits,
-		totalHits:     int64(count),
-		hits:          make([]*SearchResultHit, count),
+		totalHits: totalHits,
+		hits:      make([]*SearchResultHit, numHits),
 	}
 
 	for i, hit := range searchResult.Hits.Hits {
@@ -55,8 +54,8 @@ func (r *SearchResult) TotalHits() int64 {
 	return r.totalHits
 }
 
-func (r *SearchResult) NumberMatched() int64 {
-	return r.numberMatched
+func (r *SearchResult) NumHits() int {
+	return len(r.hits)
 }
 
 func (r *SearchResult) GetHits() *[]*SearchResultHit {
