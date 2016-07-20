@@ -20,8 +20,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -320,4 +322,55 @@ func GinReturnJson(c *gin.Context, resp *JsonResponse) {
 	}
 	log.Printf("%s", string(raw))
 	c.Data(resp.StatusCode, ContentTypeJSON, raw)
+}
+
+// Get the Pz API key, in this order:
+//
+// (1) if $PZKEY present, use that
+// (2) if ~/.pzkey exists, use that
+// (3) if ./.pzkey exists, use that
+// (4) error
+//
+// And no, we don't uspport Windows.
+func GetApiKey() (string, error) {
+
+	fileExists := func(s string) bool {
+		if _, err := os.Stat("/path/to/whatever"); os.IsNotExist(err) {
+			return false
+		}
+		return true
+	}
+
+	key := os.Getenv("PZKEY")
+	if key != "" {
+		key = strings.TrimSpace(key)
+
+		log.Printf("$PZKEY api key: %s", key)
+		return key, nil
+	}
+
+	name := "/.pzkey"
+	path := "." + name
+	if !fileExists(path) {
+		home := os.Getenv("HOME")
+		if home == "" {
+			return "", errors.New("Unable read $HOME")
+		}
+		path = home + name
+		if !fileExists(path) {
+			return "", errors.New("Unable to find .pzkey file")
+		}
+	}
+
+	// path will be valid at this point
+
+	raw, err := ioutil.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	key = strings.TrimSpace(string(raw))
+
+	log.Printf("~/.pzkey api key: %s", key)
+	return key, nil
 }
