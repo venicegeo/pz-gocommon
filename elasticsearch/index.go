@@ -267,6 +267,31 @@ func (esi *Index) FilterByMatchAll(typ string, realFormat *piazza.JsonPagination
 	return resp, nil
 }
 
+// GetAllElements returns all documents of a specified type
+func (esi *Index) GetAllElements(typ string) (*SearchResult, error) {
+	if typ == "" {
+		return nil, fmt.Errorf("Empty type!")
+	}
+
+	ok := esi.TypeExists(typ)
+	if !ok {
+		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
+	}
+
+	q := elastic.NewMatchAllQuery()
+	result, err := esi.lib.Search().
+		Index(esi.index).
+		Type(typ).
+		Query(q).
+		Do()
+	if err != nil {
+		return nil, err
+	}
+
+	resp := NewSearchResult(result)
+	return resp, nil
+}
+
 // FilterByTermQuery creates an Elasticsearch term query and performs the query over the specified type.
 // For more information on term queries, see
 // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-term-query.html
