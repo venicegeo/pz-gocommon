@@ -328,14 +328,13 @@ func GinReturnJson(c *gin.Context, resp *JsonResponse) {
 //
 // (1) if $PZKEY present, use that
 // (2) if ~/.pzkey exists, use that
-// (3) if ./.pzkey exists, use that
-// (4) error
+// (3) error
 //
 // And no, we don't uspport Windows.
 func GetApiKey() (string, error) {
 
 	fileExists := func(s string) bool {
-		if _, err := os.Stat("/path/to/whatever"); os.IsNotExist(err) {
+		if _, err := os.Stat(s); os.IsNotExist(err) {
 			return false
 		}
 		return true
@@ -344,25 +343,18 @@ func GetApiKey() (string, error) {
 	key := os.Getenv("PZKEY")
 	if key != "" {
 		key = strings.TrimSpace(key)
-
-		log.Printf("$PZKEY api key: %s", key)
 		return key, nil
 	}
 
-	name := "/.pzkey"
-	path := "." + name
-	if !fileExists(path) {
-		home := os.Getenv("HOME")
-		if home == "" {
-			return "", errors.New("Unable read $HOME")
-		}
-		path = home + name
-		if !fileExists(path) {
-			return "", errors.New("Unable to find .pzkey file")
-		}
+	home := os.Getenv("HOME")
+	if home == "" {
+		return "", errors.New("Unable read $HOME")
 	}
 
-	// path will be valid at this point
+	path := home + "/.pzkey"
+	if !fileExists(path) {
+		return "", errors.New("Unable to find env var $PZKEY or file $HOME/.pzkey")
+	}
 
 	raw, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -371,6 +363,5 @@ func GetApiKey() (string, error) {
 
 	key = strings.TrimSpace(string(raw))
 
-	log.Printf("~/.pzkey api key: %s", key)
 	return key, nil
 }

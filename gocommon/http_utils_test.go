@@ -15,8 +15,11 @@
 package piazza
 
 import (
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -72,4 +75,52 @@ func TestQueryParams(t *testing.T) {
 	assert.NoError(err)
 	assert.NotNil(cc)
 	assert.EqualValues(7, *cc)
+}
+
+func fileExists(s string) bool {
+	if _, err := os.Stat(s); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
+func TestApiKey(t *testing.T) {
+	assert := assert.New(t)
+
+	var err error
+	var key string
+
+	// will it read from $PZKEY?
+	{
+		err = os.Setenv("PZKEY", "yow")
+		assert.NoError(err)
+
+		key, err = GetApiKey()
+		assert.NoError(err)
+		assert.EqualValues(key, "yow")
+
+		os.Unsetenv("PZKEY")
+	}
+
+	path := os.Getenv("HOME")
+	assert.True(path != "")
+
+	path += "/.pzkey"
+
+	// will it read $HOME/.pzkey if $PZKEY not set?
+	// (note the test can't control whether $HOME/.pzkey actually exists or not)
+
+	if fileExists(path) {
+		key, err = GetApiKey()
+		assert.NoError(err)
+
+		raw, err := ioutil.ReadFile(path)
+		actual := strings.TrimSpace(string(raw))
+		assert.NoError(err)
+
+		assert.EqualValues(actual, key)
+	} else {
+		key, err = GetApiKey()
+		assert.Error(err)
+	}
 }
