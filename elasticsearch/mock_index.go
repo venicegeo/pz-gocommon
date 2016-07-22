@@ -213,6 +213,10 @@ func (esi *MockIndex) FilterByMatchAll(typ string, realFormat *piazza.JsonPagina
 	return resp, nil
 }
 
+func (esi *MockIndex) GetAllElements(typ string) (*SearchResult, error) {
+	return nil, errors.New("GetAllElements not supported under mocking")
+}
+
 func (esi *MockIndex) FilterByMatchQuery(typ string, name string, value interface{}) (*SearchResult, error) {
 
 	/*termQuery := NewTermQuery(name, value)

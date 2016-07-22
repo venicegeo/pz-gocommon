@@ -70,6 +70,7 @@ type IIndex interface {
 	GetByID(typ string, id string) (*GetResult, error)
 	DeleteByID(typ string, id string) (*DeleteResponse, error)
 	FilterByMatchAll(typ string, format *piazza.JsonPagination) (*SearchResult, error)
+	GetAllElements(typ string) (*SearchResult, error)
 	FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error)
 	FilterByMatchQuery(typ string, name string, value interface{}) (*SearchResult, error)
 	SearchByJSON(typ string, jsn string) (*SearchResult, error)
@@ -109,6 +110,7 @@ func ConstructMappingSchema(name string, items map[string]MappingElementTypeName
 
 	const template string = `{
 		"%s":{
+			"dynamic": false,
 			"properties":{
 				%s
 			}
