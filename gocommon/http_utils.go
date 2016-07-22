@@ -15,7 +15,6 @@
 package piazza
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -67,129 +66,31 @@ func HTTPDelete(url string) (*http.Response, error) {
 }
 
 //----------------------------------------------------------
-
-func responseToObject(resp *http.Response, output interface{}) error {
-	if resp.ContentLength < 0 {
-		return errors.New(fmt.Sprintf("Content-Length is %d", resp.ContentLength))
-	}
-
-	// no content is perfectly valid, not an error
-	if resp.ContentLength == 0 {
-		return nil
-	}
-
-	var err error
-
-	raw := make([]byte, resp.ContentLength)
-	_, err = resp.Body.Read(raw)
-	if err != nil && err != io.EOF {
-		return err
-	}
-
-	err = json.Unmarshal(raw, output)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func processInput(input interface{}) (io.Reader, error) {
-	byts, err := json.Marshal(input)
-	if err != nil {
-		return nil, err
-	}
-
-	reader := bytes.NewReader(byts)
-	return reader, nil
-}
-
-func processOutput(resp *http.Response, err error, output interface{}) (int, error) {
-	if err != nil {
-		return 0, err
-	}
-
-	if output != nil {
-		// note we decode the result even if not a 2xx status
-		err = responseToObject(resp, output)
-		if err != nil {
-			return 0, err
-		}
-	}
-
-	return resp.StatusCode, nil
-}
-
+/*
 // expects endpoint to return JSON
 func HttpJsonGetObject(url string, output interface{}) (int, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return 0, err
-	}
-
-	code, err := processOutput(resp, err, output)
-	if err != nil {
-		return 0, err
-	}
-
-	return code, nil
+	h := &Http{}
+	return h.Get(url, output)
 }
 
 // expects endpoint to take in and return JSON
 func HttpJsonPostObject(url string, input interface{}, output interface{}) (int, error) {
-	reader, err := processInput(input)
-	if err != nil {
-		return 0, err
-	}
-
-	resp, err := http.Post(url, ContentTypeJSON, reader)
-	if err != nil {
-		return 0, err
-	}
-
-	code, err := processOutput(resp, err, output)
-	if err != nil {
-		return 0, err
-	}
-
-	return code, nil
+	h := &Http{}
+	return h.Post(url, input, output)
 }
 
 // expects endpoint to take in and return JSON
 func HttpJsonPutObject(url string, input interface{}, output interface{}) (int, error) {
-	reader, err := processInput(input)
-	if err != nil {
-		return 0, err
-	}
-
-	resp, err := HTTPPut(url, ContentTypeJSON, reader)
-	if err != nil {
-		return 0, err
-	}
-
-	code, err := processOutput(resp, err, output)
-	if err != nil {
-		return 0, err
-	}
-
-	return code, nil
+	h := &Http{}
+	return h.Put(url, input, output)
 }
 
 // expects endpoint to return JSON (or empty)
 func HttpJsonDeleteObject(url string) (int, error) {
-	resp, err := HTTPDelete(url)
-	if err != nil {
-		return 0, err
-	}
-
-	code, err := processOutput(resp, err, nil)
-	if err != nil {
-		return 0, err
-	}
-
-	return code, nil
+	h := &Http{}
+	return h.Delete(url)
 }
-
+*/
 //----------------------------------------------------------
 
 // We don't want to pass http.Request objects into the Services classes

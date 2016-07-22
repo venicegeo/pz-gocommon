@@ -185,7 +185,7 @@ func Test07Server(t *testing.T) {
 	server := &ThingServer{}
 	server.Init(service)
 
-	url := ""
+	h := &Http{}
 
 	{
 		err = genericServer.Configure(server.routes)
@@ -197,7 +197,7 @@ func Test07Server(t *testing.T) {
 			assert.FailNow("server failed to start: " + err.Error())
 		}
 
-		url = "http://" + sys.BindTo
+		h.BaseUrl = "http://" + sys.BindTo
 	}
 
 	{
@@ -206,17 +206,17 @@ func Test07Server(t *testing.T) {
 		var jresp *JsonResponse
 
 		// GET /
-		jresp = HttpGetJson(url + "/")
+		jresp = h.PzGet("/")
 		assert.Equal(200, jresp.StatusCode)
 		assert.EqualValues("string", jresp.Type)
 
 		// GET bad
-		jresp = HttpGetJson(url + "/mpg")
+		jresp = h.PzGet("/mpg")
 		assert.Equal(404, jresp.StatusCode)
 
 		// POST 1
 		input = &Thing{Value: "17"}
-		jresp = HttpPostJson(url, input)
+		jresp = h.PzPost("/", input)
 		assert.Equal(201, jresp.StatusCode)
 		assert.EqualValues("thing", jresp.Type)
 
@@ -226,12 +226,12 @@ func Test07Server(t *testing.T) {
 
 		// POST bad
 		input = &Thing{Value: "NULL"}
-		jresp = HttpPostJson(url, input)
+		jresp = h.PzPost("/", input)
 		assert.Equal(400, jresp.StatusCode)
 
 		// POST 2
 		input = &Thing{Value: "18"}
-		jresp = HttpPostJson(url, input)
+		jresp = h.PzPost("/", input)
 		assert.Equal(201, jresp.StatusCode)
 		assert.EqualValues("thing", jresp.Type)
 
@@ -240,7 +240,7 @@ func Test07Server(t *testing.T) {
 		assert.EqualValues("18", output.Value)
 
 		// GET 2
-		jresp = HttpGetJson(url + "/2")
+		jresp = h.PzGet("/2")
 		assert.Equal(200, jresp.StatusCode)
 		assert.EqualValues("thing", jresp.Type)
 
@@ -251,7 +251,7 @@ func Test07Server(t *testing.T) {
 
 		// PUT 1
 		input = &Thing{Value: "71"}
-		jresp = HttpPutJson(url+"/1", input)
+		jresp = h.PzPut("/1", input)
 		assert.Equal(200, jresp.StatusCode)
 		assert.EqualValues("thing", jresp.Type)
 
@@ -260,7 +260,7 @@ func Test07Server(t *testing.T) {
 		assert.EqualValues("71", output.Value)
 
 		// GET 1
-		jresp = HttpGetJson(url + "/1")
+		jresp = h.PzGet("/1")
 		assert.Equal(200, jresp.StatusCode)
 		assert.EqualValues("thing", jresp.Type)
 
@@ -270,22 +270,22 @@ func Test07Server(t *testing.T) {
 		assert.EqualValues("71", output.Value)
 
 		// DELETE 3
-		jresp = HttpDeleteJson(url + "/3")
+		jresp = h.PzDelete("/3")
 		assert.Equal(404, jresp.StatusCode)
 
 		// DELETE 1
-		jresp = HttpDeleteJson(url + "/1")
+		jresp = h.PzDelete("/1")
 		assert.Equal(200, jresp.StatusCode)
 
 		// GET 1
-		jresp = HttpGetJson(url + "/1")
+		jresp = h.PzGet("/1")
 		assert.Equal(404, jresp.StatusCode)
 	}
 	{
 		err = genericServer.Stop()
 		//assert.NoError(err)
 
-		_, err := http.Get(url)
+		_, err := http.Get(h.BaseUrl)
 		assert.Error(err)
 	}
 }

@@ -121,39 +121,24 @@ func (resp *JsonResponse) ExtractData(output interface{}) error {
 }
 
 //----------------------------------------------------------
-
+/*
 func HttpGetJson(url string) *JsonResponse {
-	output := &JsonResponse{}
-	_, err := HttpJsonGetObject(url, output)
-
-	if err != nil {
-		return newJsonResponse500(err)
-	}
-	return output
+	h := Http{}
+	return h.PzGet(url)
 }
 
 func HttpPostJson(url string, input interface{}) *JsonResponse {
-	output := &JsonResponse{}
-	_, err := HttpJsonPostObject(url, input, output)
-	if err != nil {
-		return newJsonResponse500(err)
-	}
-	return output
+	h := Http{}
+	return h.PzPost(url, input)
 }
 
 func HttpPutJson(url string, input interface{}) *JsonResponse {
-	output := &JsonResponse{}
-	_, err := HttpJsonPutObject(url, input, output)
-	if err != nil {
-		return newJsonResponse500(err)
-	}
-	return output
+	h := Http{}
+	return h.PzPut(url, input)
 }
 
 func HttpDeleteJson(url string) *JsonResponse {
-	code, err := HttpJsonDeleteObject(url)
-	if err != nil {
-		return newJsonResponse500(err)
-	}
-	return &JsonResponse{StatusCode: code}
+	h := Http{}
+	return h.PzDelete(url)
 }
+*/
