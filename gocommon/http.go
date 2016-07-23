@@ -27,7 +27,7 @@ import (
 
 type Http struct {
 	Preflight  func(verb string, url string, json string)
-	Postflight func(statusCode int, response interface{})
+	Postflight func(statusCode int, json string)
 	ApiKey     string
 	BaseUrl    string
 }
@@ -41,7 +41,7 @@ func (h *Http) convertResponseBodyToObject(resp *http.Response, output interface
 	}
 
 	if resp.ContentLength < 0 {
-		return errors.New(fmt.Sprintf("Content-Length is %d", resp.ContentLength))
+		return errors.New(fmt.Sprintf("ContentLength is %d", resp.ContentLength))
 	}
 
 	// no content is perfectly valid, not an error
@@ -52,11 +52,11 @@ func (h *Http) convertResponseBodyToObject(resp *http.Response, output interface
 	var err error
 
 	raw := make([]byte, resp.ContentLength)
-	_, err = resp.Body.Read(raw)
+	_, err = io.ReadFull(resp.Body, raw)
+	defer resp.Body.Close()
 	if err != nil && err != io.EOF {
 		return err
 	}
-
 	err = json.Unmarshal(raw, output)
 	if err != nil {
 		return err
@@ -108,19 +108,15 @@ func (h *Http) doPostflight(statusCode int, obj interface{}) {
 func (h *Http) doVerb(verb string, endpoint string, input interface{}, output interface{}) (int, error) {
 	url := h.BaseUrl + endpoint
 
-	h.doPreflight(verb, url, input)
-
-	//log.Printf("%s %s %s", verb, verb, verb)
-
 	reader, err := h.convertObjectToReader(input)
 	if err != nil {
 		return 0, err
 	}
 
+	h.doPreflight(verb, url, input)
+
 	var resp *http.Response
 	{
-		client := &http.Client{}
-
 		req, err := http.NewRequest(verb, url, reader)
 		if err != nil {
 			return 0, err
@@ -130,6 +126,7 @@ func (h *Http) doVerb(verb string, endpoint string, input interface{}, output in
 			req.SetBasicAuth(h.ApiKey, "")
 		}
 
+		client := &http.Client{}
 		resp, err = client.Do(req)
 		if err != nil {
 			return 0, err
@@ -138,6 +135,7 @@ func (h *Http) doVerb(verb string, endpoint string, input interface{}, output in
 
 	err = h.convertResponseBodyToObject(resp, output)
 	if err != nil {
+		h.doPostflight(resp.StatusCode, "failed")
 		return 0, err
 	}
 
