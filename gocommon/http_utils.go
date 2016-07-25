@@ -223,6 +223,10 @@ func GinReturnJson(c *gin.Context, resp *JsonResponse) {
 	}
 	log.Printf("%d %s", len(raw), string(raw))
 	c.Data(resp.StatusCode, ContentTypeJSON, raw)
+
+	// If things get worse, try this:
+	//    c.Writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+	//    c.Writer.Header().Set("Content-Length", str(len(raw))
 }
 
 // Get the Pz API key, in this order:
