@@ -15,11 +15,11 @@
 package piazza
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -95,7 +95,7 @@ func TestApiKey(t *testing.T) {
 		err = os.Setenv("PZKEY", "yow")
 		assert.NoError(err)
 
-		key, err = GetApiKey()
+		key, err = GetApiKey("int")
 		assert.NoError(err)
 		assert.EqualValues(key, "yow")
 
@@ -111,16 +111,25 @@ func TestApiKey(t *testing.T) {
 	// (note the test can't control whether $HOME/.pzkey actually exists or not)
 
 	if fileExists(path) {
-		key, err = GetApiKey()
+		key, err = GetApiKey("int")
 		assert.NoError(err)
 
 		raw, err := ioutil.ReadFile(path)
-		actual := strings.TrimSpace(string(raw))
 		assert.NoError(err)
+		data := map[string]string{}
+		err = json.Unmarshal(raw, &data)
+		assert.NoError(err)
+		actual := data["int"]
 
 		assert.EqualValues(actual, key)
 	} else {
-		key, err = GetApiKey()
+		key, err = GetApiKey("int")
+		assert.Error(err)
+	}
+
+	// will it error if the space doesn't exist?
+	if fileExists(path) {
+		key, err = GetApiKey("lalala")
 		assert.Error(err)
 	}
 }

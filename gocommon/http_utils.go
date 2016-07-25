@@ -232,7 +232,7 @@ func GinReturnJson(c *gin.Context, resp *JsonResponse) {
 // (3) error
 //
 // And no, we don't uspport Windows.
-func GetApiKey() (string, error) {
+func GetApiKey(space string) (string, error) {
 
 	fileExists := func(s string) bool {
 		if _, err := os.Stat(s); os.IsNotExist(err) {
@@ -262,7 +262,16 @@ func GetApiKey() (string, error) {
 		return "", err
 	}
 
-	key = strings.TrimSpace(string(raw))
+	data := map[string]string{}
+	err = json.Unmarshal(raw, &data)
+	if err != nil {
+		return "", err
+	}
+
+	key, ok := data[space]
+	if !ok {
+		return "", errors.New("No API key for deployment space " + space)
+	}
 
 	return key, nil
 }
