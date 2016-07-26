@@ -17,15 +17,12 @@ package piazza
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -63,155 +60,6 @@ func HTTPDelete(url string) (*http.Response, error) {
 
 	client := &http.Client{}
 	return client.Do(req)
-}
-
-//----------------------------------------------------------
-/*
-// expects endpoint to return JSON
-func HttpJsonGetObject(url string, output interface{}) (int, error) {
-	h := &Http{}
-	return h.Get(url, output)
-}
-
-// expects endpoint to take in and return JSON
-func HttpJsonPostObject(url string, input interface{}, output interface{}) (int, error) {
-	h := &Http{}
-	return h.Post(url, input, output)
-}
-
-// expects endpoint to take in and return JSON
-func HttpJsonPutObject(url string, input interface{}, output interface{}) (int, error) {
-	h := &Http{}
-	return h.Put(url, input, output)
-}
-
-// expects endpoint to return JSON (or empty)
-func HttpJsonDeleteObject(url string) (int, error) {
-	h := &Http{}
-	return h.Delete(url)
-}
-*/
-//----------------------------------------------------------
-
-// We don't want to pass http.Request objects into the Services classes
-// (and certainly not a gin.Context!), and we need this kind of information
-// a lot, so we'll keep a special data structure which actually understands
-// the semantics as well as the syntax.
-
-type HttpQueryParams struct {
-	raw map[string]string
-}
-
-func NewQueryParams(request *http.Request) *HttpQueryParams {
-	params := HttpQueryParams{raw: make(map[string]string)}
-
-	for k, v := range request.URL.Query() {
-		params.raw[k] = v[0]
-	}
-	return &params
-}
-
-func (params *HttpQueryParams) AsInt(key string, defalt *int) (*int, error) {
-	if key == "" {
-		return defalt, nil
-	}
-
-	value, ok := params.raw[key]
-	if !ok || value == "" {
-		return defalt, nil
-	}
-
-	i, err := strconv.Atoi(value)
-	if err != nil {
-		return nil, err
-	}
-
-	return &i, nil
-}
-
-func (params *HttpQueryParams) AsString(key string, defalt *string) (*string, error) {
-	if key == "" {
-		return defalt, nil
-	}
-
-	value, ok := params.raw[key]
-	if !ok || value == "" {
-		return defalt, nil
-	}
-
-	s := value
-	return &s, nil
-}
-
-func (params *HttpQueryParams) AsOrder(key string, defalt *PaginationOrder) (*PaginationOrder, error) {
-	if key == "" {
-		return defalt, nil
-	}
-
-	value, ok := params.raw[key]
-	if !ok || value == "" {
-		return defalt, nil
-	}
-
-	var order PaginationOrder
-	switch strings.ToLower(value) {
-	case "desc":
-		order = PaginationOrderDescending
-	case "asc":
-		order = PaginationOrderDescending
-	default:
-		s := fmt.Sprintf("query argument for '?%s' must be \"asc\" or \"desc\"", value)
-		err := errors.New(s)
-		return nil, err
-	}
-
-	return &order, nil
-}
-
-func (params *HttpQueryParams) AsTime(key string, defalt *time.Time) (*time.Time, error) {
-	if key == "" {
-		return defalt, nil
-	}
-
-	value, ok := params.raw[key]
-	if !ok || value == "" {
-		return defalt, nil
-	}
-
-	t, err := time.Parse(time.RFC3339, value)
-	if err != nil {
-		return nil, err
-	}
-
-	return &t, nil
-}
-
-func (params *HttpQueryParams) GetAfter(defalt *time.Time) (*time.Time, error) {
-	return params.AsTime("after", defalt)
-}
-
-func (params *HttpQueryParams) GetBefore(defalt *time.Time) (*time.Time, error) {
-	return params.AsTime("before", defalt)
-}
-
-func (params *HttpQueryParams) GetCount(defalt *int) (*int, error) {
-	return params.AsInt("count", defalt)
-}
-
-func (params *HttpQueryParams) GetOrder(defalt *PaginationOrder) (*PaginationOrder, error) {
-	return params.AsOrder("order", defalt)
-}
-
-func (params *HttpQueryParams) GetPage(defalt *int) (*int, error) {
-	return params.AsInt("page", defalt)
-}
-
-func (params *HttpQueryParams) GetPerPage(defalt *int) (*int, error) {
-	return params.AsInt("perPage", defalt)
-}
-
-func (params *HttpQueryParams) GetSortBy(defalt *string) (*string, error) {
-	return params.AsString("sortBy", defalt)
 }
 
 //---------------------------------------------------------------------

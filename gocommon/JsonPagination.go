@@ -14,6 +14,8 @@
 
 package piazza
 
+import "fmt"
+
 //----------------------------------------------------------
 
 // Elasticsearch, at least, does it this way:
@@ -65,7 +67,7 @@ func NewJsonPagination(params *HttpQueryParams, defalt *JsonPagination) (*JsonPa
 	sortBy, err := params.GetSortBy(&defalt.SortBy)
 	if err != nil {
 		return nil, err
-	}
+	} 
 	if sortBy != nil {
 		jp.SortBy = *sortBy
 	}
@@ -79,4 +81,10 @@ func NewJsonPagination(params *HttpQueryParams, defalt *JsonPagination) (*JsonPa
 	}
 
 	return jp, nil
+}
+
+func (format *JsonPagination) ToParamString() string {
+	s := fmt.Sprintf("perPage=%d&page=%d&key=%s&order=%s",
+		format.PerPage, format.Page, format.SortBy, format.Order)
+	return s
 }
