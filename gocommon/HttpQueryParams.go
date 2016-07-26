@@ -123,8 +123,6 @@ func (params *HttpQueryParams) GetAsTime(key string, defalt *time.Time) (*time.T
 	if !ok || value == "" {
 		return defalt, nil
 	}
-	//log.Printf("GETASTIME: %s", value)
-	//log.Printf("         : %s", key)
 
 	t, err := time.Parse(time.RFC3339, value)
 	if err != nil {
@@ -173,7 +171,7 @@ func (params *HttpQueryParams) ToParamString() string {
 		if s != "" {
 			s += "&"
 		}
-		s += fmt.Sprintf("%s=\"%s\"", key, value)
+		s += fmt.Sprintf("%s=%s", key, value)
 	}
 	return s
 }

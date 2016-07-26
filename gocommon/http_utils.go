@@ -69,7 +69,6 @@ func GinReturnJson(c *gin.Context, resp *JsonResponse) {
 	if err != nil {
 		log.Fatalf("Internal Error: marshalling of %#v", resp)
 	}
-	log.Printf("%d %s", len(raw), string(raw))
 	c.Data(resp.StatusCode, ContentTypeJSON, raw)
 
 	// If things get worse, try this:
