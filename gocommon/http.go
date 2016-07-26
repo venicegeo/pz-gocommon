@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 )
 
@@ -128,6 +129,7 @@ func (h *Http) doVerb(verb string, endpoint string, input interface{}, output in
 
 		client := &http.Client{}
 		resp, err = client.Do(req)
+		log.Printf("AAA / %s: %#v || %#v || %#v", verb, req, resp, err)
 		if err != nil {
 			return 0, err
 		}
@@ -179,6 +181,7 @@ func (h *Http) Delete(endpoint string) (int, error) {
 func (h *Http) PzGet(endpoint string) *JsonResponse {
 	output := &JsonResponse{}
 
+	log.Printf("AAA")
 	code, err := h.Get(endpoint, output)
 	if err != nil {
 		return newJsonResponse500(err)
