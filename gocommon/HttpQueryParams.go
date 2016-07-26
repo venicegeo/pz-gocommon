@@ -104,7 +104,7 @@ func (params *HttpQueryParams) GetAsOrder(key string, defalt *PaginationOrder) (
 	case "desc":
 		order = PaginationOrderDescending
 	case "asc":
-		order = PaginationOrderDescending
+		order = PaginationOrderAscending
 	default:
 		s := fmt.Sprintf("query argument for '?%s' must be \"asc\" or \"desc\"", value)
 		err := errors.New(s)
