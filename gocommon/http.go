@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -48,28 +49,8 @@ func (h *Http) convertResponseBodyToObject(resp *http.Response, output interface
 		//////	return nil
 	}
 
-	var err error
-
-	readAll := func(body io.ReadCloser) ([]byte, error) {
-		raw := make([]byte, 0)
-		tmp := make([]byte, 1)
-		for {
-			n, err := body.Read(tmp)
-			if err != nil && err != io.EOF {
-				return nil, err
-			}
-			if n == 1 {
-				raw = append(raw, tmp[0])
-			}
-			if err == io.EOF {
-				break
-			}
-		}
-		return raw, nil
-	}
-
 	defer resp.Body.Close()
-	raw, err := readAll(resp.Body)
+	raw, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
