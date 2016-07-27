@@ -17,7 +17,6 @@ package elasticsearch
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -174,18 +173,12 @@ func (esi *Index) Delete() error {
 func (esi *Index) PostData(typ string, id string, obj interface{}) (*IndexResponse, error) {
 	ok := esi.IndexExists()
 	if !ok {
-		log.Printf("Index %s does not exist", esi.index)
 		return nil, fmt.Errorf("Index %s does not exist", esi.index)
 	}
 	ok = esi.TypeExists(typ)
 	if !ok {
-		log.Printf("Index %s or type %s does not exist", esi.index, typ)
 		return nil, fmt.Errorf("Index %s or type %s does not exist", esi.index, typ)
 	}
-
-	log.Printf("typ: %#v", typ)
-	log.Printf("id: %#v", id)
-	log.Printf("obj: %#v", obj)
 
 	indexResponse, err := esi.lib.Index().
 		Index(esi.index).
@@ -193,9 +186,6 @@ func (esi *Index) PostData(typ string, id string, obj interface{}) (*IndexRespon
 		Id(id).
 		BodyJson(obj).
 		Do()
-
-	log.Printf("IndexResponse: %#v", indexResponse)
-	log.Printf("err: %#v", err)
 
 	if err != nil {
 		return nil, err
@@ -213,7 +203,6 @@ func (esi *Index) GetByID(typ string, id string) (*GetResult, error) {
 
 	getResult, err := esi.lib.Get().Index(esi.index).Type(typ).Id(id).Do()
 	if err != nil {
-		log.Printf("Index.GetByID failed: %s", err)
 		return nil, err
 	}
 
@@ -250,8 +239,6 @@ func (esi *Index) FilterByMatchAll(typ string, realFormat *piazza.JsonPagination
 	f = f.From(format.From)
 	f = f.Size(format.Size)
 	f = f.Sort(format.Key, format.Order)
-
-	log.Printf("FilterByMatchAll: %#v", format)
 
 	searchResult, err := f.Do()
 	if err != nil {

@@ -137,21 +137,19 @@ func (suite *EsTester) SetUpIndex() IIndex {
 	pollingFn := GetData(func() (bool, error) {
 		getResult, err := esi.FilterByMatchAll(mapping, realFormat)
 		if err != nil {
-			fmt.Println("error")
 			return false, err
 		}
 		if getResult != nil && len(*getResult.GetHits()) == len(objs) {
-			fmt.Println("validation passed")
 			return true, nil
 		}
-		fmt.Println("try again")
 		return false, nil
 	})
 
 	pollOk, pollErr := PollFunction(pollingFn)
-	fmt.Print("SETUP INDEX\n", pollOk, "\n")
 	if pollErr != nil {
-		fmt.Println("Error: ", pollErr)
+		_ = pollOk
+		// TODO: return err object
+		log.Printf("Error: %#v", pollErr)
 	}
 
 	return esi
@@ -1037,19 +1035,15 @@ func (suite *EsTester) Test10GetAll() {
 		pollingFn := GetData(func() (bool, error) {
 			getResult, err := esi.FilterByMatchAll("", realFormat)
 			if err != nil {
-				fmt.Println("error")
 				return false, err
 			}
 			if getResult != nil && len(*getResult.GetHits()) == 2 {
-				fmt.Println("validation passed")
 				return true, nil
 			}
-			fmt.Println("try again")
 			return false, nil
 		})
 
-		ok, err := PollFunction(pollingFn)
-		fmt.Print("******try actual filter******\n", ok, "\n")
+		_, err := PollFunction(pollingFn)
 		getResult, err := esi.FilterByMatchAll("", realFormat)
 		assert.NoError(err)
 		assert.NotNil(getResult)
@@ -1099,7 +1093,7 @@ func (suite *EsTester) Test11Pagination1() {
 
 	assert.Equal(10*32, q.From)
 	assert.Equal(10, q.Size)
-	assert.Equal(piazza.SortOrderDescending, q.Order)
+	assert.False(q.Order)
 	assert.EqualValues("id", q.Key)
 }
 
@@ -1159,19 +1153,15 @@ func (suite *EsTester) Test11Pagination2() {
 		pollingFn := GetData(func() (bool, error) {
 			getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
 			if err != nil {
-				fmt.Println("error")
 				return false, err
 			}
 			if getResult != nil && len(*getResult.GetHits()) == 4 {
-				fmt.Println("validation passed")
 				return true, nil
 			}
-			fmt.Println("try again")
 			return false, nil
 		})
 
-		ok, err := PollFunction(pollingFn)
-		fmt.Print("******try actual filter******\n", ok, "\n")
+		_, err := PollFunction(pollingFn)
 		getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
 		assert.NoError(err)
 		assert.Len(*getResult.GetHits(), 4)
