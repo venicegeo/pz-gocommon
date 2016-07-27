@@ -23,17 +23,20 @@ import "fmt"
 //  - sort the result set
 //  - select out the page you want
 
-type PaginationOrder string
+// Constants indicating ascending (1,2,3) or descending (3,2,1) order.
+type SortOrder string
 
-const PaginationOrderAscending PaginationOrder = "asc" // (the default)
-const PaginationOrderDescending PaginationOrder = "desc"
+const (
+	SortOrderAscending  SortOrder = "asc"
+	SortOrderDescending SortOrder = "desc"
+)
 
 type JsonPagination struct {
-	Count   int             `json:"count"` // only used when writing output
-	Page    int             `json:"page"`
-	PerPage int             `json:"perPage"`
-	SortBy  string          `json:"sortBy"`
-	Order   PaginationOrder `json:"order"`
+	Count   int       `json:"count"` // only used when writing output
+	Page    int       `json:"page"`
+	PerPage int       `json:"perPage"`
+	SortBy  string    `json:"sortBy"`
+	Order   SortOrder `json:"order"`
 }
 
 func (p *JsonPagination) StartIndex() int {
@@ -67,12 +70,12 @@ func NewJsonPagination(params *HttpQueryParams, defalt *JsonPagination) (*JsonPa
 	sortBy, err := params.GetSortBy(&defalt.SortBy)
 	if err != nil {
 		return nil, err
-	} 
+	}
 	if sortBy != nil {
 		jp.SortBy = *sortBy
 	}
 
-	order, err := params.GetOrder(&defalt.Order)
+	order, err := params.GetSortOrder(&defalt.Order)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +87,7 @@ func NewJsonPagination(params *HttpQueryParams, defalt *JsonPagination) (*JsonPa
 }
 
 func (format *JsonPagination) ToParamString() string {
-	s := fmt.Sprintf("perPage=%d&page=%d&key=%s&order=%s",
+	s := fmt.Sprintf("perPage=%d&page=%d&sortBy=%s&order=%s",
 		format.PerPage, format.Page, format.SortBy, format.Order)
 	return s
 }

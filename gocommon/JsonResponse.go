@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"reflect"
 )
@@ -111,34 +112,14 @@ func (resp *JsonResponse) ExtractData(output interface{}) error {
 	if err != nil {
 		return nil
 	}
-
+	log.Printf("ExtractData/1: output=%#v", output)
+	log.Printf("ExtractData/2: len(raw)=%d", len(raw))
 	err = json.Unmarshal(raw, output)
+	log.Printf("ExtractData/3: err=%#v", err)
+	log.Printf("ExtractData/4: output=%#v", output)
 	if err != nil {
 		return nil
 	}
 
 	return nil
 }
-
-//----------------------------------------------------------
-/*
-func HttpGetJson(url string) *JsonResponse {
-	h := Http{}
-	return h.PzGet(url)
-}
-
-func HttpPostJson(url string, input interface{}) *JsonResponse {
-	h := Http{}
-	return h.PzPost(url, input)
-}
-
-func HttpPutJson(url string, input interface{}) *JsonResponse {
-	h := Http{}
-	return h.PzPut(url, input)
-}
-
-func HttpDeleteJson(url string) *JsonResponse {
-	h := Http{}
-	return h.PzDelete(url)
-}
-*/

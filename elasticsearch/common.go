@@ -27,18 +27,10 @@ import (
 // MappingElementTypeName is just an alias for a string.
 type MappingElementTypeName string
 
-// Constants indicating ascending (1,2,3) or descending (3,2,1) order.
-type SortOrder bool
-
-const (
-	SortAscending  SortOrder = false
-	SortDescending SortOrder = true
-)
-
 type QueryFormat struct {
 	Size  int
 	From  int
-	Order SortOrder
+	Order piazza.SortOrder
 	Key   string
 }
 
@@ -136,7 +128,7 @@ func NewQueryFormat(params *piazza.JsonPagination) *QueryFormat {
 		Size:  params.PerPage,
 		From:  params.Page * params.PerPage,
 		Key:   params.SortBy,
-		Order: (params.Order == piazza.PaginationOrderDescending),
+		Order: params.Order,
 	}
 
 	return format

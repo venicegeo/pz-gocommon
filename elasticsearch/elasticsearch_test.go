@@ -131,7 +131,7 @@ func (suite *EsTester) SetUpIndex() IIndex {
 	realFormat := &piazza.JsonPagination{
 		PerPage: 10,
 		Page:    0,
-		Order:   piazza.PaginationOrderAscending,
+		Order:   piazza.SortOrderAscending,
 		SortBy:  "",
 	}
 	pollingFn := GetData(func() (bool, error) {
@@ -295,7 +295,7 @@ func (suite *EsTester) Test03Operations() {
 			realFormat := &piazza.JsonPagination{
 				Page:    0,
 				PerPage: 10,
-				Order:   piazza.PaginationOrderAscending,
+				Order:   piazza.SortOrderAscending,
 				SortBy:  "",
 			}
 			searchResult, err := esi.FilterByMatchAll(mapping, realFormat)
@@ -1031,7 +1031,7 @@ func (suite *EsTester) Test10GetAll() {
 		realFormat := &piazza.JsonPagination{
 			PerPage: 10,
 			Page:    0,
-			Order:   piazza.PaginationOrderAscending,
+			Order:   piazza.SortOrderAscending,
 			SortBy:  "",
 		}
 		pollingFn := GetData(func() (bool, error) {
@@ -1091,7 +1091,7 @@ func (suite *EsTester) Test11Pagination1() {
 	p := piazza.JsonPagination{
 		PerPage: 10,
 		Page:    32,
-		Order:   piazza.PaginationOrderDescending,
+		Order:   piazza.SortOrderDescending,
 		SortBy:  "id",
 	}
 
@@ -1099,7 +1099,7 @@ func (suite *EsTester) Test11Pagination1() {
 
 	assert.Equal(10*32, q.From)
 	assert.Equal(10, q.Size)
-	assert.Equal(SortDescending, q.Order)
+	assert.Equal(piazza.SortOrderDescending, q.Order)
 	assert.EqualValues("id", q.Key)
 }
 
@@ -1153,7 +1153,7 @@ func (suite *EsTester) Test11Pagination2() {
 		realFormat := &piazza.JsonPagination{
 			PerPage: 4,
 			Page:    0,
-			Order:   piazza.PaginationOrderAscending,
+			Order:   piazza.SortOrderAscending,
 			SortBy:  "id3",
 		}
 		pollingFn := GetData(func() (bool, error) {
@@ -1185,7 +1185,7 @@ func (suite *EsTester) Test11Pagination2() {
 		realFormat := &piazza.JsonPagination{
 			PerPage: 3,
 			Page:    1,
-			Order:   piazza.PaginationOrderAscending,
+			Order:   piazza.SortOrderAscending,
 			SortBy:  "",
 		}
 		getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
