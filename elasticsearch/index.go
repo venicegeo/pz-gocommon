@@ -243,14 +243,13 @@ func (esi *Index) FilterByMatchAll(typ string, realFormat *piazza.JsonPagination
 	// 	return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
 	// }
 
-	format := NewQueryFormat(realFormat)
 	q := elastic.NewMatchAllQuery()
 	f := esi.lib.Search().Index(esi.index).Type(typ).Query(q)
 
+	format := NewQueryFormat(realFormat)
 	f = f.From(format.From)
 	f = f.Size(format.Size)
-	asc := format.Order == piazza.SortOrderAscending
-	f = f.Sort(format.Key, asc)
+	f = f.Sort(format.Key, format.Order)
 
 	log.Printf("FilterByMatchAll: %#v", format)
 

@@ -30,7 +30,7 @@ type MappingElementTypeName string
 type QueryFormat struct {
 	Size  int
 	From  int
-	Order piazza.SortOrder
+	Order bool
 	Key   string
 }
 
@@ -128,7 +128,7 @@ func NewQueryFormat(params *piazza.JsonPagination) *QueryFormat {
 		Size:  params.PerPage,
 		From:  params.Page * params.PerPage,
 		Key:   params.SortBy,
-		Order: params.Order,
+		Order: params.Order == piazza.SortOrderAscending,
 	}
 
 	return format
