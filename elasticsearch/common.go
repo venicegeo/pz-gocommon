@@ -102,7 +102,6 @@ func ConstructMappingSchema(name string, items map[string]MappingElementTypeName
 
 	const template string = `{
 		"%s":{
-			"dynamic": "strict",
 			"properties":{
 				%s
 			}
