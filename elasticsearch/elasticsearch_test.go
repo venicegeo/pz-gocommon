@@ -131,27 +131,25 @@ func (suite *EsTester) SetUpIndex() IIndex {
 	realFormat := &piazza.JsonPagination{
 		PerPage: 10,
 		Page:    0,
-		Order:   piazza.PaginationOrderAscending,
+		Order:   piazza.SortOrderAscending,
 		SortBy:  "",
 	}
 	pollingFn := GetData(func() (bool, error) {
 		getResult, err := esi.FilterByMatchAll(mapping, realFormat)
 		if err != nil {
-			fmt.Println("error")
 			return false, err
 		}
 		if getResult != nil && len(*getResult.GetHits()) == len(objs) {
-			fmt.Println("validation passed")
 			return true, nil
 		}
-		fmt.Println("try again")
 		return false, nil
 	})
 
 	pollOk, pollErr := PollFunction(pollingFn)
-	fmt.Print("SETUP INDEX\n", pollOk, "\n")
 	if pollErr != nil {
-		fmt.Println("Error: ", pollErr)
+		_ = pollOk
+		// TODO: return err object
+		log.Printf("Error: %#v", pollErr)
 	}
 
 	return esi
@@ -295,7 +293,7 @@ func (suite *EsTester) Test03Operations() {
 			realFormat := &piazza.JsonPagination{
 				Page:    0,
 				PerPage: 10,
-				Order:   piazza.PaginationOrderAscending,
+				Order:   piazza.SortOrderAscending,
 				SortBy:  "",
 			}
 			searchResult, err := esi.FilterByMatchAll(mapping, realFormat)
@@ -1031,25 +1029,21 @@ func (suite *EsTester) Test10GetAll() {
 		realFormat := &piazza.JsonPagination{
 			PerPage: 10,
 			Page:    0,
-			Order:   piazza.PaginationOrderAscending,
+			Order:   piazza.SortOrderAscending,
 			SortBy:  "",
 		}
 		pollingFn := GetData(func() (bool, error) {
 			getResult, err := esi.FilterByMatchAll("", realFormat)
 			if err != nil {
-				fmt.Println("error")
 				return false, err
 			}
 			if getResult != nil && len(*getResult.GetHits()) == 2 {
-				fmt.Println("validation passed")
 				return true, nil
 			}
-			fmt.Println("try again")
 			return false, nil
 		})
 
-		ok, err := PollFunction(pollingFn)
-		fmt.Print("******try actual filter******\n", ok, "\n")
+		_, err := PollFunction(pollingFn)
 		getResult, err := esi.FilterByMatchAll("", realFormat)
 		assert.NoError(err)
 		assert.NotNil(getResult)
@@ -1091,7 +1085,7 @@ func (suite *EsTester) Test11Pagination1() {
 	p := piazza.JsonPagination{
 		PerPage: 10,
 		Page:    32,
-		Order:   piazza.PaginationOrderDescending,
+		Order:   piazza.SortOrderDescending,
 		SortBy:  "id",
 	}
 
@@ -1099,7 +1093,7 @@ func (suite *EsTester) Test11Pagination1() {
 
 	assert.Equal(10*32, q.From)
 	assert.Equal(10, q.Size)
-	assert.Equal(SortDescending, q.Order)
+	assert.False(q.Order)
 	assert.EqualValues("id", q.Key)
 }
 
@@ -1153,25 +1147,21 @@ func (suite *EsTester) Test11Pagination2() {
 		realFormat := &piazza.JsonPagination{
 			PerPage: 4,
 			Page:    0,
-			Order:   piazza.PaginationOrderAscending,
+			Order:   piazza.SortOrderAscending,
 			SortBy:  "id3",
 		}
 		pollingFn := GetData(func() (bool, error) {
 			getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
 			if err != nil {
-				fmt.Println("error")
 				return false, err
 			}
 			if getResult != nil && len(*getResult.GetHits()) == 4 {
-				fmt.Println("validation passed")
 				return true, nil
 			}
-			fmt.Println("try again")
 			return false, nil
 		})
 
-		ok, err := PollFunction(pollingFn)
-		fmt.Print("******try actual filter******\n", ok, "\n")
+		_, err := PollFunction(pollingFn)
 		getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
 		assert.NoError(err)
 		assert.Len(*getResult.GetHits(), 4)
@@ -1185,7 +1175,7 @@ func (suite *EsTester) Test11Pagination2() {
 		realFormat := &piazza.JsonPagination{
 			PerPage: 3,
 			Page:    1,
-			Order:   piazza.PaginationOrderAscending,
+			Order:   piazza.SortOrderAscending,
 			SortBy:  "",
 		}
 		getResult, err := esi.FilterByMatchAll("Obj3", realFormat)

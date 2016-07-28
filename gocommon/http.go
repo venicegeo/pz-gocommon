@@ -17,9 +17,9 @@ package piazza
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -41,22 +41,20 @@ func (h *Http) convertResponseBodyToObject(resp *http.Response, output interface
 	}
 
 	if resp.ContentLength < 0 {
-		return errors.New(fmt.Sprintf("ContentLength is %d", resp.ContentLength))
+		////		return errors.New(fmt.Sprintf("ContentLength is %d", resp.ContentLength))
 	}
 
 	// no content is perfectly valid, not an error
 	if resp.ContentLength == 0 {
-		return nil
+		//////	return nil
 	}
 
-	var err error
-
-	raw := make([]byte, resp.ContentLength)
-	_, err = io.ReadFull(resp.Body, raw)
 	defer resp.Body.Close()
-	if err != nil && err != io.EOF {
+	raw, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
 		return err
 	}
+
 	err = json.Unmarshal(raw, output)
 	if err != nil {
 		return err
@@ -135,8 +133,11 @@ func (h *Http) doVerb(verb string, endpoint string, input interface{}, output in
 
 	err = h.convertResponseBodyToObject(resp, output)
 	if err != nil {
-		h.doPostflight(resp.StatusCode, "failed")
-		return 0, err
+		s, err := fmt.Printf("failed/1: %#v\nfailed/2: %#v\nfailed: %#v\n", err, resp, output)
+		if err != nil {
+			return 0, err
+		}
+		h.doPostflight(resp.StatusCode, s)
 	}
 
 	h.doPostflight(resp.StatusCode, output)

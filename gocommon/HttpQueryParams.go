@@ -89,7 +89,7 @@ func (params *HttpQueryParams) GetAsString(key string, defalt *string) (*string,
 	return &s, nil
 }
 
-func (params *HttpQueryParams) GetAsOrder(key string, defalt *PaginationOrder) (*PaginationOrder, error) {
+func (params *HttpQueryParams) GetAsSortOrder(key string, defalt *SortOrder) (*SortOrder, error) {
 	if key == "" {
 		return defalt, nil
 	}
@@ -99,12 +99,12 @@ func (params *HttpQueryParams) GetAsOrder(key string, defalt *PaginationOrder) (
 		return defalt, nil
 	}
 
-	var order PaginationOrder
+	var order SortOrder
 	switch strings.ToLower(value) {
 	case "desc":
-		order = PaginationOrderDescending
+		order = SortOrderDescending
 	case "asc":
-		order = PaginationOrderAscending
+		order = SortOrderAscending
 	default:
 		s := fmt.Sprintf("query argument for '?%s' must be \"asc\" or \"desc\"", value)
 		err := errors.New(s)
@@ -144,8 +144,8 @@ func (params *HttpQueryParams) GetCount(defalt *int) (*int, error) {
 	return params.GetAsInt("count", defalt)
 }
 
-func (params *HttpQueryParams) GetOrder(defalt *PaginationOrder) (*PaginationOrder, error) {
-	return params.GetAsOrder("order", defalt)
+func (params *HttpQueryParams) GetSortOrder(defalt *SortOrder) (*SortOrder, error) {
+	return params.GetAsSortOrder("order", defalt)
 }
 
 func (params *HttpQueryParams) GetPage(defalt *int) (*int, error) {

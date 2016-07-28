@@ -30,7 +30,7 @@ func TestPagination(t *testing.T) {
 	p := JsonPagination{
 		PerPage: 10,
 		Page:    32,
-		Order:   PaginationOrderDescending,
+		Order:   SortOrderDescending,
 		SortBy:  "id",
 	}
 
@@ -44,7 +44,7 @@ func TestPaginationParams(t *testing.T) {
 	defaults := &JsonPagination{
 		PerPage: 10,
 		Page:    0,
-		Order:   PaginationOrderAscending,
+		Order:   SortOrderAscending,
 		SortBy:  "id",
 	}
 
@@ -76,7 +76,7 @@ func TestPaginationParams(t *testing.T) {
 		expected := &JsonPagination{
 			PerPage: 100,
 			Page:    17,
-			Order:   PaginationOrderAscending,
+			Order:   SortOrderAscending,
 			SortBy:  "id",
 		}
 		assert.EqualValues(expected, actual)
@@ -96,7 +96,7 @@ func TestPaginationParams(t *testing.T) {
 		expected := &JsonPagination{
 			PerPage: 100,
 			Page:    17,
-			Order:   PaginationOrderDescending,
+			Order:   SortOrderDescending,
 			SortBy:  "foo",
 		}
 		assert.EqualValues(expected, actual)

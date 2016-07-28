@@ -119,26 +119,3 @@ func (resp *JsonResponse) ExtractData(output interface{}) error {
 
 	return nil
 }
-
-//----------------------------------------------------------
-/*
-func HttpGetJson(url string) *JsonResponse {
-	h := Http{}
-	return h.PzGet(url)
-}
-
-func HttpPostJson(url string, input interface{}) *JsonResponse {
-	h := Http{}
-	return h.PzPost(url, input)
-}
-
-func HttpPutJson(url string, input interface{}) *JsonResponse {
-	h := Http{}
-	return h.PzPut(url, input)
-}
-
-func HttpDeleteJson(url string) *JsonResponse {
-	h := Http{}
-	return h.PzDelete(url)
-}
-*/

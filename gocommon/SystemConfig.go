@@ -17,7 +17,6 @@ package piazza
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -161,11 +160,14 @@ func (sys *SystemConfig) checkRequirements(requirements []ServiceName) error {
 			}
 		}
 
-		newaddr, err := sys.GetAddress(name)
-		if err != nil {
-			return err
-		}
-		log.Printf("Required service: %s at %s", name, newaddr)
+		/*
+			newaddr, err := sys.GetAddress(name)
+			if err != nil {
+				log.Printf("Required service: %s missing!", name)
+				return err
+			}
+			log.Printf("Required service: %s at %s", name, newaddr)
+		*/
 	}
 
 	return nil
@@ -181,31 +183,31 @@ func (sys *SystemConfig) runHealthChecks() error {
 
 		url := fmt.Sprintf("%s://%s%s", DefaultProtocol, addr, HealthcheckEndpoints[name])
 
-		log.Printf("Service healthy? %s at %s (%s)", name, addr, url)
+		//log.Printf("Service healthy? %s at %s (%s)", name, addr, url)
 
 		resp, err := http.Get(url)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Health check errored for service: %s at %s <%#v>", name, url, resp))
+			s := fmt.Sprintf("Health check errored for service: %s at %s <%#v>", name, url, resp)
+			//log.Printf(s)
+			return errors.New(s)
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			return errors.New(fmt.Sprintf("Health check failed for service: %s at %s <%#v>", name, url, resp))
+			s := fmt.Sprintf("Health check failed for service: %s at %s <%#v>", name, url, resp)
+			//log.Printf(s)
+			return errors.New(s)
 		}
 
-		log.Printf("Service healthy: %s at %s", name, url)
+		//log.Printf("Service healthy: %s at %s", name, url)
 	}
 
-	log.Printf("SystemConfig.runHealthChecks: end")
+	//log.Printf("SystemConfig.runHealthChecks: end")
 	return nil
 }
 
 // it is explicitly allowed for outsiders to update an existing service, but we'll log it just to be safe
 func (sys *SystemConfig) AddService(name ServiceName, address string) {
-	old, ok := sys.endpoints[name]
 	sys.endpoints[name] = address
-	if ok {
-		log.Printf("SystemConfig.AddService: updated %s from %s to %s", name, old, address)
-	}
 }
 
 func (sys *SystemConfig) GetAddress(name ServiceName) (string, error) {
