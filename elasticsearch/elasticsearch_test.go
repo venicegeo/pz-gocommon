@@ -599,7 +599,7 @@ func (suite *EsTester) Test07ConstructMapping() {
 	actual := string(byts)
 
 	expected :=
-		`{"MyTestObj":{"dynamic":false,"properties":{"bool1":{"type":"boolean"},"date1":{"type":"date"},"double1":{"type":"double"},"integer1":{"type":"integer"},"integer2":{"type":"integer"}}}}`
+		`{"MyTestObj":{"dynamic":"strict","properties":{"bool1":{"type":"boolean"},"date1":{"type":"date"},"double1":{"type":"double"},"integer1":{"type":"integer"},"integer2":{"type":"integer"}}}}`
 
 	assert.Equal(expected, actual)
 
