@@ -20,6 +20,10 @@ echo THERE
 #cp "$GOPATH"/bin/glide /usr/local/go/bin
 #echo WHERE
 
+go get github.com/venicegeo/pz-gocommon/gocommon
+
+cd $GOPATH/src/github.com/venicegeo/pz-gocommon
+
 glide install
 
 go get github.com/stretchr/testify/suite
@@ -28,7 +32,6 @@ go get github.com/stretchr/testify/assert
 go get github.com/Shopify/sarama
 
 # ourself
-#go get github.com/venicegeo/pz-gocommon/gocommon
 
 # run tests
 go test -v -coverprofile=common.cov github.com/venicegeo/pz-gocommon/gocommon
