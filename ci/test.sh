@@ -14,8 +14,8 @@ mkdir "$GOPATH"/bin
 ###
 
 #curl https://glide.sh/get | sh
-sudo add-apt-repository ppa:masterminds/glide && sudo apt-get update
-sudo apt-get install glide
+add-apt-repository ppa:masterminds/glide && sudo apt-get update
+apt-get install glide
 
 glide install
 
