@@ -17,6 +17,8 @@ echo HERE
 curl https://glide.sh/get > get.sh
 sh -x get.sh
 echo THERE
+cp "$GOPATH"/bin/glide /usr/local/go/bin
+echo WHERE
 
 glide install
 
