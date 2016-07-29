@@ -11,14 +11,14 @@ mkdir -p "$GOPATH"
 # glide expects this to already exist
 mkdir "$GOPATH"/bin
 
-###
+PATH=$PATH:"$GOPATH"/bin
 
 echo HERE
 curl https://glide.sh/get > get.sh
 sh -x get.sh
 echo THERE
-cp "$GOPATH"/bin/glide /usr/local/go/bin
-echo WHERE
+#cp "$GOPATH"/bin/glide /usr/local/go/bin
+#echo WHERE
 
 glide install
 
