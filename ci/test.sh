@@ -10,6 +10,8 @@ mkdir -p "$GOPATH"
 
 ###
 
+go version
+
 # external dependences
 go get github.com/stretchr/testify/suite
 go get github.com/stretchr/testify/assert
