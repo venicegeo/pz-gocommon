@@ -13,7 +13,11 @@ mkdir "$GOPATH"/bin "$GOPATH"/src "$GOPATH"/pkg
 
 PATH=$PATH:"$GOPATH"/bin
 
-GO15VENDOREXPERIMENT="1"
+go env
+
+export GO15VENDOREXPERIMENT="1"
+
+go env
 
 curl https://glide.sh/get | sh
 
