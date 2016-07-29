@@ -1,5 +1,5 @@
-hash: 711795b0f5081d6845b2be63d92794dfb0f017b1c43943a09ed0a3441f201a23
-updated: 2016-07-29T12:29:04.276437813-04:00
+hash: eb1e5901784191b35f4d9ad3b62c2e65806c478276c91872d2ea4eeaa708b5b3
+updated: 2016-07-29T12:33:00.109927299-04:00
 imports:
 - name: github.com/davecgh/go-spew
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
@@ -32,6 +32,11 @@ imports:
   version: ee05b128a739a0fb76c7ebd3ae4810c1de808d6d
 - name: github.com/Shopify/sarama
   version: e8020bffa1cae3ddf8068cb03416fc53d1627f3d
+- name: github.com/stretchr/testify
+  version: d77da356e56a7428ad25149ca77381849a6a5232
+  subpackages:
+  - suite
+  - assert
 - name: golang.org/x/net
   version: f315505cf3349909cdf013ea56690da34e96a451
   subpackages:

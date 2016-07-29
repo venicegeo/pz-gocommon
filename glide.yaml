@@ -4,3 +4,7 @@ import:
 - package: github.com/fvbock/endless
 - package: github.com/gin-gonic/gin
 - package: gopkg.in/olivere/elastic.v3
+- package: github.com/stretchr/testify
+  subpackages:
+  - suite
+  - assert
