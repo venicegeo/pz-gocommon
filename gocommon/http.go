@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -119,7 +120,7 @@ func (h *Http) doVerb(verb string, endpoint string, input interface{}, output in
 		if err != nil {
 			return 0, err
 		}
-
+		req.Header.Set("Content-Type", ContentTypeJSON)
 		if h.ApiKey != "" {
 			req.SetBasicAuth(h.ApiKey, "")
 		}
@@ -133,7 +134,7 @@ func (h *Http) doVerb(verb string, endpoint string, input interface{}, output in
 
 	err = h.convertResponseBodyToObject(resp, output)
 	if err != nil {
-		s, err := fmt.Printf("failed/1: %#v\nfailed/2: %#v\nfailed: %#v\n", err, resp, output)
+		s, err := fmt.Printf("FAILED/1: %#v\nFAILED/2: %#v\nFAILED/3: %#v\n", err, resp, output)
 		if err != nil {
 			return 0, err
 		}
@@ -223,4 +224,17 @@ func (h *Http) PzDelete(endpoint string) *JsonResponse {
 	}
 
 	return &JsonResponse{StatusCode: code}
+}
+
+//---------------------------------------------------------------------
+
+func SimplePreflight(verb string, url string, obj string) {
+	log.Printf("PREFLIGHT.verb: %s", verb)
+	log.Printf("PREFLIGHT.url: %s", url)
+	log.Printf("PREFLIGHT.obj: %s", obj)
+}
+
+func SimplePostflight(code int, obj string) {
+	log.Printf("POSTFLIGHT.code: %d", code)
+	log.Printf("POSTFLIGHT.obj: %s", obj)
 }
