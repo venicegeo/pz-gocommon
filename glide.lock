@@ -1,6 +1,18 @@
-hash: 3fa1e47c2e16ec778f20d51a252adcdafb9ca16faf78199e14dd22a4d7a9a47d
-updated: 2016-07-29T12:21:39.350016586-04:00
+hash: 711795b0f5081d6845b2be63d92794dfb0f017b1c43943a09ed0a3441f201a23
+updated: 2016-07-29T12:29:04.276437813-04:00
 imports:
+- name: github.com/davecgh/go-spew
+  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
+  subpackages:
+  - spew
+- name: github.com/eapache/go-resiliency
+  version: b86b1ec0dd4209a588dc1285cdd471e73525c0b3
+  subpackages:
+  - breaker
+- name: github.com/eapache/go-xerial-snappy
+  version: bb955e01b9346ac19dc29eb16586c90ded99a98c
+- name: github.com/eapache/queue
+  version: ded5959c0d4e360646dc9e9908cff48666781367
 - name: github.com/fvbock/endless
   version: 2cdc20a776897c0f406853c048c33e2c1a9f0ebf
 - name: github.com/gin-gonic/gin
@@ -12,6 +24,10 @@ imports:
   version: 2402d76f3d41f928c7902a765dfc872356dd3aad
   subpackages:
   - proto
+- name: github.com/golang/snappy
+  version: d9eb7a3d35ec988b8585d4a0068e462c27d28380
+- name: github.com/klauspost/crc32
+  version: 19b0b332c9e4516a6370a0456e6182c3b5036720
 - name: github.com/manucorporat/sse
   version: ee05b128a739a0fb76c7ebd3ae4810c1de808d6d
 - name: github.com/Shopify/sarama
