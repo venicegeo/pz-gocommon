@@ -9,7 +9,7 @@ export GOPATH=$root/gogo
 mkdir -p "$GOPATH"
 
 # glide expects this to already exist
-mkdir "$GOPATH"/bin
+mkdir "$GOPATH"/bin "$GOPATH"/src "$GOPATH"/pkg
 
 PATH=$PATH:"$GOPATH"/bin
 
