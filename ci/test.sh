@@ -13,9 +13,10 @@ mkdir "$GOPATH"/bin
 
 ###
 
-echo here
-curl https://glide.sh/get | sh
-echo there
+echo HERE
+curl https://glide.sh/get > get.sh
+sh -x get.sh
+echo THERE
 
 glide install
 
