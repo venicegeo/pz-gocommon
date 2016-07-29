@@ -8,19 +8,26 @@ popd > /dev/null
 export GOPATH=$root/gogo
 mkdir -p "$GOPATH"
 
-###
+# glide expects this to already exist
+mkdir "$GOPATH"/bin "$GOPATH"/src "$GOPATH"/pkg
 
-go version
+PATH=$PATH:"$GOPATH"/bin
 
-# external dependences
+GO15VENDOREXPERIMENT="1"
+
+curl https://glide.sh/get | sh
+
+# get ourself, and go there
+go get github.com/venicegeo/pz-gocommon/gocommon
+cd $GOPATH/src/github.com/venicegeo/pz-gocommon
+
+glide install
+
+# not included in glide deps, alas
 go get github.com/stretchr/testify/suite
 go get github.com/stretchr/testify/assert
-go get gopkg.in/olivere/elastic.v3
-go get github.com/gin-gonic/gin
-go get github.com/Shopify/sarama
 
-# ourself
-go get github.com/venicegeo/pz-gocommon/gocommon
+go get github.com/Shopify/sarama
 
 # run tests
 go test -v -coverprofile=common.cov github.com/venicegeo/pz-gocommon/gocommon
@@ -28,5 +35,3 @@ go test -v -coverprofile=elastic.cov github.com/venicegeo/pz-gocommon/elasticsea
 go test -v -coverprofile=kafka.cov github.com/venicegeo/pz-gocommon/kafka
 
 #go tool cover -html=common.cov
-
-###
