@@ -27,8 +27,6 @@ glide install
 go get github.com/stretchr/testify/suite
 go get github.com/stretchr/testify/assert
 
-go get github.com/Shopify/sarama
-
 # run tests
 go test -v -coverprofile=common.cov github.com/venicegeo/pz-gocommon/gocommon
 go test -v -coverprofile=elastic.cov github.com/venicegeo/pz-gocommon/elasticsearch

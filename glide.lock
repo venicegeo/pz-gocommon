@@ -1,5 +1,5 @@
-hash: 2bb05314334abb2dc68e5512596fe0a0907c73891022661c58197321ace2faf5
-updated: 2016-07-29T09:51:25.898603243-04:00
+hash: 3fa1e47c2e16ec778f20d51a252adcdafb9ca16faf78199e14dd22a4d7a9a47d
+updated: 2016-07-29T12:21:39.350016586-04:00
 imports:
 - name: github.com/fvbock/endless
   version: 2cdc20a776897c0f406853c048c33e2c1a9f0ebf
@@ -14,6 +14,8 @@ imports:
   - proto
 - name: github.com/manucorporat/sse
   version: ee05b128a739a0fb76c7ebd3ae4810c1de808d6d
+- name: github.com/Shopify/sarama
+  version: e8020bffa1cae3ddf8068cb03416fc53d1627f3d
 - name: golang.org/x/net
   version: f315505cf3349909cdf013ea56690da34e96a451
   subpackages:
