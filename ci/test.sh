@@ -13,8 +13,10 @@ mkdir "$GOPATH"/bin
 
 ###
 
-# external dependences
-curl https://glide.sh/get | sh
+#curl https://glide.sh/get | sh
+sudo add-apt-repository ppa:masterminds/glide && sudo apt-get update
+sudo apt-get install glide
+
 glide install
 
 go get github.com/stretchr/testify/suite
