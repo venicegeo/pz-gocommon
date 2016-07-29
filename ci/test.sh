@@ -5,6 +5,8 @@ pushd "$(dirname "$0")/.." > /dev/null
 root=$(pwd -P)
 popd > /dev/null
 
+#----------------------------------------------------------------------
+
 export GOPATH=$root/gogo
 mkdir -p "$GOPATH"
 
@@ -22,6 +24,8 @@ go get github.com/venicegeo/pz-gocommon/gocommon
 cd $GOPATH/src/github.com/venicegeo/pz-gocommon
 
 glide install
+
+#----------------------------------------------------------------------
 
 # run tests
 go test -v -coverprofile=common.cov github.com/venicegeo/pz-gocommon/gocommon
