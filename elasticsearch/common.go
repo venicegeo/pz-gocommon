@@ -101,9 +101,15 @@ func NewIndexInterface(sys *piazza.SystemConfig, index string, settings string, 
 func ConstructMappingSchema(name string, items map[string]MappingElementTypeName) (piazza.JsonString, error) {
 
 	const template string = `{
-		"%s":{
-			"properties":{
-				%s
+		"%s": {
+			"dynamic": false,
+			"properties": {
+				"data": {
+					"dynamic": "strict",
+					"properties": {
+						%s
+					}
+				}
 			}
 		}
 	}`
