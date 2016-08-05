@@ -86,6 +86,15 @@ func NewJsonPagination(params *HttpQueryParams, defalt *JsonPagination) (*JsonPa
 	return jp, nil
 }
 
+func Defaults() *JsonPagination {
+	return &JsonPagination{
+		PerPage: 10,
+		Page:    0,
+		Order:   SortOrderDescending,
+		SortBy:  "createdOn",
+	}
+}
+
 func (format *JsonPagination) ToParamString() string {
 	s := fmt.Sprintf("perPage=%d&page=%d&sortBy=%s&order=%s",
 		format.PerPage, format.Page, format.SortBy, format.Order)
