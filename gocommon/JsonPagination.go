@@ -86,7 +86,7 @@ func NewJsonPagination(params *HttpQueryParams, defalt *JsonPagination) (*JsonPa
 	return jp, nil
 }
 
-func (format *JsonPagination) Defaults() *JsonPagination {
+func (format JsonPagination) Defaults() *JsonPagination {
 	return &JsonPagination{
 		PerPage: 10,
 		Page:    0,
