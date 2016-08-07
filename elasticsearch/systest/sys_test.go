@@ -30,6 +30,8 @@ import (
 	"github.com/venicegeo/pz-gocommon/gocommon"
 )
 
+const MOCKING = true
+
 type EsTester struct {
 	suite.Suite
 	sys *piazza.SystemConfig
@@ -43,6 +45,9 @@ func (suite *EsTester) TearDownSuite() {
 }
 
 func TestRunSuite(t *testing.T) {
+	if MOCKING {
+		log.Printf("*** MOCKING enabled ***")
+	}
 	s1 := new(EsTester)
 	suite.Run(t, s1)
 }
@@ -82,7 +87,11 @@ func (suite *EsTester) SetUpIndex() IIndex {
 	assert := assert.New(t)
 
 	var required []piazza.ServiceName
-	required = []piazza.ServiceName{}
+	if MOCKING {
+		required = []piazza.ServiceName{}
+	} else {
+		required = []piazza.ServiceName{piazza.PzElasticSearch}
+	}
 
 	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required)
 	if err != nil {
@@ -91,7 +100,7 @@ func (suite *EsTester) SetUpIndex() IIndex {
 
 	suite.sys = sys
 
-	esi, err := NewIndexInterface(sys, "estest$", "", true)
+	esi, err := NewIndexInterface(sys, "estest$", "", MOCKING)
 	assert.NoError(err)
 
 	err = esi.Delete()
@@ -187,12 +196,15 @@ func (suite *EsTester) Test01Client() {
 	assert := assert.New(t)
 
 	var required []piazza.ServiceName
-	required = []piazza.ServiceName{}
-
+	if MOCKING {
+		required = []piazza.ServiceName{}
+	} else {
+		required = []piazza.ServiceName{piazza.PzElasticSearch}
+	}
 	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required)
 	assert.NoError(err)
 
-	esi, err := NewIndexInterface(sys, "estest01$", "", true)
+	esi, err := NewIndexInterface(sys, "estest01$", "", MOCKING)
 	assert.NoError(err)
 
 	version := esi.GetVersion()
@@ -248,8 +260,10 @@ func (suite *EsTester) Test03Operations() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	var tmp1 Obj
+	var tmp1, tmp2 Obj
+	var err error
 	var src *json.RawMessage
+	var searchResult *SearchResult
 
 	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
@@ -269,6 +283,283 @@ func (suite *EsTester) Test03Operations() {
 		assert.NoError(err)
 		assert.EqualValues("data1", tmp1.Data)
 	}
+
+	if MOCKING {
+		t.Skip("skipping part of test, because mocking.")
+	} else {
+		{
+			// SEARCH for everything
+			// TODO: exercise sortKey
+			realFormat := &piazza.JsonPagination{
+				Page:    0,
+				PerPage: 10,
+				Order:   piazza.SortOrderAscending,
+				SortBy:  "",
+			}
+			searchResult, err := esi.FilterByMatchAll(mapping, realFormat)
+			assert.NoError(err)
+			assert.NotNil(searchResult)
+
+			assert.Equal(int64(3), searchResult.TotalHits())
+
+			m := make(map[string]Obj)
+
+			for _, hit := range *searchResult.GetHits() {
+				err = json.Unmarshal(*hit.Source, &tmp1)
+				assert.NoError(err)
+				m[tmp1.ID] = tmp1
+			}
+
+			assert.Contains(m, "id0")
+			assert.Contains(m, "id1")
+			assert.Contains(m, "id2")
+		}
+
+		{
+			// SEARCH for a specific one
+			searchResult, err = esi.FilterByTermQuery(mapping, "id", "id1")
+			assert.NoError(err)
+			assert.NotNil(searchResult)
+			assert.EqualValues(1, searchResult.TotalHits())
+			hit := *searchResult.GetHit(0)
+			assert.NotNil(hit)
+			src = hit.Source
+			assert.NotNil(src)
+			err = json.Unmarshal(*src, &tmp1)
+			assert.NoError(err)
+			assert.EqualValues("data1", tmp1.Data)
+		}
+
+		{
+			// SEARCH fuzzily
+			searchResult, err = esi.FilterByTermQuery(mapping, "tags", "foo")
+			assert.NoError(err)
+			assert.NotNil(searchResult)
+			assert.EqualValues(2, searchResult.TotalHits())
+
+			hit0 := *searchResult.GetHit(0)
+			assert.NotNil(hit0)
+			src = hit0.Source
+			assert.NotNil(src)
+			err = json.Unmarshal(*src, &tmp1)
+			assert.NoError(err)
+
+			hit1 := *searchResult.GetHit(1)
+			src = hit1.Source
+			assert.NotNil(src)
+			err = json.Unmarshal(*src, &tmp2)
+			assert.NoError(err)
+
+			ok1 := ("id0" == tmp1.ID && "id2" == tmp2.ID)
+			ok2 := ("id0" == tmp2.ID && "id2" == tmp1.ID)
+			assert.True((ok1 || ok2) && !(ok1 && ok2))
+		}
+	}
+
+	{
+		// DELETE by id
+		_, err = esi.DeleteByID(mapping, "id2")
+		assert.NoError(err)
+		_, err := esi.GetByID(mapping, "id2")
+		assert.Error(err)
+	}
+}
+
+func (suite *EsTester) Test04JsonOperations() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	if MOCKING {
+		t.Skip("skipping test, because mocking.")
+		return
+	}
+
+	var tmp1, tmp2 Obj
+	var err error
+	var src *json.RawMessage
+
+	var searchResult *SearchResult
+
+	esi := suite.SetUpIndex()
+	assert.NotNil(esi)
+	defer func() {
+		esi.Close()
+		esi.Delete()
+	}()
+
+	// SEARCH for everything
+	{
+		str :=
+			`{
+				"query": {
+					"match_all": {}
+				}
+			}`
+
+		searchResult, err = esi.SearchByJSON(mapping, str)
+		assert.NoError(err)
+		assert.NotNil(searchResult)
+
+		for _, hit := range *searchResult.GetHits() {
+			err = json.Unmarshal(*hit.Source, &tmp1)
+			assert.NoError(err)
+		}
+		assert.EqualValues(3, searchResult.TotalHits())
+	}
+
+	// SEARCH for a specific one
+	{
+		str :=
+			`{
+				"query": {
+					"term": {"id":"id1"}
+				}
+			}`
+
+		searchResult, err = esi.SearchByJSON(mapping, str)
+		assert.NoError(err)
+		assert.NotNil(searchResult)
+
+		assert.EqualValues(1, searchResult.TotalHits())
+		src = searchResult.GetHit(0).Source
+		assert.NotNil(src)
+		err = json.Unmarshal(*src, &tmp1)
+		assert.NoError(err)
+		assert.EqualValues("data1", tmp1.Data)
+	}
+
+	// SEARCH fuzzily
+	{
+		str :=
+			`{
+				"query": {
+					"term": {"tags":"foo"}
+				}
+			}`
+
+		searchResult, err = esi.SearchByJSON(mapping, str)
+		assert.NoError(err)
+		assert.NotNil(searchResult)
+
+		assert.EqualValues(2, searchResult.TotalHits())
+		hit0 := searchResult.GetHit(0)
+		assert.NotNil(hit0)
+
+		src = hit0.Source
+		assert.NotNil(src)
+		err = json.Unmarshal(*src, &tmp1)
+		assert.NoError(err)
+
+		hit1 := searchResult.GetHit(1)
+		assert.NotNil(hit1)
+		src = hit1.Source
+		assert.NotNil(src)
+		err = json.Unmarshal(*src, &tmp2)
+		assert.NoError(err)
+
+		ok1 := ("id0" == tmp1.ID && "id2" == tmp2.ID)
+		ok2 := ("id0" == tmp2.ID && "id2" == tmp1.ID)
+		assert.True((ok1 || ok2) && !(ok1 && ok2))
+	}
+}
+
+func (suite *EsTester) Test05Mapping() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	if MOCKING {
+		t.Skip("skipping test, because mocking.")
+		return
+	}
+
+	var err error
+
+	esi := suite.SetUpIndex()
+	assert.NotNil(esi)
+	defer func() {
+		esi.Close()
+		esi.Delete()
+	}()
+
+	mapping :=
+		`{
+			"tweetdoc":{
+				"properties":{
+					"message":{
+						"type":"string",
+						"store":true
+					}
+				}
+			}
+		}`
+
+	err = esi.SetMapping("tweetdoc", piazza.JsonString(mapping))
+	assert.NoError(err)
+
+	mappings, err := esi.GetMapping("tweetdoc")
+	assert.NoError(err)
+
+	tweetdoc := mappings.(map[string]interface{})["tweetdoc"]
+	assert.NotNil(tweetdoc)
+	properties := tweetdoc.(map[string]interface{})["properties"]
+	assert.NotNil(properties)
+	message := properties.(map[string]interface{})["message"]
+	assert.NotNil(message)
+	typ := message.(map[string]interface{})["type"].(string)
+	assert.NotNil(typ)
+	store := message.(map[string]interface{})["store"].(bool)
+	assert.NotNil(store)
+
+	assert.EqualValues("string", typ)
+	assert.True(store)
+}
+
+func (suite *EsTester) Test06SetMapping() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	if MOCKING {
+		t.Skip("skipping test, because mocking.")
+		return
+	}
+
+	esi := suite.SetUpIndex()
+	assert.NotNil(esi)
+	defer func() {
+		esi.Close()
+		esi.Delete()
+	}()
+
+	var err error
+
+	var expected piazza.JsonString
+	expected = `{
+			"MyTestObj": {
+				"properties":{
+					"bool1": {"type": "boolean"},
+					"date1": {"format": "dateOptionalTime", "type": "date"},
+					"double1": {"type": "double"},
+					"integer1": {"type": "integer"},
+					"integer2": {"type": "integer"}
+				}
+			}
+		}`
+
+	err = esi.SetMapping("MyTestObj", expected)
+	assert.NoError(err)
+
+	mapobj, err := esi.GetMapping("MyTestObj")
+	assert.NoError(err)
+
+	actual, err := json.Marshal(mapobj)
+	assert.NoError(err)
+	assert.JSONEq(string(expected), string(actual))
+
+	mappings, err := esi.GetTypes()
+	assert.NoError(err)
+	assert.Len(mappings, 2)
+	assert.True((mappings[0] == "Obj" && mappings[1] == "MyTestObj") ||
+		(mappings[1] == "Obj" && mappings[0] == "MyTestObj"))
 }
 
 func (suite *EsTester) Test07ConstructMapping() {
@@ -314,6 +605,79 @@ func (suite *EsTester) Test07ConstructMapping() {
 	assert.NoError(err)
 }
 
+func (suite *EsTester) Test08Percolation() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	if MOCKING {
+		t.Skip("skipping test, because mocking.")
+		return
+	}
+
+	esi := suite.SetUpIndex()
+	assert.NotNil(esi)
+	defer func() {
+		esi.Close()
+		esi.Delete()
+	}()
+
+	items := make(map[string]MappingElementTypeName)
+	items["tag"] = MappingElementTypeString
+	jsonstr, err := ConstructMappingSchema("Event", items)
+	assert.NoError(err)
+	assert.NotEmpty(jsonstr)
+
+	err = esi.SetMapping("Event", jsonstr)
+	assert.NoError(err)
+
+	query1 :=
+		`{
+		"query": {
+			"match": {
+				"tag": {
+					"query": "kitten"
+				}
+			}
+		}
+	}`
+	query2 :=
+		`{
+		"query" : {
+			"match" : {
+				"tag" : "lemur"
+			}
+		}
+	}`
+
+	_, err = esi.AddPercolationQuery("p1", piazza.JsonString(query1))
+	assert.NoError(err)
+
+	type Event struct {
+		ID  string `json:"id" binding:"required"`
+		Tag string `json:"tag" binding:"required"`
+	}
+	event1 := Event{ID: "id1", Tag: "kitten"}
+	event2 := Event{ID: "id2", Tag: "cat"}
+	event3 := Event{ID: "id3", Tag: "lemur"}
+
+	percolateResponse, err := esi.AddPercolationDocument("Event", event1)
+	assert.NoError(err)
+	assert.EqualValues(1, percolateResponse.Total)
+	assert.Equal("p1", percolateResponse.Matches[0].Id)
+
+	percolateResponse, err = esi.AddPercolationDocument("Event", event2)
+	assert.NoError(err)
+	assert.EqualValues(0, percolateResponse.Total)
+
+	_, err = esi.AddPercolationQuery("p2", piazza.JsonString(query2))
+	assert.NoError(err)
+
+	percolateResponse, err = esi.AddPercolationDocument("Event", event3)
+	assert.NoError(err)
+	assert.EqualValues(1, percolateResponse.Total)
+	assert.Equal("p2", percolateResponse.Matches[0].Id)
+}
+
 type ByID []*PercolateResponseMatch
 
 func (a ByID) Len() int {
@@ -345,7 +709,7 @@ func (suite *EsTester) Test09FullPercolation() {
 
 	// create index
 	{
-		esi, err = NewIndexInterface(suite.sys, "estest09$", "", true)
+		esi, err = NewIndexInterface(suite.sys, "estest09$", "", MOCKING)
 		assert.NoError(err)
 
 		// make the index
@@ -355,6 +719,187 @@ func (suite *EsTester) Test09FullPercolation() {
 		ok := esi.IndexExists()
 		assert.True(ok)
 	}
+
+	if MOCKING {
+		t.Skip("skipping test, because mocking.")
+		return
+	}
+
+	//-----------------------------------------------------------------------
+
+	addMappings := func(maps map[string](map[string]MappingElementTypeName)) {
+		for k, v := range maps {
+			jsn, err := ConstructMappingSchema(k, v)
+			assert.NoError(err)
+			assert.NotEmpty(jsn)
+			err = esi.SetMapping(k, jsn)
+			assert.NoError(err)
+		}
+	}
+
+	addQueries := func(queries map[string]piazza.JsonString) {
+		for k, v := range queries {
+			_, err = esi.AddPercolationQuery(k, v)
+			assert.NoError(err)
+		}
+	}
+
+	type TestCase struct {
+		typeName string
+		event    interface{}
+		expected []string
+	}
+
+	addEvents := func(tests []TestCase) {
+		for i, t := range tests {
+
+			percolateResponse, err := esi.AddPercolationDocument(t.typeName, t.event)
+			assert.NoError(err)
+
+			assert.EqualValues(len(t.expected), percolateResponse.Total, fmt.Sprintf("for test #%d", i))
+
+			matches := sortMatches(percolateResponse.Matches)
+
+			for i, expected := range t.expected {
+				assert.Equal(esi.IndexName(), matches[i].Index)
+				assert.Equal(expected, matches[i].Id)
+			}
+		}
+	}
+
+	//-----------------------------------------------------------------------
+
+	type EventType1 struct {
+		ID  string `json:"id" binding:"required"`
+		Str string `json:"str" binding:"required"`
+		Num int    `json:"num" binding:"required"`
+	}
+
+	type EventType2 struct {
+		ID  string `json:"id" binding:"required"`
+		Boo bool   `json:"boo" binding:"required"`
+		Num int    `json:"num" binding:"required"`
+	}
+
+	maps := map[string](map[string]MappingElementTypeName){
+		"EventType1": map[string]MappingElementTypeName{
+			"id":  MappingElementTypeString,
+			"str": MappingElementTypeString,
+			"num": MappingElementTypeInteger,
+		},
+		"EventType2": map[string]MappingElementTypeName{
+			"id":  MappingElementTypeString,
+			"boo": MappingElementTypeBool,
+			"num": MappingElementTypeInteger,
+		},
+	}
+	addMappings(maps)
+
+	//-----------------------------------------------------------------------
+
+	q1 :=
+		`{
+			"query": {
+				"match": {
+					"str": {
+						"query": "kitten"
+					}
+				}
+			}
+		}`
+	q2 :=
+		`{
+			"query" : {
+				"match" : {
+					"boo" : true
+				}
+			}
+		}`
+	q3 :=
+		`{
+			"query" : {
+				"match" : {
+					"num" : 17
+				}
+			}
+		}`
+	q4 :=
+		`{
+			"query" : {
+				"range" : {
+					"num" : {
+						"lt": 10.0
+					}
+				}
+			}
+		}`
+	q5 :=
+		`{
+			"query" : {
+				"filtered": {
+					"query": {
+						"match": {
+							"num": 17
+						}
+					},
+					"filter": {
+						"term": {
+							"_type": "EventType2"
+						}
+					}
+				}
+			}
+		}`
+	q6 :=
+		`{
+		"query" : {
+			"bool": {
+				"must": [
+					{
+						"match" : {
+							"num" : 17
+						}
+					},
+					{
+						"match" : {
+							"_type" : "EventType1"
+						}
+					}
+				]
+			}
+		}
+	}`
+	queries := map[string]piazza.JsonString{
+		"Q1": piazza.JsonString(q1),
+		"Q2": piazza.JsonString(q2),
+		"Q3": piazza.JsonString(q3),
+		"Q4": piazza.JsonString(q4),
+		"Q5": piazza.JsonString(q5),
+		"Q6": piazza.JsonString(q6),
+	}
+	addQueries(queries)
+
+	//-----------------------------------------------------------------------
+
+	tests := []TestCase{
+		TestCase{
+			typeName: "EventType1",
+			event:    EventType1{ID: "E1", Str: "kitten", Num: 17},
+			expected: []string{"Q1", "Q3", "Q6"},
+		},
+		TestCase{
+			typeName: "EventType2",
+			event:    EventType2{ID: "E2", Boo: true, Num: 17},
+			expected: []string{"Q2", "Q3", "Q5"},
+		},
+		TestCase{
+			typeName: "EventType1",
+			event:    EventType1{ID: "E3", Str: "lemur", Num: -31},
+			expected: []string{"Q4"},
+		},
+	}
+
+	addEvents(tests)
 }
 
 func (suite *EsTester) Test10GetAll() {
@@ -362,14 +907,18 @@ func (suite *EsTester) Test10GetAll() {
 	assert := assert.New(t)
 
 	var required []piazza.ServiceName
-	required = []piazza.ServiceName{}
+	if MOCKING {
+		required = []piazza.ServiceName{}
+	} else {
+		required = []piazza.ServiceName{piazza.PzElasticSearch}
+	}
 
 	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	esi, err := NewIndexInterface(sys, "getall$", "", true)
+	esi, err := NewIndexInterface(sys, "getall$", "", MOCKING)
 	assert.NoError(err)
 	defer func() {
 		esi.Close()
