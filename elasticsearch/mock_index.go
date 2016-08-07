@@ -17,6 +17,7 @@ package elasticsearch
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sort"
 
 	"github.com/venicegeo/pz-gocommon/gocommon"
@@ -51,28 +52,33 @@ func (esi *MockIndex) IndexName() string {
 	return esi.index
 }
 
-func (esi *MockIndex) IndexExists() bool {
-	return esi.exists
+func (esi *MockIndex) IndexExists() (bool, error) {
+	return esi.exists, nil
 }
 
-func (esi *MockIndex) TypeExists(typ string) bool {
+func (esi *MockIndex) TypeExists(typ string) (bool, error) {
 
-	if !esi.IndexExists() {
-		return false
+	ok, err := esi.IndexExists()
+	if err != nil {
+		return false, err
 	}
-	_, ok := esi.items[typ]
-	return ok
+	if !ok {
+		return false, nil
+	}
+	_, ok = esi.items[typ]
+	return ok, nil
 }
 
-func (esi *MockIndex) ItemExists(typ string, id string) bool {
-	if !esi.IndexExists() {
-		return false
+func (esi *MockIndex) ItemExists(typ string, id string) (bool, error) {
+	ok, err := esi.TypeExists(typ)
+	if err != nil {
+		return false, err
 	}
-	if !esi.TypeExists(typ) {
-		return false
+	if !ok {
+		return false, nil
 	}
-	_, ok := esi.items[typ][id]
-	return ok
+	_, ok = esi.items[typ][id]
+	return ok, nil
 }
 
 // if index already exists, does nothing
@@ -103,7 +109,18 @@ func (esi *MockIndex) Delete() error {
 }
 
 func (esi *MockIndex) PostData(typ string, id string, obj interface{}) (*IndexResponse, error) {
-	if !esi.TypeExists(typ) {
+	ok, err := esi.IndexExists()
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, fmt.Errorf("Index does not exist")
+	}
+	ok, err = esi.TypeExists(typ)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
 		esi.items[typ] = make(map[string]*json.RawMessage)
 	}
 

@@ -27,27 +27,22 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+	"github.com/venicegeo/pz-gocommon/elasticsearch"
 	"github.com/venicegeo/pz-gocommon/gocommon"
 )
 
-const MOCKING = true
-
 type EsTester struct {
 	suite.Suite
-	sys *piazza.SystemConfig
+	url string
 }
 
 func (suite *EsTester) SetupSuite() {
-	//t := suite.T()
+	suite.url = "http://localhost:9200"
 }
 
-func (suite *EsTester) TearDownSuite() {
-}
+func (suite *EsTester) TearDownSuite() {}
 
 func TestRunSuite(t *testing.T) {
-	if MOCKING {
-		log.Printf("*** MOCKING enabled ***")
-	}
 	s1 := new(EsTester)
 	suite.Run(t, s1)
 }
@@ -58,21 +53,22 @@ type Obj struct {
 	Tags string `json:"tags" binding:"required"`
 }
 
+const objType = "Obj"
 const objMapping = `{
-	"Obj":{
-		"properties":{
-			"id": {
-				"type":"string"
-			},
-			"data": {
-				"type":"string"
-			},
-			"tags": {
-				"type":"string"
+		"Obj":{
+			"properties":{
+				"id": {
+					"type":"string"
+				},
+				"data": {
+					"type":"string"
+				},
+				"tags": {
+					"type":"string"
+				}
 			}
 		}
-	}
-}`
+	}`
 
 var objs = []Obj{
 	{ID: "id0", Data: "data0", Tags: "foo bar"},
@@ -80,62 +76,44 @@ var objs = []Obj{
 	{ID: "id2", Data: "data2", Tags: "foo"},
 }
 
-const mapping = "Obj"
+func uniq() string {
+	return fmt.Sprintf("%d", time.Now().Nanosecond())
+}
 
-func (suite *EsTester) SetUpIndex() IIndex {
+func (suite *EsTester) SetUpIndex() elasticsearch.IIndex {
 	t := suite.T()
 	assert := assert.New(t)
 
-	var required []piazza.ServiceName
-	if MOCKING {
-		required = []piazza.ServiceName{}
-	} else {
-		required = []piazza.ServiceName{piazza.PzElasticSearch}
-	}
-
-	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	suite.sys = sys
-
-	esi, err := NewIndexInterface(sys, "estest$", "", MOCKING)
+	esi, err := elasticsearch.NewIndex2(suite.url, "estest$"+uniq(), "")
 	assert.NoError(err)
 
 	err = esi.Delete()
 	//assert.NoError(err)
 
-	ok := esi.IndexExists()
+	ok, err := esi.IndexExists()
+	assert.NoError(err)
 	assert.False(ok)
 
 	// make the index
 	err = esi.Create("")
 	assert.NoError(err)
-	ok = esi.IndexExists()
+	ok, err = esi.IndexExists()
+	assert.NoError(err)
 	assert.True(ok)
 
-	if mapping != "" {
-		err = esi.SetMapping(mapping, objMapping)
-		assert.NoError(err)
-	}
+	err = esi.SetMapping(objType, objMapping)
+	assert.NoError(err)
 
 	// populate the index
 	for _, o := range objs {
-		indexResult, err := esi.PostData(mapping, o.ID, o)
+		indexResult, err := esi.PostData(objType, o.ID, o)
 		assert.NoError(err)
 		assert.NotNil(indexResult)
 	}
 
 	// allow the database time to settle
-	realFormat := &piazza.JsonPagination{
-		PerPage: 10,
-		Page:    0,
-		Order:   piazza.SortOrderAscending,
-		SortBy:  "",
-	}
-	pollingFn := GetData(func() (bool, error) {
-		getResult, err := esi.FilterByMatchAll(mapping, realFormat)
+	pollingFn := elasticsearch.GetData(func() (bool, error) {
+		getResult, err := esi.FilterByMatchAll(objType, nil)
 		if err != nil {
 			return false, err
 		}
@@ -145,12 +123,8 @@ func (suite *EsTester) SetUpIndex() IIndex {
 		return false, nil
 	})
 
-	pollOk, pollErr := PollFunction(pollingFn)
-	if pollErr != nil {
-		_ = pollOk
-		// TODO: return err object
-		log.Printf("Error: %#v", pollErr)
-	}
+	_, err = elasticsearch.PollFunction(pollingFn)
+	assert.NoError(err)
 
 	return esi
 }
@@ -195,23 +169,12 @@ func (suite *EsTester) Test01Client() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	var required []piazza.ServiceName
-	if MOCKING {
-		required = []piazza.ServiceName{}
-	} else {
-		required = []piazza.ServiceName{piazza.PzElasticSearch}
-	}
-	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required)
-	assert.NoError(err)
-
-	esi, err := NewIndexInterface(sys, "estest01$", "", MOCKING)
+	esi, err := elasticsearch.NewIndex2(suite.url, "estest01$", "")
 	assert.NoError(err)
 
 	version := esi.GetVersion()
 	assert.NoError(err)
-	assert.Contains("2.2.0", version)
-
-	//deleteOldIndexes(esi.(*Index).lib)
+	assert.True(strings.HasPrefix(version, "2.2") || strings.HasPrefix(version, "2.3"))
 }
 
 func (suite *EsTester) Test02SimplePost() {
@@ -222,38 +185,58 @@ func (suite *EsTester) Test02SimplePost() {
 
 	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
+
 	defer func() {
 		esi.Close()
 		esi.Delete()
 	}()
 
-	err = esi.SetMapping(mapping, piazza.JsonString(objMapping))
-	assert.NoError(err)
-
-	type NotObj struct {
-		ID   int    `json:"id" binding:"required"`
-		Data string `json:"data" binding:"required"`
-		Foo  bool   `json:"foo" binding:"required"`
+	type Obj2 struct {
+		ID2   int    `json:"id" binding:"required"`
+		Data2 string `json:"data" binding:"required"`
+		Foo2  bool   `json:"foo" binding:"required"`
 	}
-	o := NotObj{ID: 99, Data: "quick fox", Foo: true}
 
-	indexResult, err := esi.PostData(mapping, "99", o)
+	const mapping = `{
+			"Obj2":{
+				"properties":{
+					"id2": {
+						"type":"integer"
+					},
+					"data2": {
+						"type":"string"
+					},
+					"foo2": {
+						"type":"boolean"
+					}
+				}
+			}
+		}`
+
+	typ := "Obj2"
+	err = esi.SetMapping(typ, piazza.JsonString(mapping))
 	assert.NoError(err)
-	assert.NotNil(indexResult)
+	{
+		// post it
+		obj := Obj2{ID2: 99, Data2: "quick fox", Foo2: true}
+
+		indexResult, err := esi.PostData(typ, "99", obj)
+		assert.NoError(err)
+		assert.NotNil(indexResult)
+	}
 
 	{
-		// GET it
-		getResult, err := esi.GetByID(mapping, "99")
+		// get it
+		getResult, err := esi.GetByID(typ, "99")
 		assert.NoError(err)
 		assert.NotNil(getResult)
 		src := getResult.Source
 		assert.NotNil(src)
-		var tmp1 NotObj
-		err = json.Unmarshal(*src, &tmp1)
+		var tmp Obj2
+		err = json.Unmarshal(*src, &tmp)
 		assert.NoError(err)
-		assert.EqualValues("quick fox", tmp1.Data)
+		assert.EqualValues("quick fox", tmp.Data2)
 	}
-
 }
 
 func (suite *EsTester) Test03Operations() {
@@ -263,7 +246,7 @@ func (suite *EsTester) Test03Operations() {
 	var tmp1, tmp2 Obj
 	var err error
 	var src *json.RawMessage
-	var searchResult *SearchResult
+	var searchResult *elasticsearch.SearchResult
 
 	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
@@ -274,7 +257,7 @@ func (suite *EsTester) Test03Operations() {
 
 	{
 		// GET a specific one
-		getResult, err := esi.GetByID(mapping, "id1")
+		getResult, err := esi.GetByID(objType, "id1")
 		assert.NoError(err)
 		assert.NotNil(getResult)
 		src = getResult.Source
@@ -284,83 +267,73 @@ func (suite *EsTester) Test03Operations() {
 		assert.EqualValues("data1", tmp1.Data)
 	}
 
-	if MOCKING {
-		t.Skip("skipping part of test, because mocking.")
-	} else {
-		{
-			// SEARCH for everything
-			// TODO: exercise sortKey
-			realFormat := &piazza.JsonPagination{
-				Page:    0,
-				PerPage: 10,
-				Order:   piazza.SortOrderAscending,
-				SortBy:  "",
-			}
-			searchResult, err := esi.FilterByMatchAll(mapping, realFormat)
+	{
+		// SEARCH for everything
+		// TODO: exercise sortKey
+		searchResult, err := esi.FilterByMatchAll(objType, nil)
+		assert.NoError(err)
+		assert.NotNil(searchResult)
+
+		assert.Equal(int64(3), searchResult.TotalHits())
+
+		m := make(map[string]Obj)
+
+		for _, hit := range *searchResult.GetHits() {
+			err = json.Unmarshal(*hit.Source, &tmp1)
 			assert.NoError(err)
-			assert.NotNil(searchResult)
-
-			assert.Equal(int64(3), searchResult.TotalHits())
-
-			m := make(map[string]Obj)
-
-			for _, hit := range *searchResult.GetHits() {
-				err = json.Unmarshal(*hit.Source, &tmp1)
-				assert.NoError(err)
-				m[tmp1.ID] = tmp1
-			}
-
-			assert.Contains(m, "id0")
-			assert.Contains(m, "id1")
-			assert.Contains(m, "id2")
+			m[tmp1.ID] = tmp1
 		}
 
-		{
-			// SEARCH for a specific one
-			searchResult, err = esi.FilterByTermQuery(mapping, "id", "id1")
-			assert.NoError(err)
-			assert.NotNil(searchResult)
-			assert.EqualValues(1, searchResult.TotalHits())
-			hit := *searchResult.GetHit(0)
-			assert.NotNil(hit)
-			src = hit.Source
-			assert.NotNil(src)
-			err = json.Unmarshal(*src, &tmp1)
-			assert.NoError(err)
-			assert.EqualValues("data1", tmp1.Data)
-		}
+		assert.Contains(m, "id0")
+		assert.Contains(m, "id1")
+		assert.Contains(m, "id2")
+	}
 
-		{
-			// SEARCH fuzzily
-			searchResult, err = esi.FilterByTermQuery(mapping, "tags", "foo")
-			assert.NoError(err)
-			assert.NotNil(searchResult)
-			assert.EqualValues(2, searchResult.TotalHits())
+	{
+		// SEARCH for a specific one
+		searchResult, err = esi.FilterByTermQuery(objType, "id", "id1")
+		assert.NoError(err)
+		assert.NotNil(searchResult)
+		assert.EqualValues(1, searchResult.TotalHits())
+		hit := *searchResult.GetHit(0)
+		assert.NotNil(hit)
+		src = hit.Source
+		assert.NotNil(src)
+		err = json.Unmarshal(*src, &tmp1)
+		assert.NoError(err)
+		assert.EqualValues("data1", tmp1.Data)
+	}
 
-			hit0 := *searchResult.GetHit(0)
-			assert.NotNil(hit0)
-			src = hit0.Source
-			assert.NotNil(src)
-			err = json.Unmarshal(*src, &tmp1)
-			assert.NoError(err)
+	{
+		// SEARCH fuzzily
+		searchResult, err = esi.FilterByTermQuery(objType, "tags", "foo")
+		assert.NoError(err)
+		assert.NotNil(searchResult)
+		assert.EqualValues(2, searchResult.TotalHits())
 
-			hit1 := *searchResult.GetHit(1)
-			src = hit1.Source
-			assert.NotNil(src)
-			err = json.Unmarshal(*src, &tmp2)
-			assert.NoError(err)
+		hit0 := *searchResult.GetHit(0)
+		assert.NotNil(hit0)
+		src = hit0.Source
+		assert.NotNil(src)
+		err = json.Unmarshal(*src, &tmp1)
+		assert.NoError(err)
 
-			ok1 := ("id0" == tmp1.ID && "id2" == tmp2.ID)
-			ok2 := ("id0" == tmp2.ID && "id2" == tmp1.ID)
-			assert.True((ok1 || ok2) && !(ok1 && ok2))
-		}
+		hit1 := *searchResult.GetHit(1)
+		src = hit1.Source
+		assert.NotNil(src)
+		err = json.Unmarshal(*src, &tmp2)
+		assert.NoError(err)
+
+		ok1 := ("id0" == tmp1.ID && "id2" == tmp2.ID)
+		ok2 := ("id0" == tmp2.ID && "id2" == tmp1.ID)
+		assert.True((ok1 || ok2) && !(ok1 && ok2))
 	}
 
 	{
 		// DELETE by id
-		_, err = esi.DeleteByID(mapping, "id2")
+		_, err = esi.DeleteByID(objType, "id2")
 		assert.NoError(err)
-		_, err := esi.GetByID(mapping, "id2")
+		_, err := esi.GetByID(objType, "id2")
 		assert.Error(err)
 	}
 }
@@ -369,16 +342,11 @@ func (suite *EsTester) Test04JsonOperations() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	if MOCKING {
-		t.Skip("skipping test, because mocking.")
-		return
-	}
-
 	var tmp1, tmp2 Obj
 	var err error
 	var src *json.RawMessage
 
-	var searchResult *SearchResult
+	var searchResult *elasticsearch.SearchResult
 
 	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
@@ -396,7 +364,7 @@ func (suite *EsTester) Test04JsonOperations() {
 				}
 			}`
 
-		searchResult, err = esi.SearchByJSON(mapping, str)
+		searchResult, err = esi.SearchByJSON(objType, str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -416,7 +384,7 @@ func (suite *EsTester) Test04JsonOperations() {
 				}
 			}`
 
-		searchResult, err = esi.SearchByJSON(mapping, str)
+		searchResult, err = esi.SearchByJSON(objType, str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -437,7 +405,7 @@ func (suite *EsTester) Test04JsonOperations() {
 				}
 			}`
 
-		searchResult, err = esi.SearchByJSON(mapping, str)
+		searchResult, err = esi.SearchByJSON(objType, str)
 		assert.NoError(err)
 		assert.NotNil(searchResult)
 
@@ -466,11 +434,6 @@ func (suite *EsTester) Test04JsonOperations() {
 func (suite *EsTester) Test05Mapping() {
 	t := suite.T()
 	assert := assert.New(t)
-
-	if MOCKING {
-		t.Skip("skipping test, because mocking.")
-		return
-	}
 
 	var err error
 
@@ -517,11 +480,6 @@ func (suite *EsTester) Test05Mapping() {
 func (suite *EsTester) Test06SetMapping() {
 	t := suite.T()
 	assert := assert.New(t)
-
-	if MOCKING {
-		t.Skip("skipping test, because mocking.")
-		return
-	}
 
 	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
@@ -573,15 +531,15 @@ func (suite *EsTester) Test07ConstructMapping() {
 		es.Delete()
 	}()
 
-	items := make(map[string]MappingElementTypeName)
+	items := make(map[string]elasticsearch.MappingElementTypeName)
 
-	items["integer1"] = MappingElementTypeInteger
-	items["integer2"] = MappingElementTypeInteger
-	items["double1"] = MappingElementTypeDouble
-	items["bool1"] = MappingElementTypeBool
-	items["date1"] = MappingElementTypeDate
+	items["integer1"] = elasticsearch.MappingElementTypeInteger
+	items["integer2"] = elasticsearch.MappingElementTypeInteger
+	items["double1"] = elasticsearch.MappingElementTypeDouble
+	items["bool1"] = elasticsearch.MappingElementTypeBool
+	items["date1"] = elasticsearch.MappingElementTypeDate
 
-	jsonstr, err := ConstructMappingSchema("MyTestObj", items)
+	jsonstr, err := elasticsearch.ConstructMappingSchema("MyTestObj", items)
 	assert.NoError(err)
 	assert.NotNil(jsonstr)
 	assert.NotEmpty(jsonstr)
@@ -609,11 +567,6 @@ func (suite *EsTester) Test08Percolation() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	if MOCKING {
-		t.Skip("skipping test, because mocking.")
-		return
-	}
-
 	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
 	defer func() {
@@ -621,9 +574,9 @@ func (suite *EsTester) Test08Percolation() {
 		esi.Delete()
 	}()
 
-	items := make(map[string]MappingElementTypeName)
-	items["tag"] = MappingElementTypeString
-	jsonstr, err := ConstructMappingSchema("Event", items)
+	items := make(map[string]elasticsearch.MappingElementTypeName)
+	items["tag"] = elasticsearch.MappingElementTypeString
+	jsonstr, err := elasticsearch.ConstructMappingSchema("Event", items)
 	assert.NoError(err)
 	assert.NotEmpty(jsonstr)
 
@@ -678,7 +631,7 @@ func (suite *EsTester) Test08Percolation() {
 	assert.Equal("p2", percolateResponse.Matches[0].Id)
 }
 
-type ByID []*PercolateResponseMatch
+type ByID []*elasticsearch.PercolateResponseMatch
 
 func (a ByID) Len() int {
 	return len(a)
@@ -689,7 +642,7 @@ func (a ByID) Swap(i, j int) {
 func (a ByID) Less(i, j int) bool {
 	return a[i].Id < a[j].Id
 }
-func sortMatches(matches []*PercolateResponseMatch) []*PercolateResponseMatch {
+func sortMatches(matches []*elasticsearch.PercolateResponseMatch) []*elasticsearch.PercolateResponseMatch {
 	sort.Sort(ByID(matches))
 	return matches
 }
@@ -698,7 +651,7 @@ func (suite *EsTester) Test09FullPercolation() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	var esi IIndex
+	var esi elasticsearch.IIndex
 
 	var err error
 
@@ -709,27 +662,23 @@ func (suite *EsTester) Test09FullPercolation() {
 
 	// create index
 	{
-		esi, err = NewIndexInterface(suite.sys, "estest09$", "", MOCKING)
+		esi, err = elasticsearch.NewIndex2(suite.url, "estest09$"+uniq(), "")
 		assert.NoError(err)
 
 		// make the index
 		err = esi.Create("")
 		assert.NoError(err)
 
-		ok := esi.IndexExists()
+		ok, err := esi.IndexExists()
+		assert.NoError(err)
 		assert.True(ok)
-	}
-
-	if MOCKING {
-		t.Skip("skipping test, because mocking.")
-		return
 	}
 
 	//-----------------------------------------------------------------------
 
-	addMappings := func(maps map[string](map[string]MappingElementTypeName)) {
+	addMappings := func(maps map[string](map[string]elasticsearch.MappingElementTypeName)) {
 		for k, v := range maps {
-			jsn, err := ConstructMappingSchema(k, v)
+			jsn, err := elasticsearch.ConstructMappingSchema(k, v)
 			assert.NoError(err)
 			assert.NotEmpty(jsn)
 			err = esi.SetMapping(k, jsn)
@@ -781,16 +730,16 @@ func (suite *EsTester) Test09FullPercolation() {
 		Num int    `json:"num" binding:"required"`
 	}
 
-	maps := map[string](map[string]MappingElementTypeName){
-		"EventType1": map[string]MappingElementTypeName{
-			"id":  MappingElementTypeString,
-			"str": MappingElementTypeString,
-			"num": MappingElementTypeInteger,
+	maps := map[string](map[string]elasticsearch.MappingElementTypeName){
+		"EventType1": map[string]elasticsearch.MappingElementTypeName{
+			"id":  elasticsearch.MappingElementTypeString,
+			"str": elasticsearch.MappingElementTypeString,
+			"num": elasticsearch.MappingElementTypeInteger,
 		},
-		"EventType2": map[string]MappingElementTypeName{
-			"id":  MappingElementTypeString,
-			"boo": MappingElementTypeBool,
-			"num": MappingElementTypeInteger,
+		"EventType2": map[string]elasticsearch.MappingElementTypeName{
+			"id":  elasticsearch.MappingElementTypeString,
+			"boo": elasticsearch.MappingElementTypeBool,
+			"num": elasticsearch.MappingElementTypeInteger,
 		},
 	}
 	addMappings(maps)
@@ -906,19 +855,7 @@ func (suite *EsTester) Test10GetAll() {
 	t := suite.T()
 	assert := assert.New(t)
 
-	var required []piazza.ServiceName
-	if MOCKING {
-		required = []piazza.ServiceName{}
-	} else {
-		required = []piazza.ServiceName{piazza.PzElasticSearch}
-	}
-
-	sys, err := piazza.NewSystemConfig(piazza.PzGoCommon, required)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	esi, err := NewIndexInterface(sys, "getall$", "", MOCKING)
+	esi, err := elasticsearch.NewIndex2(suite.url, "getall$", "")
 	assert.NoError(err)
 	defer func() {
 		esi.Close()
@@ -1026,14 +963,8 @@ func (suite *EsTester) Test10GetAll() {
 	}
 
 	{
-		realFormat := &piazza.JsonPagination{
-			PerPage: 10,
-			Page:    0,
-			Order:   piazza.SortOrderAscending,
-			SortBy:  "",
-		}
-		pollingFn := GetData(func() (bool, error) {
-			getResult, err := esi.FilterByMatchAll("", realFormat)
+		pollingFn := elasticsearch.GetData(func() (bool, error) {
+			getResult, err := esi.FilterByMatchAll("", nil)
 			if err != nil {
 				return false, err
 			}
@@ -1043,8 +974,8 @@ func (suite *EsTester) Test10GetAll() {
 			return false, nil
 		})
 
-		_, err := PollFunction(pollingFn)
-		getResult, err := esi.FilterByMatchAll("", realFormat)
+		_, err := elasticsearch.PollFunction(pollingFn)
+		getResult, err := esi.FilterByMatchAll("", nil)
 		assert.NoError(err)
 		assert.NotNil(getResult)
 		assert.Len(*getResult.GetHits(), 2)
@@ -1078,26 +1009,7 @@ func (suite *EsTester) Test10GetAll() {
 	}
 }
 
-func (suite *EsTester) Test11Pagination1() {
-	t := suite.T()
-	assert := assert.New(t)
-
-	p := piazza.JsonPagination{
-		PerPage: 10,
-		Page:    32,
-		Order:   piazza.SortOrderDescending,
-		SortBy:  "id",
-	}
-
-	q := NewQueryFormat(&p)
-
-	assert.Equal(10*32, q.From)
-	assert.Equal(10, q.Size)
-	assert.False(q.Order)
-	assert.EqualValues("id", q.Key)
-}
-
-func (suite *EsTester) Test11Pagination2() {
+func (suite *EsTester) Test11Pagination() {
 	t := suite.T()
 	assert := assert.New(t)
 
@@ -1111,32 +1023,33 @@ func (suite *EsTester) Test11Pagination2() {
 	}()
 
 	type Obj3 struct {
-		ID   string `json:"id3" binding:"required"`
-		Data int    `json:"data3" binding:"required"`
+		ID3   string `json:"id3" binding:"required"`
+		Data3 int    `json:"data3" binding:"required"`
 	}
-	obj3Mapping := `{
-	"Obj3":{
-		"properties":{
-			"id3": {
-				"type":"string",
-				"store":true
-			},
-			"data3": {
-				"type":"integer",
-				"store": true
+	obj3Mapping :=
+		`{
+			"Obj3":{
+				"properties":{
+				"id3": {
+					"type":"string",
+					"store":true
+				},
+				"data3": {
+					"type":"integer",
+					"store": true
+				}
 			}
 		}
-	}
-}`
+	}`
 
 	err = esi.SetMapping("Obj3", piazza.JsonString(obj3Mapping))
 	assert.NoError(err)
 
-	p := fmt.Sprintf("%x", time.Now().Nanosecond()%0xffffffff)
+	p := uniq()
 
 	for i := 0; i <= 9; i++ {
 		id := fmt.Sprintf("id%d_%s", i, p)
-		obj := Obj3{ID: id, Data: i * i}
+		obj := Obj3{ID3: id, Data3: i * i}
 		indexResult, err := esi.PostData("Obj3", id, obj)
 		assert.NoError(err)
 		assert.NotNil(indexResult)
@@ -1150,7 +1063,7 @@ func (suite *EsTester) Test11Pagination2() {
 			Order:   piazza.SortOrderAscending,
 			SortBy:  "id3",
 		}
-		pollingFn := GetData(func() (bool, error) {
+		pollingFn := elasticsearch.GetData(func() (bool, error) {
 			getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
 			if err != nil {
 				return false, err
@@ -1161,7 +1074,7 @@ func (suite *EsTester) Test11Pagination2() {
 			return false, nil
 		})
 
-		_, err := PollFunction(pollingFn)
+		_, err := elasticsearch.PollFunction(pollingFn)
 		getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
 		assert.NoError(err)
 		assert.Len(*getResult.GetHits(), 4)
@@ -1176,7 +1089,7 @@ func (suite *EsTester) Test11Pagination2() {
 			PerPage: 3,
 			Page:    1,
 			Order:   piazza.SortOrderAscending,
-			SortBy:  "",
+			SortBy:  "id3",
 		}
 		getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
 		assert.NoError(err)

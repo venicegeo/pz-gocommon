@@ -97,13 +97,15 @@ func (suite *EsTester) SetUpIndex() IIndex {
 	err = esi.Delete()
 	//assert.NoError(err)
 
-	ok := esi.IndexExists()
+	ok, err := esi.IndexExists()
+	assert.NoError(err)
 	assert.False(ok)
 
 	// make the index
 	err = esi.Create("")
 	assert.NoError(err)
-	ok = esi.IndexExists()
+	ok, err = esi.IndexExists()
+	assert.NoError(err)
 	assert.True(ok)
 
 	if mapping != "" {
@@ -136,12 +138,8 @@ func (suite *EsTester) SetUpIndex() IIndex {
 		return false, nil
 	})
 
-	pollOk, pollErr := PollFunction(pollingFn)
-	if pollErr != nil {
-		_ = pollOk
-		// TODO: return err object
-		log.Printf("Error: %#v", pollErr)
-	}
+	_, err = PollFunction(pollingFn)
+	assert.NoError(err)
 
 	return esi
 }
@@ -352,7 +350,8 @@ func (suite *EsTester) Test09FullPercolation() {
 		err = esi.Create("")
 		assert.NoError(err)
 
-		ok := esi.IndexExists()
+		ok, err := esi.IndexExists()
+		assert.NoError(err)
 		assert.True(ok)
 	}
 }

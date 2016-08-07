@@ -52,9 +52,9 @@ type IIndex interface {
 	GetVersion() string
 
 	IndexName() string
-	IndexExists() bool
-	TypeExists(typ string) bool
-	ItemExists(typ string, id string) bool
+	IndexExists() (bool, error)
+	TypeExists(typ string) (bool, error)
+	ItemExists(typ string, id string) (bool, error)
 	Create(settings string) error
 	Close() error
 	Delete() error
