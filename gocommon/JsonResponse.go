@@ -109,12 +109,12 @@ func (resp *JsonResponse) SetType() error {
 func (resp *JsonResponse) ExtractData(output interface{}) error {
 	raw, err := json.Marshal(resp.Data)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	err = json.Unmarshal(raw, output)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	return nil
