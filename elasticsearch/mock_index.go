@@ -84,6 +84,21 @@ func (esi *MockIndex) ItemExists(typ string, id string) (bool, error) {
 // if index already exists, does nothing
 func (esi *MockIndex) Create(settings string) error {
 	esi.exists = true
+
+	obj := map[string]interface{}{}
+	err := json.Unmarshal([]byte(settings), &obj)
+	if err != nil {
+		return err
+	}
+
+	var key string
+	for k, _ := range obj["mappings"].(map[string]interface{}) {
+		key = k
+		break
+	}
+
+	esi.items[key] = make(map[string]*json.RawMessage)
+
 	return nil
 }
 
