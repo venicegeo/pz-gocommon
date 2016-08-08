@@ -36,34 +36,37 @@ const waitSleepMs = 100
 type ServiceName string
 
 const (
-	PzDiscover      ServiceName = "pz-discover"
-	PzElasticSearch ServiceName = "pz-elasticsearch"
-	PzGoCommon      ServiceName = "PZ-GOCOMMON" // not a real service, just for testing
-	PzKafka         ServiceName = "pz-kafka"
-	PzLogger        ServiceName = "pz-logger"
-	PzUuidgen       ServiceName = "pz-uuidgen"
-	PzWorkflow      ServiceName = "pz-workflow"
-	PzsvcHello      ServiceName = "pzsvc-hello"
+	PzDiscover          ServiceName = "pz-discover"
+	PzElasticSearch     ServiceName = "pz-elasticsearch"
+	PzGoCommon          ServiceName = "PZ-GOCOMMON" // not a real service, just for testing
+	PzKafka             ServiceName = "pz-kafka"
+	PzLogger            ServiceName = "pz-logger"
+	PzUuidgen           ServiceName = "pz-uuidgen"
+	PzWorkflow          ServiceName = "pz-workflow"
+	PzsvcHello          ServiceName = "pzsvc-hello"
+	PzServiceController ServiceName = "pz-servicecontroller"
 )
 
 var EndpointPrefixes = map[ServiceName]string{
-	PzDiscover:      "",
-	PzElasticSearch: "",
-	PzKafka:         "",
-	PzLogger:        "",
-	PzUuidgen:       "",
-	PzWorkflow:      "",
-	PzsvcHello:      "",
+	PzDiscover:          "",
+	PzElasticSearch:     "",
+	PzKafka:             "",
+	PzLogger:            "",
+	PzUuidgen:           "",
+	PzWorkflow:          "",
+	PzsvcHello:          "",
+	PzServiceController: "",
 }
 
 var HealthcheckEndpoints = map[ServiceName]string{
-	PzDiscover:      "",
-	PzElasticSearch: "",
-	PzKafka:         "",
-	PzLogger:        "/",
-	PzUuidgen:       "/",
-	PzWorkflow:      "/",
-	PzsvcHello:      "/",
+	PzDiscover:          "",
+	PzElasticSearch:     "",
+	PzKafka:             "",
+	PzLogger:            "/",
+	PzUuidgen:           "/",
+	PzWorkflow:          "/",
+	PzsvcHello:          "/",
+	PzServiceController: "",
 }
 
 type ServicesMap map[ServiceName]string
@@ -175,7 +178,6 @@ func (sys *SystemConfig) checkRequirements(requirements []ServiceName) error {
 
 func (sys *SystemConfig) runHealthChecks() error {
 	//log.Printf("SystemConfig.runHealthChecks: start")
-
 	for name, addr := range sys.endpoints {
 		if name == sys.Name || name == PzKafka {
 			continue
@@ -184,7 +186,6 @@ func (sys *SystemConfig) runHealthChecks() error {
 		url := fmt.Sprintf("%s://%s%s", DefaultProtocol, addr, HealthcheckEndpoints[name])
 
 		//log.Printf("Service healthy? %s at %s (%s)", name, addr, url)
-
 		resp, err := http.Get(url)
 		if err != nil {
 			s := fmt.Sprintf("Health check errored for service: %s at %s <%#v>", name, url, resp)
