@@ -205,6 +205,25 @@ func IsValidMappingType(mappingValue string) bool {
 	}
 	return false
 }
+func IsValidArrayTypeMapping(mappingValue string) bool {
+	if string(MappingElementTypeStringA) == mappingValue ||
+		string(MappingElementTypeLongA) == mappingValue ||
+		string(MappingElementTypeIntegerA) == mappingValue ||
+		string(MappingElementTypeShortA) == mappingValue ||
+		string(MappingElementTypeByteA) == mappingValue ||
+		string(MappingElementTypeDoubleA) == mappingValue ||
+		string(MappingElementTypeFloatA) == mappingValue ||
+		string(MappingElementTypeDateA) == mappingValue ||
+		string(MappingElementTypeBoolA) == mappingValue ||
+		string(MappingElementTypeBinaryA) == mappingValue ||
+		string(MappingElementTypeGeoPointA) == mappingValue ||
+		string(MappingElementTypeGeoShapeA) == mappingValue ||
+		string(MappingElementTypeIpA) == mappingValue ||
+		string(MappingElementTypeCompletionA) == mappingValue {
+		return true
+	}
+	return false
+}
 func ValueIsValidArray(value string) bool {
 	openCount, closedCount := 0, 0
 	for i := 0; i < len(value); i++ {
@@ -218,7 +237,7 @@ func ValueIsValidArray(value string) bool {
 	if openCount != 1 || closedCount != 1 {
 		return false
 	}
-	if strings.HasPrefix(value, "]") && (strings.HasSuffix(value, "]") || strings.HasSuffix(value, "],")) {
+	if strings.HasPrefix(value, "[") && (strings.HasSuffix(value, "]") || strings.HasSuffix(value, "],")) {
 		return true
 	}
 	return false
@@ -226,7 +245,6 @@ func ValueIsValidArray(value string) bool {
 func CharAt(str string, index int) string {
 	return str[index : index+1]
 }
-
 func RemoveWhitespace(str string) string {
 	return strings.Map(func(r rune) rune {
 		if unicode.IsSpace(r) {
@@ -235,7 +253,6 @@ func RemoveWhitespace(str string) string {
 		return r
 	}, str)
 }
-
 func InsertString(str, insert string, index int) string {
 	return str[:index] + insert + str[index:]
 }
