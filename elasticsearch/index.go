@@ -279,7 +279,7 @@ func (esi *Index) GetAllElements(typ string) (*SearchResult, error) {
 func (esi *Index) FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error) {
 	ok := typ != "" && esi.TypeExists(typ)
 	if !ok {
-		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
+		return &SearchResult{Found: false}, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
 	}
 
 	// Returns a query of the form {"term":{"name":"value"}}

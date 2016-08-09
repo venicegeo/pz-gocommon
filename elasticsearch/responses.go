@@ -28,6 +28,7 @@ type SearchResultHit struct {
 type SearchResult struct {
 	totalHits int64 // total number of hits overall
 	hits      []*SearchResultHit
+	Found     bool
 }
 
 func NewSearchResult(searchResult *elastic.SearchResult) *SearchResult {
@@ -37,6 +38,7 @@ func NewSearchResult(searchResult *elastic.SearchResult) *SearchResult {
 	resp := &SearchResult{
 		totalHits: totalHits,
 		hits:      make([]*SearchResultHit, numHits),
+		Found:     true,
 	}
 
 	for i, hit := range searchResult.Hits.Hits {
