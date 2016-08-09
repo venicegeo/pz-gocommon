@@ -213,7 +213,7 @@ func (esi *Index) GetByID(typ string, id string) (*GetResult, error) {
 func (esi *Index) DeleteByID(typ string, id string) (*DeleteResponse, error) {
 	ok := esi.ItemExists(typ, id)
 	if !ok {
-		return nil, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
+		return &DeleteResponse{Found: false}, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
 	}
 
 	deleteResponse, err := esi.lib.Delete().
@@ -446,7 +446,7 @@ func (esi *Index) DeletePercolationQuery(id string) (*DeleteResponse, error) {
 	typ := ".percolator"
 	ok := esi.ItemExists(typ, id)
 	if !ok {
-		return nil, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
+		return &DeleteResponse{Found: false}, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
 	}
 
 	deleteResponse, err := esi.lib.Delete().
