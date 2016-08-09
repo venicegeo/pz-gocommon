@@ -198,15 +198,11 @@ func (esi *Index) GetByID(typ string, id string) (*GetResult, error) {
 	// TODO: the caller should enforce this instead (here and elsewhere)
 	ok := esi.ItemExists(typ, id)
 	if !ok {
-		return nil, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
+		return &GetResult{Found: false}, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
 	}
 
 	getResult, err := esi.lib.Get().Index(esi.index).Type(typ).Id(id).Do()
-	if err != nil {
-		return nil, err
-	}
-
-	return NewGetResult(getResult), nil
+	return NewGetResult(getResult), err
 }
 
 // DeleteByID deletes a document by ID within a specified index and type.
