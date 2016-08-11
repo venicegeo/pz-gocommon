@@ -51,7 +51,7 @@ func NewJsonPagination(params *HttpQueryParams) (*JsonPagination, error) {
 
 	jp := &JsonPagination{}
 
-	perPage, err := params.GetPerPage(defaults().PerPage)
+	perPage, err := params.GetPerPage(&(defaults().PerPage))
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func NewJsonPagination(params *HttpQueryParams) (*JsonPagination, error) {
 		jp.PerPage = *perPage
 	}
 
-	page, err := params.GetPage(defaults().Page)
+	page, err := params.GetPage(&(defaults().Page))
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func NewJsonPagination(params *HttpQueryParams) (*JsonPagination, error) {
 		jp.Page = *page
 	}
 
-	sortBy, err := params.GetSortBy(defaults().SortBy)
+	sortBy, err := params.GetSortBy(&(defaults().SortBy))
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func NewJsonPagination(params *HttpQueryParams) (*JsonPagination, error) {
 		jp.SortBy = *sortBy
 	}
 
-	order, err := params.GetSortOrder(defaults().Order)
+	order, err := params.GetSortOrder(&(defaults().Order))
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,6 @@ func NewJsonPagination(params *HttpQueryParams) (*JsonPagination, error) {
 
 	return jp, nil
 }
-
 
 // TODO: probably want to create this once and reuse it
 func defaults() *JsonPagination {
