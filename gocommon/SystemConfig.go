@@ -36,34 +36,37 @@ const waitSleepMs = 100
 type ServiceName string
 
 const (
-	PzDiscover      ServiceName = "pz-discover"
-	PzElasticSearch ServiceName = "pz-elasticsearch"
-	PzGoCommon      ServiceName = "PZ-GOCOMMON" // not a real service, just for testing
-	PzKafka         ServiceName = "pz-kafka"
-	PzLogger        ServiceName = "pz-logger"
-	PzUuidgen       ServiceName = "pz-uuidgen"
-	PzWorkflow      ServiceName = "pz-workflow"
-	PzsvcHello      ServiceName = "pzsvc-hello"
+	PzDiscover          ServiceName = "pz-discover"
+	PzElasticSearch     ServiceName = "pz-elasticsearch"
+	PzGoCommon          ServiceName = "PZ-GOCOMMON" // not a real service, just for testing
+	PzKafka             ServiceName = "pz-kafka"
+	PzLogger            ServiceName = "pz-logger"
+	PzUuidgen           ServiceName = "pz-uuidgen"
+	PzWorkflow          ServiceName = "pz-workflow"
+	PzsvcHello          ServiceName = "pzsvc-hello"
+	PzServiceController ServiceName = "pz-servicecontroller"
 )
 
 var EndpointPrefixes = map[ServiceName]string{
-	PzDiscover:      "",
-	PzElasticSearch: "",
-	PzKafka:         "",
-	PzLogger:        "",
-	PzUuidgen:       "",
-	PzWorkflow:      "",
-	PzsvcHello:      "",
+	PzDiscover:          "",
+	PzElasticSearch:     "",
+	PzKafka:             "",
+	PzLogger:            "",
+	PzUuidgen:           "",
+	PzWorkflow:          "",
+	PzsvcHello:          "",
+	PzServiceController: "",
 }
 
 var HealthcheckEndpoints = map[ServiceName]string{
-	PzDiscover:      "",
-	PzElasticSearch: "",
-	PzKafka:         "",
-	PzLogger:        "/",
-	PzUuidgen:       "/",
-	PzWorkflow:      "/",
-	PzsvcHello:      "/",
+	PzDiscover:          "",
+	PzElasticSearch:     "",
+	PzKafka:             "",
+	PzLogger:            "/",
+	PzUuidgen:           "/",
+	PzWorkflow:          "/",
+	PzsvcHello:          "/",
+	PzServiceController: "",
 }
 
 type ServicesMap map[ServiceName]string
