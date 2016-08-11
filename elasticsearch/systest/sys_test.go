@@ -1068,7 +1068,7 @@ func (suite *EsTester) Test11Pagination() {
 			if err != nil {
 				return false, err
 			}
-			if getResult != nil && len(*getResult.GetHits()) == 4 {
+			if getResult != nil && getResult.TotalHits() == 10 {
 				return true, nil
 			}
 			return false, nil
