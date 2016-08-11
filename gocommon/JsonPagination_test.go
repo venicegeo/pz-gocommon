@@ -44,8 +44,8 @@ func TestPaginationParams(t *testing.T) {
 	defaults := &JsonPagination{
 		PerPage: 10,
 		Page:    0,
-		Order:   SortOrderAscending,
-		SortBy:  "id",
+		Order:   SortOrderDescending,
+		SortBy:  "createdOn",
 	}
 
 	// with no params specified
@@ -56,7 +56,7 @@ func TestPaginationParams(t *testing.T) {
 
 		params := NewQueryParams(&req)
 
-		actual, err := NewJsonPagination(params, defaults)
+		actual, err := NewJsonPagination(params)
 		assert.NoError(err)
 		expected := defaults
 		assert.EqualValues(expected, actual)
@@ -70,33 +70,33 @@ func TestPaginationParams(t *testing.T) {
 
 		params := NewQueryParams(&req)
 
-		actual, err := NewJsonPagination(params, defaults)
-		assert.NoError(err)
-
-		expected := &JsonPagination{
-			PerPage: 100,
-			Page:    17,
-			Order:   SortOrderAscending,
-			SortBy:  "id",
-		}
-		assert.EqualValues(expected, actual)
-	}
-
-	// with all params specified
-	{
-		url, err := url.Parse("http://example.com?perPage=100&page=17&order=desc&sortBy=foo")
-		assert.NoError(err)
-		req := http.Request{URL: url}
-
-		params := NewQueryParams(&req)
-
-		actual, err := NewJsonPagination(params, defaults)
+		actual, err := NewJsonPagination(params)
 		assert.NoError(err)
 
 		expected := &JsonPagination{
 			PerPage: 100,
 			Page:    17,
 			Order:   SortOrderDescending,
+			SortBy:  "createdOn",
+		}
+		assert.EqualValues(expected, actual)
+	}
+
+	// with all params specified
+	{
+		url, err := url.Parse("http://example.com?perPage=100&page=17&order=asc&sortBy=foo")
+		assert.NoError(err)
+		req := http.Request{URL: url}
+
+		params := NewQueryParams(&req)
+
+		actual, err := NewJsonPagination(params)
+		assert.NoError(err)
+
+		expected := &JsonPagination{
+			PerPage: 100,
+			Page:    17,
+			Order:   SortOrderAscending,
 			SortBy:  "foo",
 		}
 		assert.EqualValues(expected, actual)
