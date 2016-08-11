@@ -229,14 +229,10 @@ func (esi *Index) GetByID(typ string, id string) (*GetResult, error) {
 		return nil, err
 	}
 	if !ok {
-		return nil, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
+		return &GetResult{Found: false}, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
 	}
 
 	getResult, err := esi.lib.Get().Index(esi.index).Type(typ).Id(id).Do()
-	if err != nil {
-		return nil, err
-	}
-	return NewGetResult(getResult), nil
 }
 
 // DeleteByID deletes a document by ID within a specified index and type.
@@ -246,7 +242,7 @@ func (esi *Index) DeleteByID(typ string, id string) (*DeleteResponse, error) {
 		return nil, err
 	}
 	if !ok {
-		return nil, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
+		return &DeleteResponse{Found: false}, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
 	}
 
 	deleteResponse, err := esi.lib.Delete().
@@ -327,7 +323,7 @@ func (esi *Index) FilterByTermQuery(typ string, name string, value interface{}) 
 		return nil, err
 	}
 	if !ok {
-		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
+		return &SearchResult{Found: false}, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
 	}
 
 	// Returns a query of the form {"term":{"name":"value"}}
@@ -516,7 +512,7 @@ func (esi *Index) DeletePercolationQuery(id string) (*DeleteResponse, error) {
 		return nil, err
 	}
 	if !ok {
-		return nil, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
+		return &DeleteResponse{Found: false}, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
 	}
 
 	deleteResponse, err := esi.lib.Delete().

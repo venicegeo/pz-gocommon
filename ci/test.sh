@@ -24,6 +24,7 @@ go get github.com/venicegeo/pz-gocommon/gocommon
 cd $GOPATH/src/github.com/venicegeo/pz-gocommon
 
 glide install
+glide update
 
 #----------------------------------------------------------------------
 
