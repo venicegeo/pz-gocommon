@@ -233,6 +233,7 @@ func (esi *Index) GetByID(typ string, id string) (*GetResult, error) {
 	}
 
 	getResult, err := esi.lib.Get().Index(esi.index).Type(typ).Id(id).Do()
+	return NewGetResult(getResult), err
 }
 
 // DeleteByID deletes a document by ID within a specified index and type.
