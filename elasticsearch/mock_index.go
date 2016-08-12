@@ -253,32 +253,56 @@ func (esi *MockIndex) GetAllElements(typ string) (*SearchResult, error) {
 
 func (esi *MockIndex) FilterByMatchQuery(typ string, name string, value interface{}) (*SearchResult, error) {
 
-	/*termQuery := NewTermQuery(name, value)
-	searchResult, err := esi.lib.Search().
-		Index(esi.index).
-		Type(typ).
-		Query(termQuery).
-		Do()
-	return searchResult, err*/
-
-	////resp := &SearchResult{}
-	////return resp, nil
 	return nil, errors.New("FilterByMatchQuery not supported under mocking")
 }
 
 func (esi *MockIndex) FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error) {
 
-	/*termQuery := NewTermQuery(name, value)
-	searchResult, err := esi.lib.Search().
-		Index(esi.index).
-		Type(typ).
-		Query(termQuery).
-		Do()
-	return searchResult, err*/
+	objs := make(map[string]*json.RawMessage)
 
-	////resp := &SearchResult{}
-	////return resp, nil
-	return nil, errors.New("FilterByTermQuery not supported under mocking")
+	if typ == "" {
+		for t := range esi.items {
+			for id, i := range esi.items[t] {
+				objs[id] = i
+			}
+		}
+	} else {
+		for id, i := range esi.items[typ] {
+			objs[id] = i
+		}
+	}
+
+	resp := &SearchResult{
+		totalHits: int64(len(objs)),
+		hits:      make([]*SearchResultHit, 0),
+	}
+
+	i := 0
+	for id, obj := range objs {
+		var iface interface{}
+		err := json.Unmarshal(*obj, &iface)
+		if err != nil {
+			return nil, err
+		}
+		actualValue := iface.(map[string]interface{})[name].(string)
+		if actualValue != value.(string) {
+			continue
+		}
+		tmp := &SearchResultHit{
+			Id:     id,
+			Source: obj,
+		}
+		resp.hits = append(resp.hits, tmp)
+		i++
+	}
+
+	if len(resp.hits) > 0 {
+		resp.Found = true
+	}
+
+	resp.hits = srhSortMatches(resp.hits)
+
+	return resp, nil
 }
 
 func (esi *MockIndex) SearchByJSON(typ string, jsn string) (*SearchResult, error) {

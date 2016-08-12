@@ -636,3 +636,48 @@ func (suite *EsTester) Test11Pagination2() {
 		assert.Equal("id5_"+p, getResult.GetHit(2).Id)
 	}
 }
+
+func (suite *EsTester) Test12TermMatch() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	var err error
+
+	esi := suite.SetUpIndex()
+	assert.NotNil(esi)
+	defer func() {
+		esi.Close()
+		esi.Delete()
+	}()
+
+	err = esi.SetMapping(mapping, piazza.JsonString(objMapping))
+	assert.NoError(err)
+
+	type NotObj struct {
+		ID   int    `json:"id" binding:"required"`
+		Data string `json:"data" binding:"required"`
+		Foo  bool   `json:"foo" binding:"required"`
+	}
+	o1 := NotObj{ID: 99, Data: "quick fox", Foo: true}
+	o2 := NotObj{ID: 17, Data: "lazy dog", Foo: false}
+
+	indexResult, err := esi.PostData(mapping, "99", o1)
+	assert.NoError(err)
+	assert.NotNil(indexResult)
+
+	indexResult, err = esi.PostData(mapping, "17", o2)
+	assert.NoError(err)
+	assert.NotNil(indexResult)
+
+	searchResult, err := esi.FilterByTermQuery(mapping, "data", "lazy dog")
+	assert.NoError(err)
+	assert.NotNil(searchResult)
+	assert.True(searchResult.Found)
+	array := searchResult.GetHits()
+	assert.Len(*array, 1)
+
+	searchResult, err = esi.FilterByTermQuery(mapping, "data", "lazy sloth")
+	assert.NoError(err)
+	assert.NotNil(searchResult)
+	assert.False(searchResult.Found)
+}
