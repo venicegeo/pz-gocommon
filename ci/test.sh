@@ -26,6 +26,7 @@ cd $GOPATH/src/github.com/venicegeo/pz-gocommon
 #glide install
 #glide update
 go get github.com/stretchr/testify/assert
+go get gopkg.in/olivere/elastic.v3
 
 #----------------------------------------------------------------------
 
