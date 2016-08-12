@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/venicegeo/pz-gocommon/gocommon"
 )
@@ -172,87 +171,63 @@ func PollFunction(fn GetData) (bool, error) {
 	}
 }
 
-func IsValidMappingType(mappingValue string) bool {
-	if string(MappingElementTypeString) == mappingValue ||
-		string(MappingElementTypeLong) == mappingValue ||
-		string(MappingElementTypeInteger) == mappingValue ||
-		string(MappingElementTypeShort) == mappingValue ||
-		string(MappingElementTypeByte) == mappingValue ||
-		string(MappingElementTypeDouble) == mappingValue ||
-		string(MappingElementTypeFloat) == mappingValue ||
-		string(MappingElementTypeDate) == mappingValue ||
-		string(MappingElementTypeBool) == mappingValue ||
-		string(MappingElementTypeBinary) == mappingValue ||
-		string(MappingElementTypeGeoPoint) == mappingValue ||
-		string(MappingElementTypeGeoShape) == mappingValue ||
-		string(MappingElementTypeIp) == mappingValue ||
-		string(MappingElementTypeCompletion) == mappingValue ||
-		string(MappingElementTypeStringA) == mappingValue ||
-		string(MappingElementTypeLongA) == mappingValue ||
-		string(MappingElementTypeIntegerA) == mappingValue ||
-		string(MappingElementTypeShortA) == mappingValue ||
-		string(MappingElementTypeByteA) == mappingValue ||
-		string(MappingElementTypeDoubleA) == mappingValue ||
-		string(MappingElementTypeFloatA) == mappingValue ||
-		string(MappingElementTypeDateA) == mappingValue ||
-		string(MappingElementTypeBoolA) == mappingValue ||
-		string(MappingElementTypeBinaryA) == mappingValue ||
-		string(MappingElementTypeGeoPointA) == mappingValue ||
-		string(MappingElementTypeGeoShapeA) == mappingValue ||
-		string(MappingElementTypeIpA) == mappingValue ||
-		string(MappingElementTypeCompletionA) == mappingValue {
-		return true
-	}
-	return false
-}
-func IsValidArrayTypeMapping(mappingValue string) bool {
-	if string(MappingElementTypeStringA) == mappingValue ||
-		string(MappingElementTypeLongA) == mappingValue ||
-		string(MappingElementTypeIntegerA) == mappingValue ||
-		string(MappingElementTypeShortA) == mappingValue ||
-		string(MappingElementTypeByteA) == mappingValue ||
-		string(MappingElementTypeDoubleA) == mappingValue ||
-		string(MappingElementTypeFloatA) == mappingValue ||
-		string(MappingElementTypeDateA) == mappingValue ||
-		string(MappingElementTypeBoolA) == mappingValue ||
-		string(MappingElementTypeBinaryA) == mappingValue ||
-		string(MappingElementTypeGeoPointA) == mappingValue ||
-		string(MappingElementTypeGeoShapeA) == mappingValue ||
-		string(MappingElementTypeIpA) == mappingValue ||
-		string(MappingElementTypeCompletionA) == mappingValue {
-		return true
-	}
-	return false
-}
-func ValueIsValidArray(value string) bool {
-	openCount, closedCount := 0, 0
-	for i := 0; i < len(value); i++ {
-		char := CharAt(value, i)
-		if char == "[" {
-			openCount++
-		} else if char == "]" {
-			closedCount++
-		}
-	}
-	if openCount != 1 || closedCount != 1 {
+func IsValidMappingType(mappingValue interface{}) bool {
+	str, ok := mappingValue.(string)
+	if !ok {
 		return false
 	}
-	if strings.HasPrefix(value, "[") && (strings.HasSuffix(value, "]") || strings.HasSuffix(value, "],")) {
+	if string(MappingElementTypeString) == str ||
+		string(MappingElementTypeLong) == str ||
+		string(MappingElementTypeInteger) == str ||
+		string(MappingElementTypeShort) == str ||
+		string(MappingElementTypeByte) == str ||
+		string(MappingElementTypeDouble) == str ||
+		string(MappingElementTypeFloat) == str ||
+		string(MappingElementTypeDate) == str ||
+		string(MappingElementTypeBool) == str ||
+		string(MappingElementTypeBinary) == str ||
+		string(MappingElementTypeGeoPoint) == str ||
+		string(MappingElementTypeGeoShape) == str ||
+		string(MappingElementTypeIp) == str ||
+		string(MappingElementTypeCompletion) == str ||
+		string(MappingElementTypeStringA) == str ||
+		string(MappingElementTypeLongA) == str ||
+		string(MappingElementTypeIntegerA) == str ||
+		string(MappingElementTypeShortA) == str ||
+		string(MappingElementTypeByteA) == str ||
+		string(MappingElementTypeDoubleA) == str ||
+		string(MappingElementTypeFloatA) == str ||
+		string(MappingElementTypeDateA) == str ||
+		string(MappingElementTypeBoolA) == str ||
+		string(MappingElementTypeBinaryA) == str ||
+		string(MappingElementTypeGeoPointA) == str ||
+		string(MappingElementTypeGeoShapeA) == str ||
+		string(MappingElementTypeIpA) == str ||
+		string(MappingElementTypeCompletionA) == str {
 		return true
 	}
 	return false
 }
-func CharAt(str string, index int) string {
-	return str[index : index+1]
-}
-func RemoveWhitespace(str string) string {
-	return strings.Map(func(r rune) rune {
-		if unicode.IsSpace(r) {
-			return -1
-		}
-		return r
-	}, str)
-}
-func InsertString(str, insert string, index int) string {
-	return str[:index] + insert + str[index:]
+func IsValidArrayTypeMapping(mappingValue interface{}) bool {
+	str, ok := mappingValue.(string)
+	if !ok {
+		return false
+	}
+	if string(MappingElementTypeStringA) == str ||
+		string(MappingElementTypeLongA) == str ||
+		string(MappingElementTypeIntegerA) == str ||
+		string(MappingElementTypeShortA) == str ||
+		string(MappingElementTypeByteA) == str ||
+		string(MappingElementTypeDoubleA) == str ||
+		string(MappingElementTypeFloatA) == str ||
+		string(MappingElementTypeDateA) == str ||
+		string(MappingElementTypeBoolA) == str ||
+		string(MappingElementTypeBinaryA) == str ||
+		string(MappingElementTypeGeoPointA) == str ||
+		string(MappingElementTypeGeoShapeA) == str ||
+		string(MappingElementTypeIpA) == str ||
+		string(MappingElementTypeCompletionA) == str {
+		return true
+	}
+	return false
 }
