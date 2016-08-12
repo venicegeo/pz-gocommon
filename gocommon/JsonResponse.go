@@ -34,6 +34,12 @@ func (id Ident) String() string {
 
 //----------------------------------------------------------
 
+type Version struct {
+	Version string
+}
+
+//----------------------------------------------------------
+
 type JsonString string
 
 //----------------------------------------------------------
@@ -63,6 +69,7 @@ func init() {
 	JsonResponseDataTypes["string"] = "string"
 	JsonResponseDataTypes["[]string"] = "string-list"
 	JsonResponseDataTypes["int"] = "int"
+	JsonResponseDataTypes["*piazza.Version"] = "version"
 }
 
 func (resp *JsonResponse) String() string {
