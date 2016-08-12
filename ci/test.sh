@@ -27,6 +27,7 @@ cd $GOPATH/src/github.com/venicegeo/pz-gocommon
 #glide update
 go get github.com/stretchr/testify/assert
 go get gopkg.in/olivere/elastic.v3
+go get github.com/Shopify/sarama
 
 #----------------------------------------------------------------------
 
