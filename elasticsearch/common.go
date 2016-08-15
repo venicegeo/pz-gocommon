@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-
 	"time"
 
 	"github.com/venicegeo/pz-gocommon/gocommon"
@@ -36,15 +35,34 @@ type QueryFormat struct {
 
 // Constants representing the supported data types for the Event parameters.
 const (
-	MappingElementTypeString  MappingElementTypeName = "string"
-	MappingElementTypeBool    MappingElementTypeName = "boolean"
-	MappingElementTypeInteger MappingElementTypeName = "integer"
-	MappingElementTypeDouble  MappingElementTypeName = "double"
-	MappingElementTypeDate    MappingElementTypeName = "date"
-	MappingElementTypeFloat   MappingElementTypeName = "float"
-	MappingElementTypeByte    MappingElementTypeName = "byte"
-	MappingElementTypeShort   MappingElementTypeName = "short"
-	MappingElementTypeLong    MappingElementTypeName = "long"
+	MappingElementTypeString      MappingElementTypeName = "string"
+	MappingElementTypeLong        MappingElementTypeName = "long"
+	MappingElementTypeInteger     MappingElementTypeName = "integer"
+	MappingElementTypeShort       MappingElementTypeName = "short"
+	MappingElementTypeByte        MappingElementTypeName = "byte"
+	MappingElementTypeDouble      MappingElementTypeName = "double"
+	MappingElementTypeFloat       MappingElementTypeName = "float"
+	MappingElementTypeDate        MappingElementTypeName = "date"
+	MappingElementTypeBool        MappingElementTypeName = "boolean"
+	MappingElementTypeBinary      MappingElementTypeName = "binary"
+	MappingElementTypeGeoPoint    MappingElementTypeName = "geo_point"
+	MappingElementTypeGeoShape    MappingElementTypeName = "geo_shape"
+	MappingElementTypeIp          MappingElementTypeName = "ip"
+	MappingElementTypeCompletion  MappingElementTypeName = "completion"
+	MappingElementTypeStringA     MappingElementTypeName = "[string]"
+	MappingElementTypeLongA       MappingElementTypeName = "[long]"
+	MappingElementTypeIntegerA    MappingElementTypeName = "[integer]"
+	MappingElementTypeShortA      MappingElementTypeName = "[short]"
+	MappingElementTypeByteA       MappingElementTypeName = "[byte]"
+	MappingElementTypeDoubleA     MappingElementTypeName = "[double]"
+	MappingElementTypeFloatA      MappingElementTypeName = "[float]"
+	MappingElementTypeDateA       MappingElementTypeName = "[date]"
+	MappingElementTypeBoolA       MappingElementTypeName = "[boolean]"
+	MappingElementTypeBinaryA     MappingElementTypeName = "[binary]"
+	MappingElementTypeGeoPointA   MappingElementTypeName = "[geo_point]"
+	MappingElementTypeGeoShapeA   MappingElementTypeName = "[geo_shape]"
+	MappingElementTypeIpA         MappingElementTypeName = "[ip]"
+	MappingElementTypeCompletionA MappingElementTypeName = "[completion]"
 )
 
 // IIndex is an interface to Elasticsearch Index methods
@@ -151,4 +169,65 @@ func PollFunction(fn GetData) (bool, error) {
 			}
 		}
 	}
+}
+
+func IsValidMappingType(mappingValue interface{}) bool {
+	str, ok := mappingValue.(string)
+	if !ok {
+		return false
+	}
+	if string(MappingElementTypeString) == str ||
+		string(MappingElementTypeLong) == str ||
+		string(MappingElementTypeInteger) == str ||
+		string(MappingElementTypeShort) == str ||
+		string(MappingElementTypeByte) == str ||
+		string(MappingElementTypeDouble) == str ||
+		string(MappingElementTypeFloat) == str ||
+		string(MappingElementTypeDate) == str ||
+		string(MappingElementTypeBool) == str ||
+		string(MappingElementTypeBinary) == str ||
+		string(MappingElementTypeGeoPoint) == str ||
+		string(MappingElementTypeGeoShape) == str ||
+		string(MappingElementTypeIp) == str ||
+		string(MappingElementTypeCompletion) == str ||
+		string(MappingElementTypeStringA) == str ||
+		string(MappingElementTypeLongA) == str ||
+		string(MappingElementTypeIntegerA) == str ||
+		string(MappingElementTypeShortA) == str ||
+		string(MappingElementTypeByteA) == str ||
+		string(MappingElementTypeDoubleA) == str ||
+		string(MappingElementTypeFloatA) == str ||
+		string(MappingElementTypeDateA) == str ||
+		string(MappingElementTypeBoolA) == str ||
+		string(MappingElementTypeBinaryA) == str ||
+		string(MappingElementTypeGeoPointA) == str ||
+		string(MappingElementTypeGeoShapeA) == str ||
+		string(MappingElementTypeIpA) == str ||
+		string(MappingElementTypeCompletionA) == str {
+		return true
+	}
+	return false
+}
+func IsValidArrayTypeMapping(mappingValue interface{}) bool {
+	str, ok := mappingValue.(string)
+	if !ok {
+		return false
+	}
+	if string(MappingElementTypeStringA) == str ||
+		string(MappingElementTypeLongA) == str ||
+		string(MappingElementTypeIntegerA) == str ||
+		string(MappingElementTypeShortA) == str ||
+		string(MappingElementTypeByteA) == str ||
+		string(MappingElementTypeDoubleA) == str ||
+		string(MappingElementTypeFloatA) == str ||
+		string(MappingElementTypeDateA) == str ||
+		string(MappingElementTypeBoolA) == str ||
+		string(MappingElementTypeBinaryA) == str ||
+		string(MappingElementTypeGeoPointA) == str ||
+		string(MappingElementTypeGeoShapeA) == str ||
+		string(MappingElementTypeIpA) == str ||
+		string(MappingElementTypeCompletionA) == str {
+		return true
+	}
+	return false
 }

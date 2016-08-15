@@ -178,7 +178,6 @@ func (sys *SystemConfig) checkRequirements(requirements []ServiceName) error {
 
 func (sys *SystemConfig) runHealthChecks() error {
 	//log.Printf("SystemConfig.runHealthChecks: start")
-
 	for name, addr := range sys.endpoints {
 		if name == sys.Name || name == PzKafka {
 			continue
@@ -187,7 +186,6 @@ func (sys *SystemConfig) runHealthChecks() error {
 		url := fmt.Sprintf("%s://%s%s", DefaultProtocol, addr, HealthcheckEndpoints[name])
 
 		//log.Printf("Service healthy? %s at %s (%s)", name, addr, url)
-
 		resp, err := http.Get(url)
 		if err != nil {
 			s := fmt.Sprintf("Health check errored for service: %s at %s <%#v>", name, url, resp)
