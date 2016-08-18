@@ -34,33 +34,31 @@ func TestQueryParams(t *testing.T) {
 
 	params := NewQueryParams(&req)
 
-	a, err := params.GetAsInt("a", nil)
+	a, err := params.GetAsInt("a", 0)
 	assert.NoError(err)
 	assert.NotNil(a)
-	assert.Equal(1, *a)
+	assert.Equal(1, a)
 
-	b, err := params.GetAsString("b", nil)
+	b, err := params.GetAsString("b", "")
 	assert.NoError(err)
 	assert.NotNil(b)
-	assert.EqualValues("foo", *b)
+	assert.EqualValues("foo", b)
 
-	bb, err := params.GetAsString("bb", nil)
+	bb, err := params.GetAsString("bb", "")
 	assert.NoError(err)
-	assert.Nil(bb)
+	assert.Empty(bb)
 
-	s := "bar"
-	bbb, err := params.GetAsString("bbb", &s)
+	bbb, err := params.GetAsString("bbb", "bar")
 	assert.NoError(err)
 	assert.NotNil(bbb)
-	assert.EqualValues("bar", *bbb)
+	assert.EqualValues("bar", bbb)
 
-	c, err := params.GetAsInt("c", nil)
+	c, err := params.GetAsInt("c", 0)
 	assert.NoError(err)
-	assert.Nil(c)
+	assert.Zero(c)
 
-	i := 7
-	cc, err := params.GetAsInt("c", &i)
+	cc, err := params.GetAsInt("c", 7)
 	assert.NoError(err)
 	assert.NotNil(cc)
-	assert.EqualValues(7, *cc)
+	assert.EqualValues(7, cc)
 }

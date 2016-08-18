@@ -124,7 +124,7 @@ func ConstructMappingSchema(name string, items map[string]MappingElementTypeName
 				%s
 			}
 		}
-	}`
+	}` 
 
 	stuff := make([]string, len(items))
 	i := 0

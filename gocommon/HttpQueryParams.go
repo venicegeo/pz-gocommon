@@ -57,7 +57,7 @@ func (params *HttpQueryParams) AddTime(key string, value time.Time) {
 	params.raw[key] = value.Format(time.RFC3339)
 }
 
-func (params *HttpQueryParams) GetAsInt(key string, defalt *int) (*int, error) {
+func (params *HttpQueryParams) GetAsInt(key string, defalt int) (int, error) {
 	if key == "" {
 		return defalt, nil
 	}
@@ -69,13 +69,13 @@ func (params *HttpQueryParams) GetAsInt(key string, defalt *int) (*int, error) {
 
 	i, err := strconv.Atoi(value)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	return &i, nil
+	return i, nil
 }
 
-func (params *HttpQueryParams) GetAsString(key string, defalt *string) (*string, error) {
+func (params *HttpQueryParams) GetAsString(key string, defalt string) (string, error) {
 	if key == "" {
 		return defalt, nil
 	}
@@ -86,10 +86,10 @@ func (params *HttpQueryParams) GetAsString(key string, defalt *string) (*string,
 	}
 
 	s := value
-	return &s, nil
+	return s, nil
 }
 
-func (params *HttpQueryParams) GetAsSortOrder(key string, defalt *SortOrder) (*SortOrder, error) {
+func (params *HttpQueryParams) GetAsSortOrder(key string, defalt SortOrder) (SortOrder, error) {
 	if key == "" {
 		return defalt, nil
 	}
@@ -108,13 +108,13 @@ func (params *HttpQueryParams) GetAsSortOrder(key string, defalt *SortOrder) (*S
 	default:
 		s := fmt.Sprintf("query argument for '?%s' must be \"asc\" or \"desc\"", value)
 		err := errors.New(s)
-		return nil, err
+		return SortOrderAscending, err
 	}
 
-	return &order, nil
+	return order, nil
 }
 
-func (params *HttpQueryParams) GetAsTime(key string, defalt *time.Time) (*time.Time, error) {
+func (params *HttpQueryParams) GetAsTime(key string, defalt time.Time) (time.Time, error) {
 	if key == "" {
 		return defalt, nil
 	}
@@ -126,37 +126,37 @@ func (params *HttpQueryParams) GetAsTime(key string, defalt *time.Time) (*time.T
 
 	t, err := time.Parse(time.RFC3339, value)
 	if err != nil {
-		return nil, err
+		return time.Time{}, err
 	}
 
-	return &t, nil
+	return t, nil
 }
 
-func (params *HttpQueryParams) GetAfter(defalt *time.Time) (*time.Time, error) {
+func (params *HttpQueryParams) GetAfter(defalt time.Time) (time.Time, error) {
 	return params.GetAsTime("after", defalt)
 }
 
-func (params *HttpQueryParams) GetBefore(defalt *time.Time) (*time.Time, error) {
+func (params *HttpQueryParams) GetBefore(defalt time.Time) (time.Time, error) {
 	return params.GetAsTime("before", defalt)
 }
 
-func (params *HttpQueryParams) GetCount(defalt *int) (*int, error) {
+func (params *HttpQueryParams) GetCount(defalt int) (int, error) {
 	return params.GetAsInt("count", defalt)
 }
 
-func (params *HttpQueryParams) GetSortOrder(defalt *SortOrder) (*SortOrder, error) {
+func (params *HttpQueryParams) GetSortOrder(defalt SortOrder) (SortOrder, error) {
 	return params.GetAsSortOrder("order", defalt)
 }
 
-func (params *HttpQueryParams) GetPage(defalt *int) (*int, error) {
+func (params *HttpQueryParams) GetPage(defalt int) (int, error) {
 	return params.GetAsInt("page", defalt)
 }
 
-func (params *HttpQueryParams) GetPerPage(defalt *int) (*int, error) {
+func (params *HttpQueryParams) GetPerPage(defalt int) (int, error) {
 	return params.GetAsInt("perPage", defalt)
 }
 
-func (params *HttpQueryParams) GetSortBy(defalt *string) (*string, error) {
+func (params *HttpQueryParams) GetSortBy(defalt string) (string, error) {
 	return params.GetAsString("sortBy", defalt)
 }
 

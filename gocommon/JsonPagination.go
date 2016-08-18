@@ -39,6 +39,13 @@ type JsonPagination struct {
 	Order   SortOrder `json:"order"`
 }
 
+var defaultJsonPagination = &JsonPagination{
+	PerPage: 10,
+	Page:    0,
+	Order:   SortOrderDescending,
+	SortBy:  "createdOn",
+}
+
 func (p *JsonPagination) StartIndex() int {
 	return p.Page * p.PerPage
 }
@@ -51,49 +58,31 @@ func NewJsonPagination(params *HttpQueryParams) (*JsonPagination, error) {
 
 	jp := &JsonPagination{}
 
-	perPage, err := params.GetPerPage(&(defaults().PerPage))
+	perPage, err := params.GetPerPage(defaultJsonPagination.PerPage)
 	if err != nil {
 		return nil, err
 	}
-	if perPage != nil {
-		jp.PerPage = *perPage
-	}
+	jp.PerPage = perPage
 
-	page, err := params.GetPage(&(defaults().Page))
+	page, err := params.GetPage(defaultJsonPagination.Page)
 	if err != nil {
 		return nil, err
 	}
-	if page != nil {
-		jp.Page = *page
-	}
+	jp.Page = page
 
-	sortBy, err := params.GetSortBy(&(defaults().SortBy))
+	sortBy, err := params.GetSortBy(defaultJsonPagination.SortBy)
 	if err != nil {
 		return nil, err
 	}
-	if sortBy != nil {
-		jp.SortBy = *sortBy
-	}
+	jp.SortBy = sortBy
 
-	order, err := params.GetSortOrder(&(defaults().Order))
+	order, err := params.GetSortOrder(defaultJsonPagination.Order)
 	if err != nil {
 		return nil, err
 	}
-	if order != nil {
-		jp.Order = *order
-	}
+	jp.Order = order
 
 	return jp, nil
-}
-
-// TODO: probably want to create this once and reuse it
-func defaults() *JsonPagination {
-	return &JsonPagination{
-		PerPage: 10,
-		Page:    0,
-		Order:   SortOrderDescending,
-		SortBy:  "createdOn",
-	}
 }
 
 func (format *JsonPagination) ToParamString() string {
