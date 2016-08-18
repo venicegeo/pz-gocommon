@@ -19,27 +19,36 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 
 	"github.com/venicegeo/pz-gocommon/gocommon"
 )
 
-type MockIndex struct {
-	index     string
-	items     map[string](map[string]*json.RawMessage)
-	exists    bool
-	open      bool
-	percolate string
+const percolateTypeName = ".percolate"
+
+type MockIndexType struct {
+	// maps from id string to document body
+	items map[string]*json.RawMessage
+
+	mapping interface{}
 }
 
-func NewMockIndex(index string) *MockIndex {
+type MockIndex struct {
+	name     string
+	types    map[string]*MockIndexType
+	exists   bool
+	open     bool
+	settings interface{}
+}
+
+func NewMockIndex(indexName string) *MockIndex {
 	var _ IIndex = new(MockIndex)
 
 	esi := MockIndex{
-		index:     index,
-		items:     make(map[string](map[string]*json.RawMessage)),
-		exists:    false,
-		open:      false,
-		percolate: ".percolate",
+		name:   indexName,
+		types:  make(map[string]*MockIndexType),
+		exists: false,
+		open:   false,
 	}
 	return &esi
 }
@@ -49,7 +58,7 @@ func (client *MockIndex) GetVersion() string {
 }
 
 func (esi *MockIndex) IndexName() string {
-	return esi.index
+	return esi.name
 }
 
 func (esi *MockIndex) IndexExists() (bool, error) {
@@ -65,27 +74,33 @@ func (esi *MockIndex) TypeExists(typ string) (bool, error) {
 	if !ok {
 		return false, nil
 	}
-	_, ok = esi.items[typ]
+	_, ok = esi.types[typ]
 	return ok, nil
 }
 
-func (esi *MockIndex) ItemExists(typ string, id string) (bool, error) {
-	ok, err := esi.TypeExists(typ)
+func (esi *MockIndex) ItemExists(typeName string, id string) (bool, error) {
+	ok, err := esi.TypeExists(typeName)
 	if err != nil {
 		return false, err
 	}
 	if !ok {
 		return false, nil
 	}
-	_, ok = esi.items[typ][id]
+	typ := esi.types[typeName]
+	_, ok = (*typ).items[id]
 	return ok, nil
 }
 
 // if index already exists, does nothing
 func (esi *MockIndex) Create(settings string) error {
+	if esi.exists {
+		return fmt.Errorf("Index already exists")
+	}
+
 	esi.exists = true
 
 	if settings == "" {
+		esi.settings = nil
 		return nil
 	}
 
@@ -94,13 +109,20 @@ func (esi *MockIndex) Create(settings string) error {
 	if err != nil {
 		return err
 	}
-	var key string
-	for k, _ := range obj["mappings"].(map[string]interface{}) {
-		key = k
-		break
+
+	esi.settings = obj
+
+	for k, v := range obj["mappings"].(map[string]interface{}) {
+		mapping, err := json.Marshal(v)
+		if err != nil {
+			return err
+		}
+		err = esi.addType(k, string(mapping))
+		if err != nil {
+			return err
+		}
 	}
 
-	esi.items[key] = make(map[string]*json.RawMessage)
 	return nil
 }
 
@@ -115,17 +137,41 @@ func (esi *MockIndex) Delete() error {
 	esi.exists = false
 	esi.open = false
 
-	for k := range esi.items {
-		for j := range esi.items[k] {
-			delete(esi.items[k], j)
+	for tk, tv := range esi.types {
+		for ik, _ := range tv.items {
+			delete(tv.items, ik)
 		}
-		delete(esi.items, k)
+		delete(esi.types, tk)
 	}
 
 	return nil
 }
 
-func (esi *MockIndex) PostData(typ string, id string, obj interface{}) (*IndexResponse, error) {
+func (esi *MockIndex) addType(typeName string, mapping string) error {
+
+	if mapping == "" {
+		return fmt.Errorf("addType: mapping may not be null")
+	}
+
+	obj := map[string]interface{}{}
+	err := json.Unmarshal([]byte(mapping), &obj)
+	if err != nil {
+		return err
+	}
+
+	esi.types[typeName] = &MockIndexType{
+		mapping: obj,
+		items:   make(map[string]*json.RawMessage),
+	}
+
+	return nil
+}
+
+func (esi *MockIndex) SetMapping(typeName string, mapping piazza.JsonString) error {
+	return esi.addType(typeName, string(mapping))
+}
+
+func (esi *MockIndex) PostData(typeName string, id string, obj interface{}) (*IndexResponse, error) {
 	ok, err := esi.IndexExists()
 	if err != nil {
 		return nil, err
@@ -133,12 +179,18 @@ func (esi *MockIndex) PostData(typ string, id string, obj interface{}) (*IndexRe
 	if !ok {
 		return nil, fmt.Errorf("Index does not exist")
 	}
-	ok, err = esi.TypeExists(typ)
+	ok, err = esi.TypeExists(typeName)
 	if err != nil {
 		return nil, err
 	}
+
+	var typ *MockIndexType
 	if !ok {
-		esi.items[typ] = make(map[string]*json.RawMessage)
+		typ = &MockIndexType{}
+		typ.items = make(map[string]*json.RawMessage)
+		esi.types[typeName] = typ
+	} else {
+		typ = esi.types[typeName]
 	}
 
 	byts, err := json.Marshal(obj)
@@ -151,32 +203,55 @@ func (esi *MockIndex) PostData(typ string, id string, obj interface{}) (*IndexRe
 	if err != nil {
 		return nil, err
 	}
-	esi.items[typ][id] = &raw
+	typ.items[id] = &raw
 
-	r := &IndexResponse{Created: true, Id: id, Index: esi.index, Type: typ}
+	r := &IndexResponse{Created: true, Id: id, Index: esi.name, Type: typeName}
 	return r, nil
 }
 
-func (esi *MockIndex) GetByID(typ string, id string) (*GetResult, error) {
-	for k, _ := range esi.items[typ] {
-		if k == id {
-			r := &GetResult{Id: id, Source: esi.items[typ][k], Found: true}
-			return r, nil
-		}
+func (esi *MockIndex) GetByID(typeName string, id string) (*GetResult, error) {
+	ok, err := esi.TypeExists(typeName)
+	if err != nil {
+		return nil, err
 	}
-	return nil, errors.New("GetById: not found: " + id)
+	if !ok {
+		return nil, fmt.Errorf("GetById: type does not exist: %s", typeName)
+	}
+	ok, err = esi.ItemExists(typeName, id)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, fmt.Errorf("GetById: id does not exist: %s", id)
+	}
+
+	typ := esi.types[typeName]
+	item := typ.items[id]
+	r := &GetResult{Id: id, Source: item, Found: true}
+	return r, nil
 }
 
-func (esi *MockIndex) DeleteByID(typ string, id string) (*DeleteResponse, error) {
-	for k, _ := range esi.items[typ] {
-		if k == id {
-			delete(esi.items[typ], k)
-			r := &DeleteResponse{Found: true}
-			return r, nil
-		}
+func (esi *MockIndex) DeleteByID(typeName string, id string) (*DeleteResponse, error) {
+	ok, err := esi.TypeExists(typeName)
+	if err != nil {
+		return nil, err
 	}
-	r := &DeleteResponse{Found: false}
+	if !ok {
+		return nil, fmt.Errorf("GetById: type does not exist: %s", typeName)
+	}
+	ok, err = esi.ItemExists(typeName, id)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return &DeleteResponse{Found: false}, err
+	}
+
+	typ := esi.types[typeName]
+	delete(typ.items, id)
+	r := &DeleteResponse{Found: true}
 	return r, nil
+
 }
 
 type srhByID []*SearchResultHit
@@ -195,22 +270,17 @@ func srhSortMatches(matches []*SearchResultHit) []*SearchResultHit {
 	return matches
 }
 
-func (esi *MockIndex) FilterByMatchAll(typ string, realFormat *piazza.JsonPagination) (*SearchResult, error) {
+func (esi *MockIndex) FilterByMatchAll(typeName string, realFormat *piazza.JsonPagination) (*SearchResult, error) {
+	if typeName == "" {
+		return nil, fmt.Errorf("Searching with type \"\" not supported under mocking")
+	}
 
 	format := NewQueryFormat(realFormat)
 
 	objs := make(map[string]*json.RawMessage)
 
-	if typ == "" {
-		for t := range esi.items {
-			for id, i := range esi.items[t] {
-				objs[id] = i
-			}
-		}
-	} else {
-		for id, i := range esi.items[typ] {
-			objs[id] = i
-		}
+	for ik, iv := range esi.types[typeName].items {
+		objs[ik] = iv
 	}
 
 	resp := &SearchResult{
@@ -256,20 +326,12 @@ func (esi *MockIndex) FilterByMatchQuery(typ string, name string, value interfac
 	return nil, errors.New("FilterByMatchQuery not supported under mocking")
 }
 
-func (esi *MockIndex) FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error) {
+func (esi *MockIndex) FilterByTermQuery(typeName string, name string, value interface{}) (*SearchResult, error) {
 
 	objs := make(map[string]*json.RawMessage)
 
-	if typ == "" {
-		for t := range esi.items {
-			for id, i := range esi.items[t] {
-				objs[id] = i
-			}
-		}
-	} else {
-		for id, i := range esi.items[typ] {
-			objs[id] = i
-		}
+	for ik, iv := range esi.types[typeName].items {
+		objs[ik] = iv
 	}
 
 	resp := &SearchResult{
@@ -326,15 +388,10 @@ func (esi *MockIndex) SearchByJSON(typ string, jsn string) (*SearchResult, error
 	return nil, errors.New("SearchByJSON not supported under mocking")
 }
 
-func (esi *MockIndex) SetMapping(typename string, jsn piazza.JsonString) error {
-	return nil
-	//return errors.New("SetMapping not supported under mocking")
-}
-
 func (esi *MockIndex) GetTypes() ([]string, error) {
 	var s []string
 
-	for k, _ := range esi.items {
+	for k, _ := range esi.types {
 		s = append(s, k)
 	}
 
@@ -346,17 +403,20 @@ func (esi *MockIndex) GetMapping(typ string) (interface{}, error) {
 }
 
 func (esi *MockIndex) AddPercolationQuery(id string, query piazza.JsonString) (*IndexResponse, error) {
-	return esi.PostData(esi.percolate, id, query)
+	return esi.PostData(percolateTypeName, id, query)
 }
 
 func (esi *MockIndex) DeletePercolationQuery(id string) (*DeleteResponse, error) {
-	return esi.DeleteByID(esi.percolate, id)
+	return esi.DeleteByID(percolateTypeName, id)
 }
 
-func (esi *MockIndex) AddPercolationDocument(typ string, doc interface{}) (*PercolateResponse, error) {
-	for _, _ = range esi.items[esi.percolate] {
-		r := &PercolateResponse{}
-		return r, nil
+var percid int
+
+func (esi *MockIndex) AddPercolationDocument(typeName string, doc interface{}) (*PercolateResponse, error) {
+
+	_, err := esi.PostData(percolateTypeName, strconv.Itoa(percid), doc)
+	if err != nil {
+		return nil, err
 	}
 
 	resp := &PercolateResponse{}
