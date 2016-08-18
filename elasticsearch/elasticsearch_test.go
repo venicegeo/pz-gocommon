@@ -475,7 +475,7 @@ func (suite *EsTester) Test10GetAll() {
 		}
 	}
 
-	/*{
+	{
 		realFormat := &piazza.JsonPagination{
 			PerPage: 10,
 			Page:    0,
@@ -525,7 +525,7 @@ func (suite *EsTester) Test10GetAll() {
 		assert.Equal(tmp1.Extra1, "extra1")
 		assert.Equal(tmp2.Data2, 123)
 		assert.Equal(tmp2.Extra2, "extra2")
-	}*/
+	}
 }
 
 func (suite *EsTester) Test11Pagination1() {
