@@ -271,16 +271,23 @@ func srhSortMatches(matches []*SearchResultHit) []*SearchResultHit {
 }
 
 func (esi *MockIndex) FilterByMatchAll(typeName string, realFormat *piazza.JsonPagination) (*SearchResult, error) {
-	if typeName == "" {
-		return nil, fmt.Errorf("Searching with type \"\" not supported under mocking")
-	}
-
 	format := NewQueryFormat(realFormat)
 
 	objs := make(map[string]*json.RawMessage)
 
-	for ik, iv := range esi.types[typeName].items {
-		objs[ik] = iv
+	if typeName == "" {
+		for tk, tv := range esi.types {
+			if tk == percolateTypeName {
+				continue
+			}
+			for ik, iv := range tv.items {
+				objs[ik] = iv
+			}
+		}
+	} else {
+		for ik, iv := range esi.types[typeName].items {
+			objs[ik] = iv
+		}
 	}
 
 	resp := &SearchResult{
