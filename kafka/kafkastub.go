@@ -23,7 +23,7 @@ import (
 // just a silly little app to get Glide to see the kafka
 // package imports we need
 
-func KafkaStub() {
+func Stub() {
 	config := sarama.NewConfig()
 	if config == nil {
 		log.Printf("Nope.")
