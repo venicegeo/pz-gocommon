@@ -138,7 +138,7 @@ func (esi *MockIndex) Delete() error {
 	esi.open = false
 
 	for tk, tv := range esi.types {
-		for ik, _ := range tv.items {
+		for ik := range tv.items {
 			delete(tv.items, ik)
 		}
 		delete(esi.types, tk)
@@ -403,7 +403,7 @@ func (esi *MockIndex) SearchByJSON(typ string, jsn string) (*SearchResult, error
 func (esi *MockIndex) GetTypes() ([]string, error) {
 	var s []string
 
-	for k, _ := range esi.types {
+	for k := range esi.types {
 		s = append(s, k)
 	}
 

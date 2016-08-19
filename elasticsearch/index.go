@@ -68,7 +68,10 @@ func NewIndex2(url string, index string, settings string) (*Index, error) {
 	}
 
 	// This does nothing if the index is already created, but creates it if not
-	esi.Create(settings)
+	err = esi.Create(settings)
+	if err != nil {
+		return nil, err
+	}
 
 	return esi, nil
 }
@@ -162,11 +165,7 @@ func (esi *Index) Close() error {
 	}
 
 	_, err = esi.lib.CloseIndex(esi.index).Do()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // Delete the index; if index doesn't already exist, does nothing.

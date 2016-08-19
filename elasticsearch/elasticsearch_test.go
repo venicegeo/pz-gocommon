@@ -112,8 +112,8 @@ func (suite *EsTester) SetUpIndex() IIndex {
 
 	// populate the index
 	for _, o := range objs {
-		indexResult, err := esi.PostData(mapping, o.ID, o)
-		assert.NoError(err)
+		indexResult, err2 := esi.PostData(mapping, o.ID, o)
+		assert.NoError(err2)
 		assert.NotNil(indexResult)
 	}
 
@@ -125,9 +125,9 @@ func (suite *EsTester) SetUpIndex() IIndex {
 		SortBy:  "",
 	}
 	pollingFn := GetData(func() (bool, error) {
-		getResult, err := esi.FilterByMatchAll(mapping, realFormat)
-		if err != nil {
-			return false, err
+		getResult, err2 := esi.FilterByMatchAll(mapping, realFormat)
+		if err2 != nil {
+			return false, err2
 		}
 		if getResult != nil && len(*getResult.GetHits()) == len(objs) {
 			return true, nil
@@ -139,6 +139,29 @@ func (suite *EsTester) SetUpIndex() IIndex {
 	assert.NoError(err)
 
 	return esi
+}
+
+func searchPoller(f func() (*SearchResult, error), expectedCount int) GetData {
+	pollingFn := GetData(func() (bool, error) {
+		getResult, err := f()
+		if err != nil {
+			return false, err
+		}
+		if getResult != nil && len(*getResult.GetHits()) == expectedCount {
+			return true, nil
+		}
+		return false, nil
+	})
+
+	return pollingFn
+}
+
+func closerT(t *testing.T, esi IIndex) {
+	assert := assert.New(t)
+	err := esi.Close()
+	assert.NoError(err)
+	err = esi.Delete()
+	assert.NoError(err)
 }
 
 //---------------------------------------------------------------------------
@@ -169,10 +192,7 @@ func (suite *EsTester) Test02SimplePost() {
 
 	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
-	defer func() {
-		esi.Close()
-		esi.Delete()
-	}()
+	defer closerT(t, esi)
 
 	err = esi.SetMapping(mapping, piazza.JsonString(objMapping))
 	assert.NoError(err)
@@ -212,10 +232,7 @@ func (suite *EsTester) Test03Operations() {
 
 	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
-	defer func() {
-		esi.Close()
-		esi.Delete()
-	}()
+	defer closerT(t, esi)
 
 	{
 		// GET a specific one
@@ -236,10 +253,7 @@ func (suite *EsTester) Test07ConstructMapping() {
 
 	es := suite.SetUpIndex()
 	assert.NotNil(es)
-	defer func() {
-		es.Close()
-		es.Delete()
-	}()
+	defer closerT(t, es)
 
 	items := make(map[string]MappingElementTypeName)
 
@@ -298,23 +312,20 @@ func (suite *EsTester) Test09FullPercolation() {
 	var err error
 
 	defer func() {
-		esi.Close()
-		esi.Delete()
+		closerT(t, esi)
 	}()
 
 	// create index
-	{
-		esi, err = NewIndexInterface(suite.sys, "estest09$", "", true)
-		assert.NoError(err)
+	esi, err = NewIndexInterface(suite.sys, "estest09$", "", true)
+	assert.NoError(err)
 
-		// make the index
-		err = esi.Create("")
-		assert.NoError(err)
+	// make the index
+	err = esi.Create("")
+	assert.NoError(err)
 
-		ok, err := esi.IndexExists()
-		assert.NoError(err)
-		assert.True(ok)
-	}
+	ok, err := esi.IndexExists()
+	assert.NoError(err)
+	assert.True(ok)
 }
 
 func (suite *EsTester) Test10GetAll() {
@@ -331,10 +342,7 @@ func (suite *EsTester) Test10GetAll() {
 
 	esi, err := NewIndexInterface(sys, "getall$", "", true)
 	assert.NoError(err)
-	defer func() {
-		esi.Close()
-		esi.Delete()
-	}()
+	defer closerT(t, esi)
 
 	// make the index
 	err = esi.Create("")
@@ -397,29 +405,23 @@ func (suite *EsTester) Test10GetAll() {
 	assert.NotNil(indexResult)
 
 	{
-		// GET a specific one
-		getResult, err := esi.GetByID("schema1", "id1")
-		assert.NoError(err)
-		assert.NotNil(getResult)
-		src := getResult.Source
-		assert.NotNil(src)
-		var tmp T1
-		err = json.Unmarshal(*src, &tmp)
-		assert.NoError(err)
-		assert.EqualValues("obj", tmp.Data1)
-	}
+		getASpecificOne := func(input1 string, input2 string, tmp interface{}) {
+			getResult, err := esi.GetByID(input1, input2)
+			assert.NoError(err)
+			assert.NotNil(getResult)
+			src := getResult.Source
+			assert.NotNil(src)
+			err = json.Unmarshal(*src, tmp)
+			assert.NoError(err)
+		}
 
-	{
-		// GET a specific one
-		getResult, err := esi.GetByID("schema2", "id2")
-		assert.NoError(err)
-		assert.NotNil(getResult)
-		src := getResult.Source
-		assert.NotNil(src)
-		var tmp T2
-		err = json.Unmarshal(*src, &tmp)
-		assert.NoError(err)
-		assert.Equal(123, tmp.Data2)
+		tmp1 := T1{}
+		getASpecificOne("schema1", "id1", &tmp1)
+		assert.EqualValues("obj", tmp1.Data1)
+
+		tmp2 := T2{}
+		getASpecificOne("schema2", "id2", &tmp2)
+		assert.EqualValues(123, tmp2.Data2)
 	}
 
 	{
@@ -443,18 +445,10 @@ func (suite *EsTester) Test10GetAll() {
 			Order:   piazza.SortOrderAscending,
 			SortBy:  "",
 		}
-		pollingFn := GetData(func() (bool, error) {
-			getResult, err := esi.FilterByMatchAll("", realFormat)
-			if err != nil {
-				return false, err
-			}
-			if getResult != nil && len(*getResult.GetHits()) == 2 {
-				return true, nil
-			}
-			return false, nil
-		})
 
-		_, err := PollFunction(pollingFn)
+		spf := func() (*SearchResult, error) { return esi.FilterByMatchAll("", realFormat) }
+
+		_, err := PollFunction(searchPoller(spf, 2))
 		getResult, err := esi.FilterByMatchAll("", realFormat)
 		assert.NoError(err)
 		assert.NotNil(getResult)
@@ -516,10 +510,7 @@ func (suite *EsTester) Test11Pagination2() {
 
 	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
-	defer func() {
-		esi.Close()
-		esi.Delete()
-	}()
+	defer closerT(t, esi)
 
 	type Obj3 struct {
 		ID   string `json:"id3" binding:"required"`
@@ -561,18 +552,10 @@ func (suite *EsTester) Test11Pagination2() {
 			Order:   piazza.SortOrderAscending,
 			SortBy:  "id3",
 		}
-		pollingFn := GetData(func() (bool, error) {
-			getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
-			if err != nil {
-				return false, err
-			}
-			if getResult != nil && len(*getResult.GetHits()) == 4 {
-				return true, nil
-			}
-			return false, nil
-		})
 
-		_, err := PollFunction(pollingFn)
+		spf := func() (*SearchResult, error) { return esi.FilterByMatchAll("Obj3", realFormat) }
+
+		_, err := PollFunction(searchPoller(spf, 4))
 		getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
 		assert.NoError(err)
 		assert.Len(*getResult.GetHits(), 4)
@@ -606,10 +589,7 @@ func (suite *EsTester) Test12TermMatch() {
 
 	esi := suite.SetUpIndex()
 	assert.NotNil(esi)
-	defer func() {
-		esi.Close()
-		esi.Delete()
-	}()
+	defer closerT(t, esi)
 
 	err = esi.SetMapping(mapping, piazza.JsonString(objMapping))
 	assert.NoError(err)
