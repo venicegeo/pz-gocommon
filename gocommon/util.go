@@ -17,6 +17,7 @@ package piazza
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 	"unicode"
 )
@@ -33,52 +34,38 @@ func StructInterfaceToString(stru interface{}) (string, error) {
 	return string(data), err
 }
 
-//TODO display the whole tree in the variable name
 func GetVarsFromStruct(struc interface{}) (map[string]interface{}, error) {
 	input, ok := struc.(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("Structure is not of type map[string]interface{}")
+		return nil, fmt.Errorf("Structure is not of type map[string]interface{}, currently: %T", struc)
 	}
-	_, res, err := getVarsFromStructHelper(input, map[string]interface{}{})
-	return res, err
+	return getVarsFromStructHelper(input, map[string]interface{}{}, []string{}), nil
 }
-func getVarsFromStructHelper(inputObj map[string]interface{}, res map[string]interface{}) (map[string]interface{}, map[string]interface{}, error) {
-	outputObj := map[string]interface{}{}
+func getVarsFromStructHelper(inputObj map[string]interface{}, res map[string]interface{}, path []string) map[string]interface{} {
 	for k, v := range inputObj {
+		wasMap := false
 		switch v.(type) {
 		case map[string]interface{}:
-			var err error
-			var tree map[string]interface{}
-			tree, res, err = getVarsFromStructHelper(v.(map[string]interface{}), res)
-			if err != nil {
-				return nil, nil, err
-			}
-			outputObj[k] = tree
+			wasMap = true
+			path = append(path, k)
+			res = getVarsFromStructHelper(v.(map[string]interface{}), res, path)
 		default:
-			res[k] = v
-			outputObj[k] = v
+			temp := ""
+			for i := 0; i < len(path); i++ {
+				temp += path[i] + "."
+			}
+			res[fmt.Sprintf("%s%s", temp, k)] = v
+		}
+		if wasMap {
+			path = path[:len(path)-1]
 		}
 	}
-	return outputObj, res, nil
+	return res
 }
 
-func ValueIsValidArray(value string) bool {
-	openCount, closedCount := 0, 0
-	for i := 0; i < len(value); i++ {
-		char := CharAt(value, i)
-		if char == "[" {
-			openCount++
-		} else if char == "]" {
-			closedCount++
-		}
-	}
-	if openCount != 1 || closedCount != 1 {
-		return false
-	}
-	if strings.HasPrefix(value, "[") && (strings.HasSuffix(value, "]") || strings.HasSuffix(value, "],")) {
-		return true
-	}
-	return false
+func ValueIsValidArray(value interface{}) bool {
+	s := reflect.ValueOf(value)
+	return s.Kind() == reflect.Array || s.Kind() == reflect.Slice
 }
 func CharAt(str string, index int) string {
 	return str[index : index+1]
