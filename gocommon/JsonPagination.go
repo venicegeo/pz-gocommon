@@ -18,19 +18,18 @@ import "fmt"
 
 //----------------------------------------------------------
 
-// Elasticsearch, at least, does it this way:
-//  - perform the query, giving a huge result set
-//  - sort the result set
-//  - select out the page you want
-
-// Constants indicating ascending (1,2,3) or descending (3,2,1) order.
+// SortOrder indicates ascending (1,2,3) or descending (3,2,1) order.
 type SortOrder string
 
 const (
-	SortOrderAscending  SortOrder = "asc"
+	// SortOrderAscending is for "a, b, c, ..."
+	SortOrderAscending SortOrder = "asc"
+
+	// SortOrderDescending is for "z, y, x, ..."
 	SortOrderDescending SortOrder = "desc"
 )
 
+// JsonPagination is the Piazza model for pagination json responses.
 type JsonPagination struct {
 	Count   int       `json:"count"` // only used when writing output
 	Page    int       `json:"page"`
@@ -46,14 +45,8 @@ var defaultJsonPagination = &JsonPagination{
 	SortBy:  "createdOn",
 }
 
-func (p *JsonPagination) StartIndex() int {
-	return p.Page * p.PerPage
-}
-
-func (p *JsonPagination) EndIndex() int {
-	return p.StartIndex() + p.PerPage
-}
-
+// NewJsonPagination creates a JsonPagination object. The default values will
+// be overwritten with any appropriate values from the params list.
 func NewJsonPagination(params *HttpQueryParams) (*JsonPagination, error) {
 
 	jp := &JsonPagination{}
@@ -85,8 +78,19 @@ func NewJsonPagination(params *HttpQueryParams) (*JsonPagination, error) {
 	return jp, nil
 }
 
-func (format *JsonPagination) ToParamString() string {
+// StartIndex returns the index number of the first element to be used.
+func (p *JsonPagination) StartIndex() int {
+	return p.Page * p.PerPage
+}
+
+// EndIndex returns the index number of the last element to be used.
+func (p *JsonPagination) EndIndex() int {
+	return p.StartIndex() + p.PerPage
+}
+
+// String returns a URL-style string of the pagination settings.
+func (p *JsonPagination) String() string {
 	s := fmt.Sprintf("perPage=%d&page=%d&sortBy=%s&order=%s",
-		format.PerPage, format.Page, format.SortBy, format.Order)
+		p.PerPage, p.Page, p.SortBy, p.Order)
 	return s
 }

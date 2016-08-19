@@ -24,22 +24,28 @@ import (
 
 //----------------------------------------------------------
 
+// Ident is the type used for representing ID values.
 type Ident string
 
+// NoIdent is the "empty" ID value.
 const NoIdent Ident = ""
 
+// String returns an id as a string.
 func (id Ident) String() string {
 	return string(id)
 }
 
 //----------------------------------------------------------
 
+// Version captures the information about the version of a service. For now,
+// it is just a string.
 type Version struct {
 	Version string
 }
 
 //----------------------------------------------------------
 
+// JsonString is the type used to represent JSON values.
 type JsonString string
 
 //----------------------------------------------------------
@@ -62,7 +68,7 @@ type JsonResponse struct {
 	Metadata interface{} `json:"metadata,omitempty"`
 }
 
-var JsonResponseDataTypes map[string]string = map[string]string{}
+var JsonResponseDataTypes = map[string]string{}
 
 func init() {
 	// common types
@@ -120,9 +126,5 @@ func (resp *JsonResponse) ExtractData(output interface{}) error {
 	}
 
 	err = json.Unmarshal(raw, output)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }

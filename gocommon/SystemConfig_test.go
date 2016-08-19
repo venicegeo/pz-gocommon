@@ -15,7 +15,6 @@
 package piazza
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,7 +34,6 @@ func Test03SystemConfig(t *testing.T) {
 func Test04Services(t *testing.T) {
 	assert := assert.New(t)
 
-	var err error
 	required := []ServiceName{}
 
 	{
@@ -58,9 +56,9 @@ func Test04Services(t *testing.T) {
 	}
 
 	{
-		err = os.Setenv("DOMAIN", "abc.xyz")
-		assert.NoError(err)
-		defer os.Unsetenv("DOMAIN")
+		setenvT(t, "DOMAIN", "abc.xyz")
+		defer unsetenvT(t, "DOMAIN")
+
 		sys, err := NewSystemConfig(PzGoCommon, required)
 		assert.NoError(err)
 

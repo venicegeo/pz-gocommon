@@ -23,11 +23,23 @@ import (
 
 //--------------------------
 
+func unsetenvT(t *testing.T, v string) {
+	assert := assert.New(t)
+	err := os.Unsetenv(v)
+	assert.NoError(err)
+}
+
+func setenvT(t *testing.T, k string, v string) {
+	assert := assert.New(t)
+	err := os.Setenv(k, v)
+	assert.NoError(err)
+}
+
 func Test05VcapApplication(t *testing.T) {
 	assert := assert.New(t)
 
-	os.Unsetenv("VCAP_APPLICATION")
-	os.Unsetenv("PORT")
+	unsetenvT(t, "VCAP_APPLICATION")
+	unsetenvT(t, "PORT")
 
 	vcap, err := NewVcapApplication()
 	assert.NoError(err)
@@ -59,12 +71,10 @@ func Test05VcapApplication(t *testing.T) {
          "version": "5f0ee99d-252c-4f8d-b241-bc3e22534afc"
      }
 `
-	err = os.Setenv("VCAP_APPLICATION", env)
-	assert.NoError(err)
-	defer os.Unsetenv("VCAP_APPLICATION")
-	err = os.Setenv("PORT", "6280")
-	assert.NoError(err)
-	defer os.Unsetenv("PORT")
+	setenvT(t, "VCAP_APPLICATION", env)
+	defer unsetenvT(t, "VCAP_APPLICATION")
+	setenvT(t, "PORT", "6280")
+	defer unsetenvT(t, "PORT")
 
 	vcap, err = NewVcapApplication()
 	assert.NoError(err)

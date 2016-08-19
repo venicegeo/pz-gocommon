@@ -28,18 +28,22 @@ import (
 
 const ginHammerTime = 3 * time.Second
 
+// GenericServer is the basic framework for standing up a gin-based server. It has methods
+// to Start and Stop as well as to define the routing paths.
 type GenericServer struct {
 	Sys    *SystemConfig
 	pid    int
 	router http.Handler
 }
 
+// RouteData describes one server route: which http verb, the path string, and the handler to use.
 type RouteData struct {
 	Verb    string
 	Path    string
 	Handler gin.HandlerFunc
 }
 
+// Stop will request the server to shutdown. It will wait for the service to die before returning.
 func (server *GenericServer) Stop() error {
 	sys := server.Sys
 
@@ -49,13 +53,10 @@ func (server *GenericServer) Stop() error {
 	}
 
 	err = sys.WaitForServiceToDieByAddress(sys.Name, sys.BindTo)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
+// Start will start the service. You must call Configure first.
 func (server *GenericServer) Start() (chan error, error) {
 
 	sys := server.Sys
@@ -96,6 +97,7 @@ func (server *GenericServer) Start() (chan error, error) {
 	return done, nil
 }
 
+// Configure will take the give RouteData and register them with the server.
 func (server *GenericServer) Configure(routeData []RouteData) error {
 	gin.SetMode(gin.ReleaseMode)
 
@@ -123,13 +125,3 @@ func (server *GenericServer) Configure(routeData []RouteData) error {
 
 	return nil
 }
-
-/*
-// ServerLogHandler adds traditional logging support to the http server handlers.
-func ServerLogHandler(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
-		handler.ServeHTTP(w, r)
-	})
-}
-*/

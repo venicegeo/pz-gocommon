@@ -44,19 +44,15 @@ func fileExists(s string) bool {
 func TestApiKey(t *testing.T) {
 	assert := assert.New(t)
 
-	var err error
-	var key string
-
 	// will it read from $PZKEY?
 	{
-		err = os.Setenv("PZKEY", "yow")
-		assert.NoError(err)
+		setenvT(t, "PZKEY", "yow")
 
-		key, err = GetApiKey("int")
+		key, err := GetApiKey("int")
 		assert.NoError(err)
 		assert.EqualValues(key, "yow")
 
-		os.Unsetenv("PZKEY")
+		unsetenvT(t, "PZKEY")
 	}
 
 	path := os.Getenv("HOME")
@@ -68,7 +64,7 @@ func TestApiKey(t *testing.T) {
 	// (note the test can't control whether $HOME/.pzkey actually exists or not)
 
 	if fileExists(path) {
-		key, err = GetApiKey("int")
+		key, err := GetApiKey("int")
 		assert.NoError(err)
 
 		raw, err := ioutil.ReadFile(path)
@@ -80,13 +76,13 @@ func TestApiKey(t *testing.T) {
 
 		assert.EqualValues(actual, key)
 	} else {
-		key, err = GetApiKey("int")
+		_, err := GetApiKey("int")
 		assert.Error(err)
 	}
 
 	// will it error if the space doesn't exist?
 	if fileExists(path) {
-		key, err = GetApiKey("lalala")
+		_, err := GetApiKey("lalala")
 		assert.Error(err)
 	}
 }

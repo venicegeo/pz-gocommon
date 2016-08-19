@@ -214,7 +214,7 @@ func (sys *SystemConfig) AddService(name ServiceName, address string) {
 func (sys *SystemConfig) GetAddress(name ServiceName) (string, error) {
 	addr, ok := sys.endpoints[name]
 	if !ok {
-		return "", errors.New(fmt.Sprintf("Unknown service: %s", name))
+		return "", fmt.Errorf("Unknown service: %s", name)
 	}
 
 	return addr, nil
@@ -242,11 +242,7 @@ func (sys *SystemConfig) WaitForService(name ServiceName) error {
 	}
 
 	err = sys.WaitForServiceByAddress(name, addr)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (sys *SystemConfig) WaitForServiceByAddress(name ServiceName, address string) error {
@@ -276,11 +272,7 @@ func (sys *SystemConfig) WaitForServiceToDie(name ServiceName) error {
 	}
 
 	err = sys.WaitForServiceToDieByAddress(name, addr)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (sys *SystemConfig) WaitForServiceToDieByAddress(name ServiceName, address string) error {

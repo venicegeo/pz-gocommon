@@ -15,7 +15,6 @@
 package piazza
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,7 +25,7 @@ import (
 func Test06VcapServices(t *testing.T) {
 	assert := assert.New(t)
 
-	os.Unsetenv("VCAP_SERVICES")
+	unsetenvT(t, "VCAP_SERVICES")
 
 	vcap, err := NewVcapServices()
 	assert.NoError(err)
@@ -49,9 +48,8 @@ func Test06VcapServices(t *testing.T) {
 				]
 			}`
 
-	err = os.Setenv("VCAP_SERVICES", env)
-	assert.NoError(err)
-	defer os.Unsetenv("VCAP_SERVICES")
+	setenvT(t, "VCAP_SERVICES", env)
+	defer unsetenvT(t, "VCAP_SERVICES")
 
 	vcap, err = NewVcapServices()
 	assert.NoError(err)

@@ -50,18 +50,17 @@ func (h *Http) convertResponseBodyToObject(resp *http.Response, output interface
 		//////	return nil
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
 	raw, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 
 	err = json.Unmarshal(raw, output)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (h *Http) convertObjectToReader(input interface{}) (io.Reader, error) {
@@ -104,6 +103,25 @@ func (h *Http) doPostflight(statusCode int, obj interface{}) {
 	}
 }
 
+func (h *Http) doRequest(verb string, url string, reader io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest(verb, url, reader)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", ContentTypeJSON)
+	if h.ApiKey != "" {
+		req.SetBasicAuth(h.ApiKey, "")
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
 func (h *Http) doVerb(verb string, endpoint string, input interface{}, output interface{}) (int, error) {
 	url := h.BaseUrl + endpoint
 
@@ -114,30 +132,14 @@ func (h *Http) doVerb(verb string, endpoint string, input interface{}, output in
 
 	h.doPreflight(verb, url, input)
 
-	var resp *http.Response
-	{
-		req, err := http.NewRequest(verb, url, reader)
-		if err != nil {
-			return 0, err
-		}
-		req.Header.Set("Content-Type", ContentTypeJSON)
-		if h.ApiKey != "" {
-			req.SetBasicAuth(h.ApiKey, "")
-		}
-
-		client := &http.Client{}
-		resp, err = client.Do(req)
-		if err != nil {
-			return 0, err
-		}
+	resp, err := h.doRequest(verb, url, reader)
+	if err != nil {
+		return 0, err
 	}
 
 	err = h.convertResponseBodyToObject(resp, output)
 	if err != nil {
-		s, err := fmt.Printf("FAILED/1: %#v\nFAILED/2: %#v\nFAILED/3: %#v\n", err, resp, output)
-		if err != nil {
-			return 0, err
-		}
+		s := fmt.Sprintf("FAILED/1: %#v\nFAILED/2: %#v\nFAILED/3: %#v\n", err, resp, output)
 		h.doPostflight(resp.StatusCode, s)
 	}
 
@@ -191,10 +193,15 @@ func (h *Http) PzGet(endpoint string) *JsonResponse {
 	return output
 }
 
-func (h *Http) PzPost(endpoint string, input interface{}) *JsonResponse {
+func (h *Http) postOrPut(post bool, endpoint string, input interface{}) *JsonResponse {
 	output := &JsonResponse{}
 
-	code, err := h.Post(endpoint, input, output)
+	f := h.Post
+	if !post {
+		f = h.Put
+	}
+
+	code, err := f(endpoint, input, output)
 	if err != nil {
 		return newJsonResponse500(err)
 	}
@@ -204,17 +211,12 @@ func (h *Http) PzPost(endpoint string, input interface{}) *JsonResponse {
 	return output
 }
 
+func (h *Http) PzPost(endpoint string, input interface{}) *JsonResponse {
+	return h.postOrPut(true, endpoint, input)
+}
+
 func (h *Http) PzPut(endpoint string, input interface{}) *JsonResponse {
-	output := &JsonResponse{}
-
-	code, err := h.Put(endpoint, input, output)
-	if err != nil {
-		return newJsonResponse500(err)
-	}
-
-	output.StatusCode = code
-
-	return output
+	return h.postOrPut(false, endpoint, input)
 }
 
 func (h *Http) PzDelete(endpoint string) *JsonResponse {
