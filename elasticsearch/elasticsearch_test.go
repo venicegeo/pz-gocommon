@@ -19,11 +19,8 @@ import (
 	"fmt"
 	"log"
 	"sort"
-	"strings"
 	"testing"
 	"time"
-
-	"gopkg.in/olivere/elastic.v3"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -146,40 +143,6 @@ func (suite *EsTester) SetUpIndex() IIndex {
 
 //---------------------------------------------------------------------------
 
-func deleteOldIndexes(es *elastic.Client) {
-	s, err := es.IndexNames()
-	if err != nil {
-		panic(err)
-	}
-	log.Printf("%d indexes", len(s))
-
-	del := func(nam string) {
-		ret, err := es.DeleteIndex(nam).Do()
-		if err != nil {
-			log.Printf("%s: %s", nam, err.Error())
-		} else {
-			log.Printf("%s: %t", nam, ret.Acknowledged)
-		}
-	}
-
-	for _, v := range s {
-		if strings.HasPrefix(v, "alerts.") ||
-			strings.HasPrefix(v, "triggers.") ||
-			strings.HasPrefix(v, "events.") ||
-			strings.HasPrefix(v, "eventtypes.") ||
-			strings.HasPrefix(v, "estest.") ||
-			strings.HasPrefix(v, "test.") ||
-			strings.HasPrefix(v, "getall.") ||
-			strings.HasPrefix(v, "pzlogger.") {
-			del(v)
-		} else {
-			log.Printf("Skipping %s", v)
-		}
-	}
-
-	panic(999)
-}
-
 func (suite *EsTester) Test01Client() {
 	t := suite.T()
 	assert := assert.New(t)
@@ -196,8 +159,6 @@ func (suite *EsTester) Test01Client() {
 	version := esi.GetVersion()
 	assert.NoError(err)
 	assert.Contains("2.2.0", version)
-
-	//deleteOldIndexes(esi.(*Index).lib)
 }
 
 func (suite *EsTester) Test02SimplePost() {
