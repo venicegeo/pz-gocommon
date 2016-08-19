@@ -181,20 +181,20 @@ func (name MappingElementTypeName) isValidMappingType() bool {
 func (name MappingElementTypeName) isValidScalarMappingType() bool {
 
 	switch name {
-	case MappingElementTypeString:
-	case MappingElementTypeLong:
-	case MappingElementTypeInteger:
-	case MappingElementTypeShort:
-	case MappingElementTypeByte:
-	case MappingElementTypeDouble:
-	case MappingElementTypeFloat:
-	case MappingElementTypeDate:
-	case MappingElementTypeBool:
-	case MappingElementTypeBinary:
-	case MappingElementTypeGeoPoint:
-	case MappingElementTypeGeoShape:
-	case MappingElementTypeIp:
-	case MappingElementTypeCompletion:
+	case MappingElementTypeString,
+		MappingElementTypeLong,
+		MappingElementTypeInteger,
+		MappingElementTypeShort,
+		MappingElementTypeByte,
+		MappingElementTypeDouble,
+		MappingElementTypeFloat,
+		MappingElementTypeDate,
+		MappingElementTypeBool,
+		MappingElementTypeBinary,
+		MappingElementTypeGeoPoint,
+		MappingElementTypeGeoShape,
+		MappingElementTypeIp,
+		MappingElementTypeCompletion:
 		return true
 	}
 
@@ -204,20 +204,20 @@ func (name MappingElementTypeName) isValidScalarMappingType() bool {
 func (name MappingElementTypeName) isValidArrayMappingType() bool {
 
 	switch name {
-	case MappingElementTypeStringA:
-	case MappingElementTypeLongA:
-	case MappingElementTypeIntegerA:
-	case MappingElementTypeShortA:
-	case MappingElementTypeByteA:
-	case MappingElementTypeDoubleA:
-	case MappingElementTypeFloatA:
-	case MappingElementTypeDateA:
-	case MappingElementTypeBoolA:
-	case MappingElementTypeBinaryA:
-	case MappingElementTypeGeoPointA:
-	case MappingElementTypeGeoShapeA:
-	case MappingElementTypeIpA:
-	case MappingElementTypeCompletionA:
+	case MappingElementTypeStringA,
+		MappingElementTypeLongA,
+		MappingElementTypeIntegerA,
+		MappingElementTypeShortA,
+		MappingElementTypeByteA,
+		MappingElementTypeDoubleA,
+		MappingElementTypeFloatA,
+		MappingElementTypeDateA,
+		MappingElementTypeBoolA,
+		MappingElementTypeBinaryA,
+		MappingElementTypeGeoPointA,
+		MappingElementTypeGeoShapeA,
+		MappingElementTypeIpA,
+		MappingElementTypeCompletionA:
 		return true
 	}
 
@@ -225,18 +225,21 @@ func (name MappingElementTypeName) isValidArrayMappingType() bool {
 }
 
 func IsValidMappingType(mappingValue interface{}) bool {
-	name, ok := mappingValue.(MappingElementTypeName)
+	str, ok := mappingValue.(string)
 	if !ok {
 		return false
 	}
+	name := MappingElementTypeName(str)
 
-	return name.isValidArrayMappingType()
+	return name.isValidMappingType()
 }
 
 func IsValidArrayTypeMapping(mappingValue interface{}) bool {
-	name, ok := mappingValue.(MappingElementTypeName)
+	str, ok := mappingValue.(string)
 	if !ok {
 		return false
 	}
+	name := MappingElementTypeName(str)
+
 	return name.isValidArrayMappingType()
 }
