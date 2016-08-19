@@ -172,63 +172,71 @@ func PollFunction(fn GetData) (bool, error) {
 	}
 }
 
-func IsValidMappingType(mappingValue interface{}) bool {
-	str, ok := mappingValue.(string)
-	if !ok {
-		return false
-	}
-	if string(MappingElementTypeString) == str ||
-		string(MappingElementTypeLong) == str ||
-		string(MappingElementTypeInteger) == str ||
-		string(MappingElementTypeShort) == str ||
-		string(MappingElementTypeByte) == str ||
-		string(MappingElementTypeDouble) == str ||
-		string(MappingElementTypeFloat) == str ||
-		string(MappingElementTypeDate) == str ||
-		string(MappingElementTypeBool) == str ||
-		string(MappingElementTypeBinary) == str ||
-		string(MappingElementTypeGeoPoint) == str ||
-		string(MappingElementTypeGeoShape) == str ||
-		string(MappingElementTypeIp) == str ||
-		string(MappingElementTypeCompletion) == str ||
-		string(MappingElementTypeStringA) == str ||
-		string(MappingElementTypeLongA) == str ||
-		string(MappingElementTypeIntegerA) == str ||
-		string(MappingElementTypeShortA) == str ||
-		string(MappingElementTypeByteA) == str ||
-		string(MappingElementTypeDoubleA) == str ||
-		string(MappingElementTypeFloatA) == str ||
-		string(MappingElementTypeDateA) == str ||
-		string(MappingElementTypeBoolA) == str ||
-		string(MappingElementTypeBinaryA) == str ||
-		string(MappingElementTypeGeoPointA) == str ||
-		string(MappingElementTypeGeoShapeA) == str ||
-		string(MappingElementTypeIpA) == str ||
-		string(MappingElementTypeCompletionA) == str {
+func (name MappingElementTypeName) isValidMappingType() bool {
+	valid := name.isValidScalarMappingType() ||
+		name.isValidArrayMappingType()
+	return valid
+}
+
+func (name MappingElementTypeName) isValidScalarMappingType() bool {
+
+	switch name {
+	case MappingElementTypeString:
+	case MappingElementTypeLong:
+	case MappingElementTypeInteger:
+	case MappingElementTypeShort:
+	case MappingElementTypeByte:
+	case MappingElementTypeDouble:
+	case MappingElementTypeFloat:
+	case MappingElementTypeDate:
+	case MappingElementTypeBool:
+	case MappingElementTypeBinary:
+	case MappingElementTypeGeoPoint:
+	case MappingElementTypeGeoShape:
+	case MappingElementTypeIp:
+	case MappingElementTypeCompletion:
 		return true
 	}
+
 	return false
 }
-func IsValidArrayTypeMapping(mappingValue interface{}) bool {
-	str, ok := mappingValue.(string)
+
+func (name MappingElementTypeName) isValidArrayMappingType() bool {
+
+	switch name {
+	case MappingElementTypeStringA:
+	case MappingElementTypeLongA:
+	case MappingElementTypeIntegerA:
+	case MappingElementTypeShortA:
+	case MappingElementTypeByteA:
+	case MappingElementTypeDoubleA:
+	case MappingElementTypeFloatA:
+	case MappingElementTypeDateA:
+	case MappingElementTypeBoolA:
+	case MappingElementTypeBinaryA:
+	case MappingElementTypeGeoPointA:
+	case MappingElementTypeGeoShapeA:
+	case MappingElementTypeIpA:
+	case MappingElementTypeCompletionA:
+		return true
+	}
+
+	return false
+}
+
+func IsValidMappingType(mappingValue interface{}) bool {
+	name, ok := mappingValue.(MappingElementTypeName)
 	if !ok {
 		return false
 	}
-	if string(MappingElementTypeStringA) == str ||
-		string(MappingElementTypeLongA) == str ||
-		string(MappingElementTypeIntegerA) == str ||
-		string(MappingElementTypeShortA) == str ||
-		string(MappingElementTypeByteA) == str ||
-		string(MappingElementTypeDoubleA) == str ||
-		string(MappingElementTypeFloatA) == str ||
-		string(MappingElementTypeDateA) == str ||
-		string(MappingElementTypeBoolA) == str ||
-		string(MappingElementTypeBinaryA) == str ||
-		string(MappingElementTypeGeoPointA) == str ||
-		string(MappingElementTypeGeoShapeA) == str ||
-		string(MappingElementTypeIpA) == str ||
-		string(MappingElementTypeCompletionA) == str {
-		return true
+
+	return name.isValidArrayMappingType()
+}
+
+func IsValidArrayTypeMapping(mappingValue interface{}) bool {
+	name, ok := mappingValue.(MappingElementTypeName)
+	if !ok {
+		return false
 	}
-	return false
+	return name.isValidArrayMappingType()
 }
