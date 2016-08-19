@@ -209,6 +209,11 @@ func (esi *MockIndex) PostData(typeName string, id string, obj interface{}) (*In
 	return r, nil
 }
 
+//TODO
+func (esi *MockIndex) PutData(typeName string, id string, obj interface{}) (*IndexResponse, error) {
+	return esi.PostData(typeName, id, obj)
+}
+
 func (esi *MockIndex) GetByID(typeName string, id string) (*GetResult, error) {
 	ok, err := esi.TypeExists(typeName)
 	if err != nil {

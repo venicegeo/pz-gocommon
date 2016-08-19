@@ -221,6 +221,11 @@ func (esi *Index) PostData(typ string, id string, obj interface{}) (*IndexRespon
 	return NewIndexResponse(indexResponse), nil
 }
 
+//TODO
+func (esi *Index) PutData(typ string, id string, obj interface{}) (*IndexResponse, error) {
+	return esi.PostData(typ, id, obj)
+}
+
 // GetByID returns a document by ID within the specified index and type.
 func (esi *Index) GetByID(typ string, id string) (*GetResult, error) {
 	// TODO: the caller should enforce this instead (here and elsewhere)

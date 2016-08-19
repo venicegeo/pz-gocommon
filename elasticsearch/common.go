@@ -77,6 +77,7 @@ type IIndex interface {
 	Close() error
 	Delete() error
 	PostData(typ string, id string, obj interface{}) (*IndexResponse, error)
+	PutData(typ string, id string, obj interface{}) (*IndexResponse, error)
 	GetByID(typ string, id string) (*GetResult, error)
 	DeleteByID(typ string, id string) (*DeleteResponse, error)
 	FilterByMatchAll(typ string, format *piazza.JsonPagination) (*SearchResult, error)
@@ -124,7 +125,7 @@ func ConstructMappingSchema(name string, items map[string]MappingElementTypeName
 				%s
 			}
 		}
-	}` 
+	}`
 
 	stuff := make([]string, len(items))
 	i := 0
