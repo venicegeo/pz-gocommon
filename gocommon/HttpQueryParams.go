@@ -81,6 +81,13 @@ func (params *HttpQueryParams) GetAsInt(key string, defalt int) (int, error) {
 	return i, nil
 }
 
+// GetAsID retrieves the (string) value of a key from parameter set and
+// returns it as an Ident.
+func (params *HttpQueryParams) GetAsID(key string, defalt string) (Ident, error) {
+	str, err := params.GetAsString(key, defalt)
+	return Ident(str), err
+}
+
 // GetAsString retrieves the (string) value of a key from parameter set and returns it.
 func (params *HttpQueryParams) GetAsString(key string, defalt string) (string, error) {
 	if key == "" {

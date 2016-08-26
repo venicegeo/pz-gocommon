@@ -21,7 +21,7 @@ import (
 )
 
 type SearchResultHit struct {
-	Id     string
+	ID     string
 	Source *json.RawMessage
 }
 
@@ -43,7 +43,7 @@ func NewSearchResult(searchResult *elastic.SearchResult) *SearchResult {
 
 	for i, hit := range searchResult.Hits.Hits {
 		tmp := &SearchResultHit{
-			Id:     hit.Id,
+			ID:     hit.Id,
 			Source: hit.Source,
 		}
 		resp.hits[i] = tmp
@@ -71,7 +71,7 @@ func (r *SearchResult) GetHit(i int) *SearchResultHit {
 
 type IndexResponse struct {
 	Created bool
-	Id      string
+	ID      string
 	Index   string
 	Type    string
 	Version int
@@ -80,7 +80,7 @@ type IndexResponse struct {
 func NewIndexResponse(indexResponse *elastic.IndexResponse) *IndexResponse {
 	resp := &IndexResponse{
 		Created: indexResponse.Created,
-		Id:      indexResponse.Id,
+		ID:      indexResponse.Id,
 		Index:   indexResponse.Index,
 		Type:    indexResponse.Type,
 		Version: indexResponse.Version,
@@ -118,27 +118,27 @@ func NewPercolateResponse(percolateResponse *elastic.PercolateResponse) *Percola
 // DeleteResponse is the response when a deletion of a document or type occurs
 type DeleteResponse struct {
 	Found bool
-	Id    string
+	ID    string
 }
 
 // NewDeleteResponse is the initializing constructor for DeleteResponse
 func NewDeleteResponse(deleteResponse *elastic.DeleteResponse) *DeleteResponse {
 	resp := &DeleteResponse{
 		Found: deleteResponse.Found,
-		Id:    deleteResponse.Id,
+		ID:    deleteResponse.Id,
 	}
 	return resp
 }
 
 type GetResult struct {
-	Id     string
+	ID     string
 	Source *json.RawMessage
 	Found  bool
 }
 
 func NewGetResult(getResult *elastic.GetResult) *GetResult {
 	resp := &GetResult{
-		Id:     getResult.Id,
+		ID:     getResult.Id,
 		Source: getResult.Source,
 		Found:  getResult.Found,
 	}
