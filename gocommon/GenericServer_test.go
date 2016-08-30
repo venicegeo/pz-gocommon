@@ -26,14 +26,14 @@ import (
 //--------------------------
 
 type Thing struct {
-	Id    string `json:"id"`
+	ID    string `json:"id"`
 	Value string `json:"value"`
 }
 
 type ThingService struct {
 	assert  *assert.Assertions
 	Data    map[string]string `json:"data"`
-	IdCount int
+	IDCount int
 }
 
 func (service *ThingService) GetThing(id string) *JsonResponse {
@@ -41,7 +41,7 @@ func (service *ThingService) GetThing(id string) *JsonResponse {
 	if !ok {
 		return &JsonResponse{StatusCode: http.StatusNotFound}
 	}
-	resp := &JsonResponse{StatusCode: http.StatusOK, Data: Thing{Id: id, Value: val}}
+	resp := &JsonResponse{StatusCode: http.StatusOK, Data: Thing{ID: id, Value: val}}
 	err := resp.SetType()
 	if err != nil {
 		return &JsonResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()}
@@ -54,9 +54,9 @@ func (service *ThingService) PostThing(thing *Thing) *JsonResponse {
 		resp := &JsonResponse{StatusCode: http.StatusBadRequest, Message: "oops"}
 		return resp
 	}
-	service.IdCount++
-	thing.Id = fmt.Sprintf("%d", service.IdCount)
-	service.Data[thing.Id] = thing.Value
+	service.IDCount++
+	thing.ID = fmt.Sprintf("%d", service.IDCount)
+	service.Data[thing.ID] = thing.Value
 
 	resp := &JsonResponse{StatusCode: http.StatusCreated, Data: thing}
 	err := resp.SetType()
@@ -70,10 +70,10 @@ func (service *ThingService) PutThing(id string, thing *Thing) *JsonResponse {
 	if thing.Value == "NULL" {
 		return &JsonResponse{StatusCode: http.StatusBadRequest, Message: "oops"}
 	}
-	if thing.Id != id {
+	if thing.ID != id {
 		return &JsonResponse{StatusCode: http.StatusBadRequest, Message: "oops - id mismatch"}
 	}
-	service.Data[thing.Id] = thing.Value
+	service.Data[thing.ID] = thing.Value
 
 	resp := &JsonResponse{StatusCode: http.StatusOK, Data: thing}
 	err := resp.SetType()
@@ -150,7 +150,7 @@ func (server *ThingServer) handlePut(c *gin.Context) {
 		resp := &JsonResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()}
 		c.JSON(resp.StatusCode, resp)
 	}
-	thing.Id = id
+	thing.ID = id
 	resp := server.service.PutThing(id, &thing)
 	c.JSON(resp.StatusCode, resp)
 }
@@ -178,7 +178,7 @@ func Test07Server(t *testing.T) {
 
 	service := &ThingService{
 		assert:  assert,
-		IdCount: 0,
+		IDCount: 0,
 		Data:    make(map[string]string),
 	}
 
@@ -221,7 +221,7 @@ func Test07Server(t *testing.T) {
 		assert.EqualValues("thing", jresp.Type)
 
 		err = jresp.ExtractData(&output)
-		assert.EqualValues("1", output.Id)
+		assert.EqualValues("1", output.ID)
 		assert.EqualValues("17", output.Value)
 
 		// POST bad
@@ -236,7 +236,7 @@ func Test07Server(t *testing.T) {
 		assert.EqualValues("thing", jresp.Type)
 
 		err = jresp.ExtractData(&output)
-		assert.EqualValues("2", output.Id)
+		assert.EqualValues("2", output.ID)
 		assert.EqualValues("18", output.Value)
 
 		// GET 2
@@ -246,7 +246,7 @@ func Test07Server(t *testing.T) {
 
 		err = jresp.ExtractData(&output)
 		assert.NoError(err)
-		assert.EqualValues("2", output.Id)
+		assert.EqualValues("2", output.ID)
 		assert.EqualValues("18", output.Value)
 
 		// PUT 1
@@ -266,7 +266,7 @@ func Test07Server(t *testing.T) {
 
 		err = jresp.ExtractData(&output)
 		assert.NoError(err)
-		assert.EqualValues("1", output.Id)
+		assert.EqualValues("1", output.ID)
 		assert.EqualValues("71", output.Value)
 
 		// DELETE 3
