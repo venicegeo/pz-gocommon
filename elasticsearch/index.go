@@ -372,17 +372,6 @@ func (esi *Index) FilterByMatchQuery(typ string, name string, value interface{})
 
 // SearchByJSON performs a search over the index via raw JSON.
 func (esi *Index) SearchByJSON(typ string, jsn string) (*SearchResult, error) {
-	/*if typ == "" {
-		return nil, fmt.Errorf("Can't filter on type \"\"")
-	}
-	ok, err := esi.TypeExists(typ)
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
-	}*/
-
 	var obj interface{}
 	err := json.Unmarshal([]byte(jsn), &obj)
 	if err != nil {
@@ -394,16 +383,6 @@ func (esi *Index) SearchByJSON(typ string, jsn string) (*SearchResult, error) {
 		Type(typ).
 		Source(obj).
 		Do()
-	//if format != nil {
-	//	queryFormat := NewQueryFormat(format)
-	// TODO: Check the jsn string for size and from and override those params
-	//    Otherwise use what was given in the JsonPagination
-	//	searchService.
-	//		From(queryFormat.From).
-	//		Size(queryFormat.Size).
-	//		Sort(queryFormat.Key, queryFormat.Order)
-	//}
-	//searchResult, err := searchService.Do()
 	if err != nil {
 		return nil, err
 	}
