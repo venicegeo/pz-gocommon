@@ -4,8 +4,14 @@ set -e
 set -x
 
 go test -v github.com/venicegeo/pz-gocommon/gocommon
+
 go test -v github.com/venicegeo/pz-gocommon/elasticsearch
+cd ~/venicegeo/pz-gocommon/elasticsearch/systest
+go test -v
+
 go test -v github.com/venicegeo/pz-gocommon/kafka
+cd ~/venicegeo/pz-gocommon/kafka/systest
+go test -v
 
 go test -v github.com/venicegeo/pz-logger/logger
 cd ~/venicegeo/pz-logger/systest
