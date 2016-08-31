@@ -84,7 +84,7 @@ type IIndex interface {
 	GetAllElements(typ string) (*SearchResult, error)
 	FilterByTermQuery(typ string, name string, value interface{}) (*SearchResult, error)
 	FilterByMatchQuery(typ string, name string, value interface{}) (*SearchResult, error)
-	SearchByJSON(typ string, jsn string) (*SearchResult, error)
+	SearchByJSON(typ string, jsn string, format *piazza.JsonPagination) (*SearchResult, error)
 	SetMapping(typename string, jsn piazza.JsonString) error
 	GetTypes() ([]string, error)
 	GetMapping(typ string) (interface{}, error)
