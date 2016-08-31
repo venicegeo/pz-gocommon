@@ -371,7 +371,7 @@ func (esi *Index) FilterByMatchQuery(typ string, name string, value interface{})
 }
 
 // SearchByJSON performs a search over the index via raw JSON.
-func (esi *Index) SearchByJSON(typ string, jsn string, format *piazza.JsonPagination) (*SearchResult, error) {
+func (esi *Index) SearchByJSON(typ string, jsn string) (*SearchResult, error) {
 	/*if typ == "" {
 		return nil, fmt.Errorf("Can't filter on type \"\"")
 	}
@@ -389,20 +389,21 @@ func (esi *Index) SearchByJSON(typ string, jsn string, format *piazza.JsonPagina
 		return nil, err
 	}
 
-	searchService := esi.lib.Search().
+	searchResult, err := esi.lib.Search().
 		Index(esi.index).
 		Type(typ).
-		Source(obj)
-	if format != nil {
-		queryFormat := NewQueryFormat(format)
-		// TODO: Check the jsn string for size and from and override those params
-		//    Otherwise use what was given in the JsonPagination
-		searchService.
-			From(queryFormat.From).
-			Size(queryFormat.Size).
-			Sort(queryFormat.Key, queryFormat.Order)
-	}
-	searchResult, err := searchService.Do()
+		Source(obj).
+		Do()
+	//if format != nil {
+	//	queryFormat := NewQueryFormat(format)
+	// TODO: Check the jsn string for size and from and override those params
+	//    Otherwise use what was given in the JsonPagination
+	//	searchService.
+	//		From(queryFormat.From).
+	//		Size(queryFormat.Size).
+	//		Sort(queryFormat.Key, queryFormat.Order)
+	//}
+	//searchResult, err := searchService.Do()
 	if err != nil {
 		return nil, err
 	}
