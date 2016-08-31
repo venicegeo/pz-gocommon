@@ -205,7 +205,7 @@ func (esi *MockIndex) PostData(typeName string, id string, obj interface{}) (*In
 	}
 	typ.items[id] = &raw
 
-	r := &IndexResponse{Created: true, Id: id, Index: esi.name, Type: typeName}
+	r := &IndexResponse{Created: true, ID: id, Index: esi.name, Type: typeName}
 	return r, nil
 }
 
@@ -232,7 +232,7 @@ func (esi *MockIndex) GetByID(typeName string, id string) (*GetResult, error) {
 
 	typ := esi.types[typeName]
 	item := typ.items[id]
-	r := &GetResult{Id: id, Source: item, Found: true}
+	r := &GetResult{ID: id, Source: item, Found: true}
 	return r, nil
 }
 
@@ -268,7 +268,7 @@ func (a srhByID) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
 func (a srhByID) Less(i, j int) bool {
-	return (*a[i]).Id < (*a[j]).Id
+	return (*a[i]).ID < (*a[j]).ID
 }
 func srhSortMatches(matches []*SearchResultHit) []*SearchResultHit {
 	sort.Sort(srhByID(matches))
@@ -303,7 +303,7 @@ func (esi *MockIndex) FilterByMatchAll(typeName string, realFormat *piazza.JsonP
 	i := 0
 	for id, obj := range objs {
 		tmp := &SearchResultHit{
-			Id:     id,
+			ID:     id,
 			Source: obj,
 		}
 		resp.hits[i] = tmp
@@ -363,7 +363,7 @@ func (esi *MockIndex) FilterByTermQuery(typeName string, name string, value inte
 			continue
 		}
 		tmp := &SearchResultHit{
-			Id:     id,
+			ID:     id,
 			Source: obj,
 		}
 		resp.hits = append(resp.hits, tmp)

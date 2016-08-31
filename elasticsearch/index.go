@@ -203,7 +203,7 @@ func (esi *Index) PostData(typ string, id string, obj interface{}) (*IndexRespon
 		return nil, err
 	}
 	if !ok {
-		err := fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
+		err = fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
 		return nil, err
 	}
 
