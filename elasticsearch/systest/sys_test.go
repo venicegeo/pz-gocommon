@@ -1053,7 +1053,7 @@ func (suite *EsTester) Test11Pagination() {
 		indexResult, err := esi.PostData("Obj3", id, obj)
 		assert.NoError(err)
 		assert.NotNil(indexResult)
-		assert.EqualValues(id, indexResult.Id)
+		assert.EqualValues(id, indexResult.ID)
 	}
 
 	{
@@ -1078,10 +1078,10 @@ func (suite *EsTester) Test11Pagination() {
 		getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
 		assert.NoError(err)
 		assert.Len(*getResult.GetHits(), 4)
-		assert.Equal("id0_"+p, getResult.GetHit(0).Id)
-		assert.Equal("id1_"+p, getResult.GetHit(1).Id)
-		assert.Equal("id2_"+p, getResult.GetHit(2).Id)
-		assert.Equal("id3_"+p, getResult.GetHit(3).Id)
+		assert.Equal("id0_"+p, getResult.GetHit(0).ID)
+		assert.Equal("id1_"+p, getResult.GetHit(1).ID)
+		assert.Equal("id2_"+p, getResult.GetHit(2).ID)
+		assert.Equal("id3_"+p, getResult.GetHit(3).ID)
 	}
 
 	{
@@ -1094,8 +1094,8 @@ func (suite *EsTester) Test11Pagination() {
 		getResult, err := esi.FilterByMatchAll("Obj3", realFormat)
 		assert.NoError(err)
 		assert.Len(*getResult.GetHits(), 3)
-		assert.Equal("id3_"+p, getResult.GetHit(0).Id)
-		assert.Equal("id4_"+p, getResult.GetHit(1).Id)
-		assert.Equal("id5_"+p, getResult.GetHit(2).Id)
+		assert.Equal("id3_"+p, getResult.GetHit(0).ID)
+		assert.Equal("id4_"+p, getResult.GetHit(1).ID)
+		assert.Equal("id5_"+p, getResult.GetHit(2).ID)
 	}
 }
