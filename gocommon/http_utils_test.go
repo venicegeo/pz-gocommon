@@ -64,7 +64,7 @@ func TestApiKey(t *testing.T) {
 	// (note the test can't control whether $HOME/.pzkey actually exists or not)
 
 	if fileExists(path) {
-		key, err := GetApiKey("int")
+		key, err := GetApiKey("pz-gateway.int.geointservices.io")
 		assert.NoError(err)
 
 		raw, err := ioutil.ReadFile(path)
@@ -72,17 +72,34 @@ func TestApiKey(t *testing.T) {
 		data := map[string]string{}
 		err = json.Unmarshal(raw, &data)
 		assert.NoError(err)
-		actual := data["int"]
+		actual := data["pz-gateway.int.geointservices.io"]
 
 		assert.EqualValues(actual, key)
 	} else {
-		_, err := GetApiKey("int")
+		_, err := GetApiKey("pz-gateway.int.geointservices.io")
 		assert.Error(err)
 	}
 
 	// will it error if the space doesn't exist?
 	if fileExists(path) {
-		_, err := GetApiKey("lalala")
+		_, err := GetApiKey("la.la.la")
 		assert.Error(err)
 	}
+}
+
+func TestApiServer(t *testing.T) {
+	assert := assert.New(t)
+
+	unsetenvT(t, "PZSERVER")
+
+	pzserver, err := GetApiServer()
+	assert.Error(err)
+
+	setenvT(t, "PZSERVER", "a.b.c.d")
+
+	pzserver, err = GetApiServer()
+	assert.NoError(err)
+	assert.EqualValues("a.b.c.d", pzserver)
+
+	unsetenvT(t, "PZSERVER")
 }

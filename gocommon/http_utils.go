@@ -17,6 +17,7 @@ package piazza
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -76,14 +77,14 @@ func GinReturnJson(c *gin.Context, resp *JsonResponse) {
 	//    c.Writer.Header().Set("Content-Length", str(len(raw))
 }
 
-// Get the Pz API key, in this order:
+// Get the Pz API key for the given server, in this order:
 //
 // (1) if $PZKEY present, use that
 // (2) if ~/.pzkey exists, use that
 // (3) error
 //
 // And no, we don't uspport Windows.
-func GetApiKey(space string) (string, error) {
+func GetApiKey(pzserver string) (string, error) {
 
 	fileExists := func(s string) bool {
 		if _, err := os.Stat(s); os.IsNotExist(err) {
@@ -119,10 +120,19 @@ func GetApiKey(space string) (string, error) {
 		return "", err
 	}
 
-	key, ok := data[space]
+	key, ok := data[pzserver]
 	if !ok {
-		return "", errors.New("No API key for deployment space " + space)
+		return "", fmt.Errorf("No API key for server %s", pzserver)
 	}
 
 	return key, nil
+}
+
+// GetEnvironment gets the $PZSERVER host and the API key.
+func GetApiServer() (string, error) {
+	pzserver := os.Getenv("PZSERVER")
+	if pzserver == "" {
+		return "", fmt.Errorf("$PZSERVER not set")
+	}
+	return pzserver, nil
 }
