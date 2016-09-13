@@ -174,7 +174,9 @@ func (suite *EsTester) Test01Client() {
 
 	version := esi.GetVersion()
 	assert.NoError(err)
-	assert.True(strings.HasPrefix(version, "2.2") || strings.HasPrefix(version, "2.3"))
+	assert.True(strings.HasPrefix(version, "2.2") ||
+		strings.HasPrefix(version, "2.3") ||
+		strings.HasPrefix(version, "2.4"))
 }
 
 func (suite *EsTester) Test02SimplePost() {
