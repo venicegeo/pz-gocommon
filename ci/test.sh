@@ -17,6 +17,8 @@ PATH=$PATH:"$GOPATH"/bin
 
 export GO15VENDOREXPERIMENT="1"
 
+go version
+
 curl https://glide.sh/get | sh
 
 # get ourself, and go there
