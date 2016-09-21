@@ -192,7 +192,7 @@ func (sys *SystemConfig) runHealthChecks() error {
 			//log.Printf(s)
 			return errors.New(s)
 		}
-
+		resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
 			s := fmt.Sprintf("Health check failed for service: %s at %s <%#v>", name, url, resp)
 			//log.Printf(s)
@@ -254,6 +254,7 @@ func (sys *SystemConfig) WaitForServiceByAddress(name ServiceName, address strin
 		resp, err := http.Get(url)
 		if err == nil && resp.StatusCode == http.StatusOK {
 			//log.Printf("found service %s", name)
+			resp.Body.Close()
 			return nil
 		}
 		if msTime >= waitTimeoutMs {
@@ -281,10 +282,11 @@ func (sys *SystemConfig) WaitForServiceToDieByAddress(name ServiceName, address 
 	msTime := 0
 
 	for {
-		_, err := http.Get(url)
+		resp, err := http.Get(url)
 		if err != nil {
 			return nil
 		}
+		resp.Body.Close()
 		if msTime >= waitTimeoutMs {
 			return fmt.Errorf("timed out waiting for service to die: %s at %s", name, url)
 		}
