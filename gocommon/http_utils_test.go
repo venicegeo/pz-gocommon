@@ -25,7 +25,7 @@ import (
 
 //--------------------------
 
-func TestHttp(t *testing.T) {
+func TestHttpUtils(t *testing.T) {
 	assert := assert.New(t)
 
 	// testing of Http{Get,Post,Put,Delete}Json covered by GenericServer_test.go

@@ -36,6 +36,8 @@ func TestPagination(t *testing.T) {
 
 	assert.Equal(320, p.StartIndex())
 	assert.Equal(330, p.EndIndex())
+
+	assert.Equal("perPage=10&page=32&sortBy=id&order=desc", p.String())
 }
 
 func TestPaginationParams(t *testing.T) {

@@ -122,13 +122,13 @@ func (server *ThingServer) handleGetRoot(c *gin.Context) {
 	if err != nil {
 		resp = JsonResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()}
 	}
-	c.JSON(resp.StatusCode, resp)
+	GinReturnJson(c, &resp)
 }
 
 func (server *ThingServer) handleGet(c *gin.Context) {
 	id := c.Param("id")
 	resp := server.service.GetThing(id)
-	c.JSON(resp.StatusCode, resp)
+	GinReturnJson(c, resp)
 }
 
 func (server *ThingServer) handlePost(c *gin.Context) {
@@ -136,10 +136,10 @@ func (server *ThingServer) handlePost(c *gin.Context) {
 	err := c.BindJSON(&thing)
 	if err != nil {
 		resp := &JsonResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()}
-		c.JSON(resp.StatusCode, resp)
+		GinReturnJson(c, resp)
 	}
 	resp := server.service.PostThing(&thing)
-	c.JSON(resp.StatusCode, resp)
+	GinReturnJson(c, resp)
 }
 
 func (server *ThingServer) handlePut(c *gin.Context) {
@@ -148,17 +148,17 @@ func (server *ThingServer) handlePut(c *gin.Context) {
 	err := c.BindJSON(&thing)
 	if err != nil {
 		resp := &JsonResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()}
-		c.JSON(resp.StatusCode, resp)
+		GinReturnJson(c, resp)
 	}
 	thing.ID = id
 	resp := server.service.PutThing(id, &thing)
-	c.JSON(resp.StatusCode, resp)
+	GinReturnJson(c, resp)
 }
 
 func (server *ThingServer) handleDelete(c *gin.Context) {
 	id := c.Param("id")
 	resp := server.service.DeleteThing(id)
-	c.JSON(resp.StatusCode, resp)
+	GinReturnJson(c, resp)
 }
 
 //------------------------------------------
@@ -200,11 +200,11 @@ func Test07Server(t *testing.T) {
 		h.BaseUrl = "http://" + sys.BindTo
 	}
 
-	{
-		var input *Thing
-		var output Thing
-		var jresp *JsonResponse
+	var input *Thing
+	var output Thing
+	var jresp *JsonResponse = &JsonResponse{}
 
+	{
 		// GET /
 		jresp = h.PzGet("/")
 		assert.Equal(200, jresp.StatusCode)
@@ -281,6 +281,34 @@ func Test07Server(t *testing.T) {
 		jresp = h.PzGet("/1")
 		assert.Equal(404, jresp.StatusCode)
 	}
+
+	// raw PUT and DELETE
+	{
+		// PUT
+		input = &Thing{Value: "72"}
+		body, err := h.convertObjectToReader(input)
+		assert.NoError(err)
+		resp, err := HTTPPut(h.BaseUrl+"/2", ContentTypeJSON, body)
+		assert.NoError(err)
+		assert.Equal(200, resp.StatusCode)
+
+		// check return
+		err = h.convertResponseBodyToObject(resp, jresp)
+		assert.NoError(err)
+		m := jresp.Data.(map[string]interface{})
+		assert.Equal("72", m["value"])
+
+		// DELETE
+		resp, err = HTTPDelete(h.BaseUrl + "/2")
+		assert.NoError(err)
+		assert.Equal(200, resp.StatusCode)
+
+		// check return
+		// GET 2
+		jresp = h.PzGet("/2")
+		assert.Equal(404, jresp.StatusCode)
+	}
+
 	{
 		err = genericServer.Stop()
 		//assert.NoError(err)

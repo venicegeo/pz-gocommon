@@ -16,6 +16,7 @@ package piazza
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -38,4 +39,41 @@ func TestMarshalling(t *testing.T) {
 	err = json.Unmarshal(byts, b)
 	assert.NoError(err)
 	assert.EqualValues(a, b)
+
+	actual := b.String()
+	expected := `{
+		StatusCode: 10,
+		Data: <nil>,
+		Message:
+	}`
+	assert.Equal(RemoveWhitespace(expected), RemoveWhitespace(actual))
+}
+
+func TestIdent(t *testing.T) {
+	assert := assert.New(t)
+
+	var id Ident = "01730"
+	s := id.String()
+
+	assert.Equal("01730", s)
+}
+
+func TestMisc(t *testing.T) {
+	assert := assert.New(t)
+
+	a := &JsonResponse{
+		StatusCode: 401,
+		Message:    "yow",
+	}
+
+	assert.True(a.IsError())
+	err := a.ToError()
+	assert.Equal("{401: yow}", err.Error())
+
+	b := newJsonResponse500(fmt.Errorf("yowyow"))
+	assert.True(b.IsError())
+	assert.Equal("yowyow", b.Message)
+
+	a.StatusCode = 201
+	assert.False(a.IsError())
 }
