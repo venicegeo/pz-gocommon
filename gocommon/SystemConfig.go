@@ -45,6 +45,7 @@ const (
 	PzWorkflow          ServiceName = "pz-workflow"
 	PzsvcHello          ServiceName = "pzsvc-hello"
 	PzServiceController ServiceName = "pz-servicecontroller"
+	PzMetrics           ServiceName = "pz-metrics"
 )
 
 var EndpointPrefixes = map[ServiceName]string{
@@ -56,6 +57,7 @@ var EndpointPrefixes = map[ServiceName]string{
 	PzWorkflow:          "",
 	PzsvcHello:          "",
 	PzServiceController: "",
+	PzMetrics:           "",
 }
 
 var HealthcheckEndpoints = map[ServiceName]string{
@@ -67,6 +69,7 @@ var HealthcheckEndpoints = map[ServiceName]string{
 	PzWorkflow:          "/",
 	PzsvcHello:          "/",
 	PzServiceController: "",
+	PzMetrics:           "/",
 }
 
 type ServicesMap map[ServiceName]string
