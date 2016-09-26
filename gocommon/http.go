@@ -159,6 +159,10 @@ func (h *Http) Get(endpoint string, output interface{}) (int, error) {
 	return h.doVerb("GET", endpoint, nil, output)
 }
 
+func (h *Http) Get2(endpoint string, input interface{}, output interface{}) (int, error) {
+	return h.doVerb("GET", endpoint, input, output)
+}
+
 // expects endpoint to take in and return JSON
 func (h *Http) Post(endpoint string, input interface{}, output interface{}) (int, error) {
 	return h.doVerb("POST", endpoint, input, output)
@@ -184,6 +188,19 @@ func (h *Http) PzGet(endpoint string) *JsonResponse {
 	output := &JsonResponse{}
 
 	code, err := h.Get(endpoint, output)
+	if err != nil {
+		return newJsonResponse500(err)
+	}
+
+	output.StatusCode = code
+
+	return output
+}
+
+func (h *Http) PzGet2(endpoint string, input interface{}) *JsonResponse {
+	output := &JsonResponse{}
+
+	code, err := h.Get2(endpoint, input, output)
 	if err != nil {
 		return newJsonResponse500(err)
 	}
