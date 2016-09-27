@@ -178,6 +178,11 @@ func (h *Http) Delete(endpoint string) (int, error) {
 	return h.doVerb("DELETE", endpoint, nil, nil)
 }
 
+// expects endpoint to take in and return JSON
+func (h *Http) Verb(verb string, endpoint string, input interface{}, output interface{}) (int, error) {
+	return h.doVerb(verb, endpoint, input, output)
+}
+
 //----------------------------------------------------------
 
 // Use these when doing HTTP requests where the inputs and outputs
