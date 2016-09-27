@@ -107,5 +107,5 @@ func TestSplitString(t *testing.T) {
 
 	p, q := SplitString("asdf", 2)
 	assert.Equal("as", p)
-	assert.Equal("f", q)
+	assert.Equal("df", q)
 }
