@@ -82,5 +82,5 @@ func InsertString(str, insert string, index int) string {
 	return str[:index] + insert + str[index:]
 }
 func SplitString(str string, whereToSplit int) (string, string) {
-	return str[:whereToSplit], str[whereToSplit+1:]
+	return str[:whereToSplit], str[whereToSplit:]
 }
