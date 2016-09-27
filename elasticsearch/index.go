@@ -30,6 +30,7 @@ type Index struct {
 	lib     *elastic.Client
 	version string
 	index   string
+	url     string
 }
 
 // NewIndex is the initializing constructor for the type Index.
@@ -47,7 +48,10 @@ func NewIndex2(url string, index string, settings string) (*Index, error) {
 		index = fmt.Sprintf("%s.%x", index[0:len(index)-1], time.Now().Nanosecond())
 	}
 
-	esi := &Index{index: index}
+	esi := &Index{
+		index: index,
+		url:   url,
+	}
 
 	var err error
 
@@ -544,4 +548,13 @@ func (esi *Index) AddPercolationDocument(typ string, doc interface{}) (*Percolat
 	}
 
 	return NewPercolateResponse(percolateResponse), nil
+}
+
+func (esi *Index) DirectAccess(verb string, endpoint string, input interface{}, output interface{}) error {
+	h := &piazza.Http{
+		BaseUrl: esi.url,
+	}
+
+	_, err := h.Verb(verb, endpoint, input, output)
+	return err
 }

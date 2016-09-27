@@ -91,6 +91,8 @@ type IIndex interface {
 	AddPercolationQuery(id string, query piazza.JsonString) (*IndexResponse, error)
 	DeletePercolationQuery(id string) (*DeleteResponse, error)
 	AddPercolationDocument(typ string, doc interface{}) (*PercolateResponse, error)
+
+	DirectAccess(verb string, endpoint string, input interface{}, output interface{}) error
 }
 
 // NewIndexInterface constructs an IIndex

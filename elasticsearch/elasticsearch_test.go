@@ -622,3 +622,18 @@ func (suite *EsTester) Test12TermMatch() {
 	assert.NotNil(searchResult)
 	assert.False(searchResult.Found)
 }
+
+func (suite *EsTester) Test13DirectAccess() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	var err error
+
+	esi := suite.SetUpIndex()
+	assert.NotNil(esi)
+	defer closerT(t, esi)
+
+	out := &map[string]interface{}{}
+	err = esi.DirectAccess("GET", "", nil, out)
+	assert.Error(err)
+}

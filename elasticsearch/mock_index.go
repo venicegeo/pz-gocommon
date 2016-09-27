@@ -434,3 +434,7 @@ func (esi *MockIndex) AddPercolationDocument(typeName string, doc interface{}) (
 	resp := &PercolateResponse{}
 	return resp, nil
 }
+
+func (esi *MockIndex) DirectAccess(verb string, endpoint string, input interface{}, output interface{}) error {
+	return fmt.Errorf("DirectAccess not supported")
+}
