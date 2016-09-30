@@ -62,14 +62,6 @@ type VcapApplication struct {
 	domain     string
 }
 
-// if running on laptop, we'll use this
-var localVcapApplication = &VcapApplication{
-	ApplicationName: "myapplicationname",
-	ApplicationURIs: []string{"localhost:20000"},
-	bindToPort:      "localhost:20000",
-	domain:          ".int.geointservices.io",
-}
-
 func NewVcapApplication(serviceName ServiceName) (*VcapApplication, error) {
 
 	var err error
@@ -108,29 +100,8 @@ func NewVcapApplication(serviceName ServiceName) (*VcapApplication, error) {
 }
 
 func genLocalVcapApplication(serviceName ServiceName) *VcapApplication {
-	port := ""
-	switch serviceName {
-	case PzWorkflow:
-		port = "20000"
-	case PzLogger:
-		port = "20001"
-	case PzUuidgen:
-		port = "20002"
-	case PzDiscover:
-		port = "20003"
-	case PzElasticSearch:
-		port = "20004"
-	case PzServiceController:
-		port = "20005"
-	case PzMetrics:
-		port = "20006"
-	case PzKafka:
-		port = "20007"
-	case PzsvcHello:
-		port = "20008"
-	case PzGoCommon:
-		port = "20009"
-	default:
+	port, ok := localPortNumbers[serviceName]
+	if !ok {
 		port = "0"
 	}
 	return &VcapApplication{
