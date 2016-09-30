@@ -18,6 +18,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
 	"syscall"
 	"time"
 
@@ -43,13 +44,16 @@ type RouteData struct {
 
 // Stop will request the server to shutdown. It will wait for the service to die before returning.
 func (server *GenericServer) Stop() error {
-	sys := server.Sys
-
-	err := syscall.Kill(server.pid, syscall.SIGINT)
+	kp, err := os.FindProcess(server.pid)
+	if err != nil {
+		return err
+	}
+	err = kp.Kill()
 	if err != nil {
 		return err
 	}
 
+	sys := server.Sys
 	err = sys.WaitForServiceToDieByAddress(sys.Name, sys.BindTo)
 	return err
 }
