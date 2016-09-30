@@ -97,7 +97,7 @@ func NewSystemConfig(serviceName ServiceName,
 
 	sys := &SystemConfig{endpoints: make(ServicesMap)}
 
-	sys.vcapApplication, err = NewVcapApplication()
+	sys.vcapApplication, err = NewVcapApplication(serviceName)
 	if err != nil {
 		return nil, err
 	}
