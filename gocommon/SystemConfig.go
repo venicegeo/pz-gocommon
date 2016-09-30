@@ -48,6 +48,19 @@ const (
 	PzMetrics           ServiceName = "pz-metrics"
 )
 
+var localPortNumbers = map[ServiceName]string{
+	PzWorkflow:          "20000",
+	PzLogger:            "20001",
+	PzUuidgen:           "20002",
+	PzDiscover:          "20003",
+	PzElasticSearch:     "20004",
+	PzServiceController: "20005",
+	PzMetrics:           "20006",
+	PzKafka:             "20007",
+	PzsvcHello:          "20008",
+	PzGoCommon:          "20009",
+}
+
 var EndpointPrefixes = map[ServiceName]string{
 	PzDiscover:          "",
 	PzElasticSearch:     "",
@@ -97,7 +110,7 @@ func NewSystemConfig(serviceName ServiceName,
 
 	sys := &SystemConfig{endpoints: make(ServicesMap)}
 
-	sys.vcapApplication, err = NewVcapApplication()
+	sys.vcapApplication, err = NewVcapApplication(serviceName)
 	if err != nil {
 		return nil, err
 	}

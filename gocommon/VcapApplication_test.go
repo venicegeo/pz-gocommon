@@ -41,11 +41,11 @@ func Test05VcapApplication(t *testing.T) {
 	unsetenvT(t, "VCAP_APPLICATION")
 	unsetenvT(t, "PORT")
 
-	vcap, err := NewVcapApplication()
+	vcap, err := NewVcapApplication(PzWorkflow)
 	assert.NoError(err)
 
-	assert.EqualValues("localhost:0", vcap.GetAddress())
-	assert.EqualValues("localhost:0", vcap.GetBindToPort())
+	assert.EqualValues("localhost:20000", vcap.GetAddress())
+	assert.EqualValues("localhost:20000", vcap.GetBindToPort())
 	assert.EqualValues("myapplicationname", vcap.GetName())
 
 	env :=
@@ -76,7 +76,7 @@ func Test05VcapApplication(t *testing.T) {
 	setenvT(t, "PORT", "6280")
 	defer unsetenvT(t, "PORT")
 
-	vcap, err = NewVcapApplication()
+	vcap, err = NewVcapApplication(PzWorkflow)
 	assert.NoError(err)
 
 	assert.EqualValues("pz-workflow"+DefaultDomain, vcap.GetAddress())

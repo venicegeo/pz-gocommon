@@ -62,15 +62,7 @@ type VcapApplication struct {
 	domain     string
 }
 
-// if running on laptop, we'll use this
-var localVcapApplication = &VcapApplication{
-	ApplicationName: "myapplicationname",
-	ApplicationURIs: []string{"localhost:0"},
-	bindToPort:      "localhost:0",
-	domain:          ".int.geointservices.io",
-}
-
-func NewVcapApplication() (*VcapApplication, error) {
+func NewVcapApplication(serviceName ServiceName) (*VcapApplication, error) {
 
 	var err error
 	var vcap *VcapApplication
@@ -101,10 +93,23 @@ func NewVcapApplication() (*VcapApplication, error) {
 		vcap.domain = full[dot:]
 
 	} else {
-		vcap = localVcapApplication
+		vcap = genLocalVcapApplication(serviceName)
 	}
 
 	return vcap, nil
+}
+
+func genLocalVcapApplication(serviceName ServiceName) *VcapApplication {
+	port, ok := localPortNumbers[serviceName]
+	if !ok {
+		port = "0"
+	}
+	return &VcapApplication{
+		ApplicationName: "myapplicationname",
+		ApplicationURIs: []string{"localhost:" + port},
+		bindToPort:      "localhost:" + port,
+		domain:          ".int.geointservices.io",
+	}
 }
 
 func (vcap *VcapApplication) GetAddress() string {
