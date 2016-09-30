@@ -257,13 +257,15 @@ func (sys *SystemConfig) WaitForService(name ServiceName) error {
 		return err
 	}
 
-	err = sys.WaitForServiceByAddress(name, addr)
+	err = sys.WaitForServiceByAddress(name, addr, "")
 	return err
 }
 
-func (sys *SystemConfig) WaitForServiceByAddress(name ServiceName, address string) error {
-	url := fmt.Sprintf("%s://%s", DefaultProtocol, address)
-
+func (sys *SystemConfig) WaitForServiceByAddress(name ServiceName, address string, protocol string) error {
+	if protocol == "" {
+		protocol = DefaultProtocol
+	}
+	url := fmt.Sprintf("%s://%s", protocol, address)
 	msTime := 0
 
 	for {
