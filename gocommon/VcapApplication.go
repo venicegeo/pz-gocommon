@@ -65,8 +65,8 @@ type VcapApplication struct {
 // if running on laptop, we'll use this
 var localVcapApplication = &VcapApplication{
 	ApplicationName: "myapplicationname",
-	ApplicationURIs: []string{"localhost:0"},
-	bindToPort:      "localhost:0",
+	ApplicationURIs: []string{"localhost:20000"},
+	bindToPort:      "localhost:20000",
 	domain:          ".int.geointservices.io",
 }
 
