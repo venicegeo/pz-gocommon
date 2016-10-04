@@ -317,3 +317,33 @@ func Test07Server(t *testing.T) {
 		assert.Error(err)
 	}
 }
+
+func Test07ABadServer(t *testing.T) {
+	assert := assert.New(t)
+
+	f := func(c *gin.Context) {}
+
+	required := []ServiceName{}
+	sys, err := NewSystemConfig(PzGoCommon, required)
+	assert.NoError(err)
+
+	genericServer := GenericServer{Sys: sys}
+
+	service := &ThingService{
+		assert:  assert,
+		IDCount: 0,
+		Data:    make(map[string]string),
+	}
+
+	server := &ThingServer{}
+
+	server.Init(service)
+
+	server.routes = []RouteData{
+		{"GET", "/", f},
+		{"YOW", "/", f},
+	}
+
+	err = genericServer.Configure(server.routes)
+	assert.Error(err)
+}
