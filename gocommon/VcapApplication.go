@@ -100,7 +100,7 @@ func NewVcapApplication(serviceName ServiceName) (*VcapApplication, error) {
 }
 
 func genLocalVcapApplication(serviceName ServiceName) *VcapApplication {
-	port, ok := localPortNumbers[serviceName]
+	port, ok := LocalPortNumbers[serviceName]
 	if !ok {
 		port = "0"
 	}

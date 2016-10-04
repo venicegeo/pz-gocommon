@@ -48,7 +48,7 @@ const (
 	PzMetrics           ServiceName = "pz-metrics"
 )
 
-var localPortNumbers = map[ServiceName]string{
+var LocalPortNumbers = map[ServiceName]string{
 	PzWorkflow:          "20000",
 	PzLogger:            "20001",
 	PzUuidgen:           "20002",
