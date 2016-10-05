@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/venicegeo/pz-gocommon/gocommon"
+	"gopkg.in/olivere/elastic.v3"
 )
 
 type EsTester struct {
@@ -104,6 +105,8 @@ func (suite *EsTester) SetUpIndex() IIndex {
 	ok, err = esi.IndexExists()
 	assert.NoError(err)
 	assert.True(ok)
+	err = esi.Create("")
+	assert.Error(err)
 
 	if mapping != "" {
 		err = esi.SetMapping(mapping, objMapping)
@@ -178,6 +181,7 @@ func (suite *EsTester) Test01Client() {
 
 	esi, err := NewIndexInterface(sys, "estest01$", "", true)
 	assert.NoError(err)
+	assert.EqualValues("estest01$", esi.IndexName())
 
 	version := esi.GetVersion()
 	assert.NoError(err)
@@ -219,8 +223,15 @@ func (suite *EsTester) Test02SimplePost() {
 		err = json.Unmarshal(*src, &tmp1)
 		assert.NoError(err)
 		assert.EqualValues("quick fox", tmp1.Data)
+		//DELETE it
+		deleteResult, err := esi.DeleteByID(mapping, "99")
+		assert.NoError(err)
+		assert.NotNil(deleteResult)
+		//PUT it
+		indexResult, err := esi.PutData(mapping, "99", 0)
+		assert.NoError(err)
+		assert.NotNil(indexResult)
 	}
-
 }
 
 func (suite *EsTester) Test03Operations() {
@@ -245,6 +256,21 @@ func (suite *EsTester) Test03Operations() {
 		assert.NoError(err)
 		assert.EqualValues("data1", tmp1.Data)
 	}
+	//Coverage
+	_, err := esi.GetAllElements("")
+	assert.Error(err)
+	_, err = esi.FilterByMatchQuery("", "", "")
+	assert.Error(err)
+	_, err = esi.SearchByJSON("", "")
+	assert.Error(err)
+	_, err = esi.GetMapping("")
+	assert.Error(err)
+	_, err = esi.AddPercolationQuery("123", "{}")
+	assert.NoError(err)
+	_, err = esi.DeletePercolationQuery("123")
+	assert.NoError(err)
+	_, err = esi.AddPercolationDocument("123", "{}")
+	assert.NoError(err)
 }
 
 func (suite *EsTester) Test07ConstructMapping() {
@@ -636,4 +662,36 @@ func (suite *EsTester) Test13DirectAccess() {
 	out := &map[string]interface{}{}
 	err = esi.DirectAccess("GET", "", nil, out)
 	assert.Error(err)
+}
+
+func (suite *EsTester) Test14Coverage() {
+	t := suite.T()
+	assert := assert.New(t)
+
+	indexResponse := NewIndexResponse(&elastic.IndexResponse{"index", "type", "1", 1, true})
+	assert.NotNil(indexResponse)
+
+	percolateResponse := NewPercolateResponse(&elastic.PercolateResponse{TookInMillis: 0, Total: 1, Matches: []*elastic.PercolateMatch{&elastic.PercolateMatch{"1", "2", 3}}})
+	assert.NotNil(percolateResponse)
+
+	getResult := NewGetResult(&elastic.GetResult{Id: "", Source: &json.RawMessage{}, Found: false})
+	assert.NotNil(getResult)
+
+	deleteResponse := NewDeleteResponse(&elastic.DeleteResponse{Found: false, Id: ""})
+	assert.NotNil(deleteResponse)
+
+	searchResult := NewSearchResult(&elastic.SearchResult{Hits: &elastic.SearchHits{TotalHits: 1, Hits: []*elastic.SearchHit{&elastic.SearchHit{Id: "1", Source: &json.RawMessage{}}}}})
+	assert.NotNil(searchResult)
+	assert.True(searchResult.TotalHits() == int64(1))
+	assert.True(searchResult.NumHits() == 1)
+
+	assert.True(MappingElementTypeString.isValidMappingType())
+	assert.True(MappingElementTypeString.isValidScalarMappingType())
+	assert.True(MappingElementTypeStringA.isValidArrayMappingType())
+	assert.False(MappingElementTypeString.isValidArrayMappingType())
+	assert.False(MappingElementTypeStringA.isValidScalarMappingType())
+	assert.True(IsValidMappingType("string"))
+	assert.True(IsValidArrayTypeMapping("[string]"))
+	assert.False(IsValidMappingType(5))
+	assert.False(IsValidArrayTypeMapping(5))
 }
