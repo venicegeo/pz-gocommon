@@ -58,4 +58,13 @@ func TestPreflight(t *testing.T) {
 	code, err := h.Get("/", s)
 	assert.NoError(err)
 	assert.Equal(200, code)
+	code, err = h.Get2("/", nil, s)
+	assert.NoError(err)
+	assert.Equal(200, code)
+	code, err = h.Verb("GET", "/", nil, s)
+	assert.NoError(err)
+	assert.Equal(200, code)
+	assert.NotNil(h.PzGet2("/", nil))
+	SimplePreflight("", "", "")
+	SimplePostflight(9000, "")
 }

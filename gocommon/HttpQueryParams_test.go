@@ -109,4 +109,31 @@ func TestQueryParams(t *testing.T) {
 	ii, err := params.GetCount(0)
 	assert.NoError(err)
 	assert.Equal(19, ii)
+
+	params.raw = nil
+	params.AddString("stringkey1", "asdf")
+	s, err = params.GetAsString("stringkey1", "")
+	assert.NoError(err)
+	assert.Equal("asdf", s)
+
+	params.raw = nil
+	tim = time.Now()
+	params.AddTime("timekey1", tim)
+	tim2, err = params.GetAsTime("timekey1", time.Time{})
+	assert.NoError(err)
+	assert.Equal(tim.Second(), tim2.Second())
+
+	_, err = params.GetAsInt("", 1)
+	assert.NoError(err)
+	_, err = params.GetAsString("", "")
+	assert.NoError(err)
+	_, err = params.GetAsSortOrder("", SortOrderAscending)
+	assert.NoError(err)
+	_, err = params.GetAsTime("", time.Now())
+	assert.NoError(err)
+	_, err = params.GetAsTime("notime", time.Now())
+	assert.NoError(err)
+
+	params.raw = nil
+	assert.Equal("", params.String())
 }

@@ -76,4 +76,7 @@ func TestMisc(t *testing.T) {
 
 	a.StatusCode = 201
 	assert.False(a.IsError())
+
+	assert.Nil(a.ToError())
+	assert.Nil(a.SetType())
 }

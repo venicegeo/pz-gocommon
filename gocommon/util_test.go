@@ -64,6 +64,9 @@ func TestGetVarsFromStruct(t *testing.T) {
 	assert.Len(r, 2)
 	assert.Equal("v", r["f"])
 	assert.Equal("b", r["g.a"])
+
+	_, err = GetVarsFromStruct(5)
+	assert.Error(err)
 }
 
 func TestValueIsValidArray(t *testing.T) {
