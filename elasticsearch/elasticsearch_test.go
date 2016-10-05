@@ -256,6 +256,7 @@ func (suite *EsTester) Test03Operations() {
 		assert.NoError(err)
 		assert.EqualValues("data1", tmp1.Data)
 	}
+	//Coverage
 	_, err := esi.GetAllElements("")
 	assert.Error(err)
 	_, err = esi.FilterByMatchQuery("", "", "")
@@ -267,6 +268,8 @@ func (suite *EsTester) Test03Operations() {
 	_, err = esi.AddPercolationQuery("123", "{}")
 	assert.NoError(err)
 	_, err = esi.DeletePercolationQuery("123")
+	assert.NoError(err)
+	_, err = esi.AddPercolationDocument("123", "{}")
 	assert.NoError(err)
 }
 
@@ -682,4 +685,13 @@ func (suite *EsTester) Test14Coverage() {
 	assert.True(searchResult.TotalHits() == int64(1))
 	assert.True(searchResult.NumHits() == 1)
 
+	assert.True(MappingElementTypeString.isValidMappingType())
+	assert.True(MappingElementTypeString.isValidScalarMappingType())
+	assert.True(MappingElementTypeStringA.isValidArrayMappingType())
+	assert.False(MappingElementTypeString.isValidArrayMappingType())
+	assert.False(MappingElementTypeStringA.isValidScalarMappingType())
+	assert.True(IsValidMappingType("string"))
+	assert.True(IsValidArrayTypeMapping("[string]"))
+	assert.False(IsValidMappingType(5))
+	assert.False(IsValidArrayTypeMapping(5))
 }
