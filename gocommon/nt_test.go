@@ -26,7 +26,8 @@ import (
 func TestNT(t *testing.T) {
 	assert := assert.New(t)
 	server := &http.Server{Addr: ":19999", Handler: http.DefaultServeMux}
-	server.ListenAndServe()
+	err := server.ListenAndServe()
+	assert.NoError(err)
 
 	GetValueFromHeader(http.Header{}, "Content-Type")
 	_, _, _, err := HTTP(GET, "localhost:19999", NewHeaderBuilder().AddJsonContentType().AddBasicAuth("foo", "bar").GetHeader(), nil)
