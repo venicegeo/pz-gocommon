@@ -15,8 +15,6 @@ mkdir "$GOPATH"/bin "$GOPATH"/src "$GOPATH"/pkg
 
 PATH=$PATH:"$GOPATH"/bin
 
-export GO15VENDOREXPERIMENT="1"
-
 go version
 
 curl https://glide.sh/get | sh
@@ -24,12 +22,6 @@ curl https://glide.sh/get | sh
 # get ourself, and go there
 go get github.com/venicegeo/pz-gocommon/gocommon
 cd $GOPATH/src/github.com/venicegeo/pz-gocommon
-
-#glide install
-#glide update
-go get github.com/stretchr/testify/assert
-go get gopkg.in/olivere/elastic.v3
-go get github.com/Shopify/sarama
 
 #----------------------------------------------------------------------
 
