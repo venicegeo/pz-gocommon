@@ -30,7 +30,7 @@ func TestNT(t *testing.T) {
 	assert.NoError(err)
 
 	GetValueFromHeader(http.Header{}, "Content-Type")
-	_, _, _, err := HTTP(GET, "localhost:19999", NewHeaderBuilder().AddJsonContentType().AddBasicAuth("foo", "bar").GetHeader(), nil)
+	_, _, _, err = HTTP(GET, "localhost:19999", NewHeaderBuilder().AddJsonContentType().AddBasicAuth("foo", "bar").GetHeader(), nil)
 	assert.NoError(err)
 	_, _, _, err = HTTP(GET, "localhost:19999/exit", NewHeaderBuilder().GetHeader(), nil)
 	assert.NoError(err)
