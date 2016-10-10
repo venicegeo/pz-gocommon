@@ -12,7 +12,3 @@ gometalinter \
 --exclude="Json.* should be .*JSON" \
 --exclude="Url.* should be .*URL" \
 ./...
-
-#--exclude="cyclomatic complexity 13 of function createQueryDslAsString" \
-#--exclude="cyclomatic complexity 12 of function \(\*Service\)\.GetMessage" \
-#--exclude="cyclomatic complexity 11 of function \(\*Client\)\.GetMessages" \
