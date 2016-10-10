@@ -3,6 +3,7 @@
 gometalinter \
 --deadline=45s \
 --concurrency=8 \
+--vendor \
 ./...
 
 #--exclude="exported (var)|(method)|(const)|(type)|(function) [A-Za-z\.0-9]* should have comment" \
