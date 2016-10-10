@@ -30,8 +30,8 @@ const DefaultPzUuidgenAddress = "localhost:14800"
 const DefaultDomain = ".int.geointservices.io"
 const DefaultProtocol = "http"
 
-const waitTimeoutMs = 2000
-const waitSleepMs = 100
+const waitTimeoutMs = 3000
+const waitSleepMs = 250
 
 type ServiceName string
 
