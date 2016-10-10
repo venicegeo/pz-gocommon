@@ -17,14 +17,11 @@ PATH=$PATH:"$GOPATH"/bin
 
 go version
 
-# install Glide
-curl https://glide.sh/get | sh
-
 # install metalinter
 go get -u github.com/alecthomas/gometalinter
 gometalinter --install
 
-# get ourself, and go there
+# build ourself, and go there
 go get github.com/venicegeo/pz-gocommon/gocommon
 cd $GOPATH/src/github.com/venicegeo/pz-gocommon
 
@@ -38,4 +35,5 @@ go test -v -coverprofile=kafka.cov github.com/venicegeo/pz-gocommon/kafka
 sh ci/metalinter.sh | tee lint.txt
 wc -l lint.txt
 
+#curl https://glide.sh/get | sh
 #go tool cover -html=common.cov
