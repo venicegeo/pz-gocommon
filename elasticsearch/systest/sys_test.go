@@ -81,6 +81,9 @@ func uniq() string {
 }
 
 func closer(t *testing.T, esi elasticsearch.IIndex) {
+	if esi == nil {
+		return
+	}
 	err := esi.Close()
 	assert.NoError(t, err)
 	err = esi.Delete()
@@ -653,8 +656,12 @@ func (suite *EsTester) Test09FullPercolation() {
 
 	// create index
 	{
-		esi, err := elasticsearch.NewIndex2(suite.url, "estest09$"+uniq(), "")
+		var err error
+
+		esi, err = elasticsearch.NewIndex2(suite.url, "estest09$"+uniq(), "")
 		assert.NoError(err)
+
+		defer closer(t, esi)
 
 		// make the index
 		err = esi.Create("")
@@ -664,7 +671,6 @@ func (suite *EsTester) Test09FullPercolation() {
 		assert.NoError(err)
 		assert.True(ok)
 	}
-	defer closer(t, esi)
 
 	//-----------------------------------------------------------------------
 
