@@ -14,6 +14,9 @@ sh $root/ci/do_build.sh
 # gather some data about the repo
 source $root/ci/vars.sh
 
+# stage the artifact(s) for a mvn deploy
+touch $root/$APP.$EXT  # fake out!
+
 cd $root
 tar cvzf $APP.tgz \
     common.cov \
