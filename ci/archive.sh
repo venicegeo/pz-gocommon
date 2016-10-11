@@ -15,7 +15,7 @@ sh $root/ci/do_build.sh
 source $root/ci/vars.sh
 
 cd $root
-tar cvzf $APP.tgz \
+tar cvzf $APP.$EXT \
     common.cov \
     elastic.cov \
     kafka.cov \
