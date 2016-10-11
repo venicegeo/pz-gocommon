@@ -33,9 +33,10 @@ func TestNT(t *testing.T) {
 	{
 		var err error
 		required := []ServiceName{}
-		sys, err = NewSystemConfig(PzGoCommon, required)
-		assert.NoError(err)
-
+		sys, err = NewSystemConfig(PzGoCommonTest, required)
+		if err != nil {
+			assert.FailNow(err.Error())
+		}
 		genericServer = &GenericServer{Sys: sys}
 		server = &ThingServer{}
 		service := &ThingService{
@@ -58,8 +59,10 @@ func TestNT(t *testing.T) {
 	}
 
 	GetValueFromHeader(http.Header{}, "Content-Type")
-	_, _, _, err := HTTP(GET, "localhost:"+LocalPortNumbers[PzGoCommon], NewHeaderBuilder().AddJsonContentType().AddBasicAuth("foo", "bar").GetHeader(), nil)
-	assert.NoError(err)
+	_, _, _, err := HTTP(GET, "localhost:"+LocalPortNumbers[PzGoCommonTest], NewHeaderBuilder().AddJsonContentType().AddBasicAuth("foo", "bar").GetHeader(), nil)
+	if err != nil {
+		assert.FailNow(err.Error())
+	}
 
 	err = genericServer.Stop()
 	assert.NoError(err)

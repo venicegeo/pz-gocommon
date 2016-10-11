@@ -38,7 +38,8 @@ type ServiceName string
 const (
 	PzDiscover          ServiceName = "pz-discover"
 	PzElasticSearch     ServiceName = "pz-elasticsearch"
-	PzGoCommon          ServiceName = "PZ-GOCOMMON" // not a real service, just for testing
+	PzGoCommon          ServiceName = "PZ-GOCOMMON"     // not a real service, just for testing
+	PzGoCommonTest      ServiceName = "PZ-GOCOMMONTEST" // not a real service, just for testing
 	PzKafka             ServiceName = "pz-kafka"
 	PzLogger            ServiceName = "pz-logger"
 	PzUuidgen           ServiceName = "pz-uuidgen"
@@ -59,6 +60,7 @@ var LocalPortNumbers = map[ServiceName]string{
 	PzKafka:             "20007",
 	PzsvcHello:          "20008",
 	PzGoCommon:          "20009",
+	PzGoCommonTest:      "20010",
 }
 
 var EndpointPrefixes = map[ServiceName]string{
