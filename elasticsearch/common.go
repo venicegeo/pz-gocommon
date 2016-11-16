@@ -35,34 +35,32 @@ type QueryFormat struct {
 
 // Constants representing the supported data types for the Event parameters.
 const (
-	MappingElementTypeString      MappingElementTypeName = "string"
-	MappingElementTypeLong        MappingElementTypeName = "long"
-	MappingElementTypeInteger     MappingElementTypeName = "integer"
-	MappingElementTypeShort       MappingElementTypeName = "short"
-	MappingElementTypeByte        MappingElementTypeName = "byte"
-	MappingElementTypeDouble      MappingElementTypeName = "double"
-	MappingElementTypeFloat       MappingElementTypeName = "float"
-	MappingElementTypeDate        MappingElementTypeName = "date"
-	MappingElementTypeBool        MappingElementTypeName = "boolean"
-	MappingElementTypeBinary      MappingElementTypeName = "binary"
-	MappingElementTypeGeoPoint    MappingElementTypeName = "geo_point"
-	MappingElementTypeGeoShape    MappingElementTypeName = "geo_shape"
-	MappingElementTypeIp          MappingElementTypeName = "ip"
-	MappingElementTypeCompletion  MappingElementTypeName = "completion"
-	MappingElementTypeStringA     MappingElementTypeName = "[string]"
-	MappingElementTypeLongA       MappingElementTypeName = "[long]"
-	MappingElementTypeIntegerA    MappingElementTypeName = "[integer]"
-	MappingElementTypeShortA      MappingElementTypeName = "[short]"
-	MappingElementTypeByteA       MappingElementTypeName = "[byte]"
-	MappingElementTypeDoubleA     MappingElementTypeName = "[double]"
-	MappingElementTypeFloatA      MappingElementTypeName = "[float]"
-	MappingElementTypeDateA       MappingElementTypeName = "[date]"
-	MappingElementTypeBoolA       MappingElementTypeName = "[boolean]"
-	MappingElementTypeBinaryA     MappingElementTypeName = "[binary]"
-	MappingElementTypeGeoPointA   MappingElementTypeName = "[geo_point]"
-	MappingElementTypeGeoShapeA   MappingElementTypeName = "[geo_shape]"
-	MappingElementTypeIpA         MappingElementTypeName = "[ip]"
-	MappingElementTypeCompletionA MappingElementTypeName = "[completion]"
+	MappingElementTypeString    MappingElementTypeName = "string"
+	MappingElementTypeLong      MappingElementTypeName = "long"
+	MappingElementTypeInteger   MappingElementTypeName = "integer"
+	MappingElementTypeShort     MappingElementTypeName = "short"
+	MappingElementTypeByte      MappingElementTypeName = "byte"
+	MappingElementTypeDouble    MappingElementTypeName = "double"
+	MappingElementTypeFloat     MappingElementTypeName = "float"
+	MappingElementTypeDate      MappingElementTypeName = "date"
+	MappingElementTypeBool      MappingElementTypeName = "boolean"
+	MappingElementTypeBinary    MappingElementTypeName = "binary"
+	MappingElementTypeGeoPoint  MappingElementTypeName = "geo_point"
+	MappingElementTypeGeoShape  MappingElementTypeName = "geo_shape"
+	MappingElementTypeIp        MappingElementTypeName = "ip"
+	MappingElementTypeStringA   MappingElementTypeName = "[string]"
+	MappingElementTypeLongA     MappingElementTypeName = "[long]"
+	MappingElementTypeIntegerA  MappingElementTypeName = "[integer]"
+	MappingElementTypeShortA    MappingElementTypeName = "[short]"
+	MappingElementTypeByteA     MappingElementTypeName = "[byte]"
+	MappingElementTypeDoubleA   MappingElementTypeName = "[double]"
+	MappingElementTypeFloatA    MappingElementTypeName = "[float]"
+	MappingElementTypeDateA     MappingElementTypeName = "[date]"
+	MappingElementTypeBoolA     MappingElementTypeName = "[boolean]"
+	MappingElementTypeBinaryA   MappingElementTypeName = "[binary]"
+	MappingElementTypeGeoPointA MappingElementTypeName = "[geo_point]"
+	MappingElementTypeGeoShapeA MappingElementTypeName = "[geo_shape]"
+	MappingElementTypeIpA       MappingElementTypeName = "[ip]"
 )
 
 // IIndex is an interface to Elasticsearch Index methods
@@ -195,8 +193,7 @@ func (name MappingElementTypeName) isValidScalarMappingType() bool {
 		MappingElementTypeBinary,
 		MappingElementTypeGeoPoint,
 		MappingElementTypeGeoShape,
-		MappingElementTypeIp,
-		MappingElementTypeCompletion:
+		MappingElementTypeIp:
 		return true
 	}
 
@@ -218,8 +215,7 @@ func (name MappingElementTypeName) isValidArrayMappingType() bool {
 		MappingElementTypeBinaryA,
 		MappingElementTypeGeoPointA,
 		MappingElementTypeGeoShapeA,
-		MappingElementTypeIpA,
-		MappingElementTypeCompletionA:
+		MappingElementTypeIpA:
 		return true
 	}
 

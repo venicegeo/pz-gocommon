@@ -15,6 +15,7 @@
 package piazza
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -22,33 +23,54 @@ import (
 	"unicode"
 )
 
+//func StructStringToInterface(stru string) (interface{}, error) {
+//	data := []byte(stru)
+//	source := (*json.RawMessage)(&data)
+//	var res interface{}
+//	err := json.Unmarshal(*source, &res)
+//	return res, err
+//}
 func StructStringToInterface(stru string) (interface{}, error) {
 	data := []byte(stru)
 	source := (*json.RawMessage)(&data)
 	var res interface{}
-	err := json.Unmarshal(*source, &res)
+	decoder := json.NewDecoder(bytes.NewReader(*source))
+	decoder.UseNumber()
+	err := decoder.Decode(&res)
 	return res, err
 }
 func StructInterfaceToString(stru interface{}) (string, error) {
 	data, err := json.MarshalIndent(stru, " ", "   ")
 	return string(data), err
 }
-
 func GetVarsFromStruct(struc interface{}) (map[string]interface{}, error) {
+	return GetVarsFromStructSkip(struc, nil)
+}
+func GetVarsFromStructSkip(struc interface{}, skipMaps []string) (map[string]interface{}, error) {
 	input, ok := struc.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("Structure is not of type map[string]interface{}, currently: %T", struc)
 	}
-	return getVarsFromStructHelper(input, map[string]interface{}{}, []string{}), nil
+	return getVarsFromStructHelper(input, map[string]interface{}{}, []string{}, skipMaps), nil
 }
-func getVarsFromStructHelper(inputObj map[string]interface{}, res map[string]interface{}, path []string) map[string]interface{} {
+func getVarsFromStructHelper(inputObj map[string]interface{}, res map[string]interface{}, path []string, skipMaps []string) map[string]interface{} {
 	for k, v := range inputObj {
 		wasMap := false
 		switch v.(type) {
 		case map[string]interface{}:
-			wasMap = true
-			path = append(path, k)
-			res = getVarsFromStructHelper(v.(map[string]interface{}), res, path)
+			temp := ""
+			for i := 0; i < len(path); i++ {
+				temp += path[i] + "."
+			}
+			varPath := fmt.Sprintf("%s%s", temp, k)
+			if skipMaps != nil && Contains(skipMaps, varPath) {
+				data, _ := json.Marshal(v)
+				res[varPath] = string(data)
+			} else {
+				wasMap = true
+				path = append(path, k)
+				res = getVarsFromStructHelper(v.(map[string]interface{}), res, path, skipMaps)
+			}
 		default:
 			temp := ""
 			for i := 0; i < len(path); i++ {
@@ -83,4 +105,12 @@ func InsertString(str, insert string, index int) string {
 }
 func SplitString(str string, whereToSplit int) (string, string) {
 	return str[:whereToSplit], str[whereToSplit:]
+}
+func Contains(strs []string, str string) bool {
+	for _, v := range strs {
+		if v == str {
+			return true
+		}
+	}
+	return false
 }
