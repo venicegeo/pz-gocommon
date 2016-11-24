@@ -15,7 +15,6 @@
 package piazza
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -41,11 +40,20 @@ type SyslogMessage struct {
 	Message     string         `json:"message"`
 }
 
+const privateEnterpriseNumber = "48851" // Flaxen's PEN
+
 // AuditElement represents an SDE for auditing (security-specific of just general).
 type AuditElement struct {
 	Actor  string `json:"actor"`
 	Action string `json:"action"`
 	Actee  string `json:"actee"`
+}
+
+const securityAuditActions = []string{
+	"create",
+	"read",
+	"update",
+	"delete",
 }
 
 // MetricElement represents an SDE for recoridng metrics.
@@ -57,68 +65,150 @@ type MetricElement struct {
 
 // NewSyslogMessage returns a SyslogMessage with the defaults filled in for you.
 func NewSyslogMessage() *SyslogMessage {
-	m := &SyslogMessage{
-		Facility: 1,
-		// TODO: add all the other fields, with sensible defauls
-		TimeStamp: time.Now().Format(time.RFC3339),
-		Process:   os.Getpid(),
+	var err error
+
+	var ipAddr, host string
+	host, err = os.Hostname()
+	if err != nil {
+		host = ""
+		ipAddr, err = GetExternalIP()
+		if err != nil {
+			ipAddr = ""
+			host = "UNKNOWN"
+		}
 	}
+
+	m := &SyslogMessage{
+		Facility:    1,
+		Severity:    6,
+		Version:     1,
+		TimeStamp:   time.Now().Format(time.RFC3339),
+		HostName:    host,
+		IPAddress:   ipAddr,
+		Application: "TODO",
+		Process:     os.Getpid(),
+		MessageID:   "",
+		AuditData:   nil,
+		MetricData:  nil,
+		Message:     "",
+	}
+
 	return m
 }
 
 // String builds and returns the RFC5424-style textual representation of a SyslogMessage.
 func (m *SyslogMessage) String() string {
-	// TODO: make this print all the fields, in the right format
-	s := fmt.Sprintf("%d ... %s", m.Facility, m.Message)
+	pri := m.Facility*8 + m.Severity
+	host := m.HostName
+	if host == "" {
+		host = m.IPAddress
+	}
+
+	header := fmt.Sprintf("<%d>%d %s %s %s %d %s",
+		pri, m.Facility, m.TimeStamp, host,
+		m.Application, m.Process, m.MessageID)
+
+	audit := ""
+	if m.AuditData != nil {
+		audit := m.AuditData.String()
+	}
+
+	metric := ""
+	if m.MetricData != nil {
+		metric := m.MetricData.String()
+	}
+
+	s := fmt.Sprintf("%s %s %s %s", header, audit, metric, m.Message)
 	return s
 }
 
-func (m *SyslogMessage) validate() error {
-	// TODO: add more/stronger error checks
+// IsSecurityAudit returns true iff the audit action is something we need to formally
+// record as an auidtable event.
+func (m *SyslogMessage) IsSecurityAudit() bool {
+	if m.AuditData == nil {
+		return false
+	}
 
-	if m.HostName == "" && m.IPAddress == "" {
-		return errors.New("Neither hostname nor IP address were supplied")
-	} else if m.HostName != "" && m.IPAddress != "" {
-		return errors.New("Both hostname and IP address were supplied")
+	for _, s := range securityAuditActions {
+		if m.AuditData.Action == s {
+			return true
+		}
 	}
+	return false
+}
+
+func (m *SyslogMessage) validate() error {
 	if m.Facility != 1 {
-		return errors.New("Bad facility")
+		return fmt.Errorf("Invalid Message.Facility: %d", m.Facility)
 	}
-	if m.Severity != 2 && m.Severity != 3 && m.Severity != 4 && m.Severity != 5 && m.Severity != 6 && m.Severity != 7 {
-		return errors.New("Bad severity")
+	if m.Severity < 0 || m.Severity > 7 {
+		return fmt.Errorf("Invalid Message.Severity: %d", m.Severity)
 	}
 	if m.Version != 1 {
-		return errors.New("Version is not 1")
+		return fmt.Errorf("Invalid Message.Version: %d", m.Version)
 	}
-
 	_, err := time.Parse(time.RFC3339, m.TimeStamp)
 	if err != nil {
-		return errors.New("invalid time format")
+		return fmt.Errorf("Invalid Message.Time value or format: %s", m.TimeStamp)
+	}
+
+	if m.HostName == "" && m.IPAddress == "" {
+		return fmt.Errorf("Neither Message.HostnName nor Message.IPAddress were supplied")
+	} else if m.HostName != "" && m.IPAddress != "" {
+		return fmt.Errorf("Both Message.HostName and Message.IPAddress were supplied: %s, %s",
+			m.HostName, m.IPAddress)
 	}
 
 	if m.Application == "" {
-		return errors.New("Application not set")
+		return fmt.Errorf("Message.Application not set")
 	}
 
 	if m.Process == 0 {
-		return errors.New("Process not set")
+		return fmt.Errorf("Message.Process not set")
 	}
 
 	return nil
 }
 
 func (ae *AuditElement) validate() error {
-	//TODO
-	//Valid uuid
-	//Valid action
+	if ae.Actor == "" {
+		return fmt.Errorf("AuditElement.Actor not set")
+	}
+	if ae.Action == "" {
+		return fmt.Errorf("AuditElement.Action not set")
+	}
+	if ae.Actee == "" {
+		return fmt.Errorf("AuditElement.Actee not set")
+	}
+
+	// TODO: check for valid UUIDs?
+
 	return nil
 }
 
-func (ae *MetricElement) validate() error {
-	//TODO
-	//Valid uuid
-	//Valid action
+func (ae *AuditElement) String() string {
+	s := fmt.Sprintf("[pzaudit@%s Actor=\"%s\" Action=\"%s\" Actee=\"%s\"]",
+		privateEnterpriseNumber, ae.Actor, ae.Action, ae.Actee)
+	return s
+}
+
+func (me *MetricElement) validate() error {
+	if me.Name == "" {
+		return fmt.Errorf("MetricElement.Name not set")
+	}
+	if me.Object == "" {
+		return fmt.Errorf("MetricElement.Object not set")
+	}
+
+	// TODO: check for valid UUIDs?
+
 	return nil
+}
+
+func (me *MetricElement) String() string {
+	s := fmt.Sprintf("[pzmetric@%s Name=\"%s\" Value=\"%f\" Object=\"%s\"]",
+		privateEnterpriseNumber, me.Name, me.Value, me.Object)
+	return s
 }
 
 // Validate checks to see if a SyslogMessage is well-formed.
