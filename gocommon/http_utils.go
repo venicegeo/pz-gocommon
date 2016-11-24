@@ -77,7 +77,7 @@ func GinReturnJson(c *gin.Context, resp *JsonResponse) {
 	//    c.Writer.Header().Set("Content-Length", str(len(raw))
 }
 
-// Get the Pz API key for the given server, in this order:
+// GetApiKey retrieves the Pz API key for the given server, in this order:
 //
 // (1) if $PZKEY present, use that
 // (2) if ~/.pzkey exists, use that
@@ -128,7 +128,7 @@ func GetApiKey(pzserver string) (string, error) {
 	return key, nil
 }
 
-// GetEnvironment gets the $PZSERVER host and the API key.
+// GetApiServer gets the $PZSERVER host.
 func GetApiServer() (string, error) {
 	pzserver := os.Getenv("PZSERVER")
 	if pzserver == "" {
