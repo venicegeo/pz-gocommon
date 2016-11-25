@@ -130,7 +130,7 @@ func Test03SyslogWriter(t *testing.T) {
 
 	{
 		// verify error if no io.Writer given
-		w := &SyslogSimpleWriter{Writer: nil}
+		w := &SyslogWriter{Writer: nil}
 		err := w.Write(m)
 		assert.Error(err)
 	}
@@ -138,7 +138,7 @@ func Test03SyslogWriter(t *testing.T) {
 	{
 		// a simple kind of writer
 		var buf bytes.Buffer
-		w := &SyslogSimpleWriter{Writer: &buf}
+		w := &SyslogWriter{Writer: &buf}
 		err := w.Write(m)
 		assert.NoError(err)
 
@@ -192,13 +192,13 @@ func Test05Syslog(t *testing.T) {
 	err = safeRemove(logfile)
 	assert.NoError(err)
 
-	// this is what a developer would do
+	// the following clause is what a developer would do
 	var buf bytes.Buffer
 	{
-		writer := &SyslogSimpleWriter{
+		writer := &SyslogWriter{
 			Writer: &buf,
 		}
-		logger := &Syslog{
+		logger := &Syslogger{
 			Writer: writer,
 		}
 		logger.Warning("bonk")
