@@ -18,7 +18,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
+
+	"strconv"
+
+	"github.com/jeromer/syslogparser/rfc5424"
 )
 
 //---------------------------------------------------------------------
@@ -31,9 +36,8 @@ type SyslogMessage struct {
 	Version     int            `json:"version"`
 	TimeStamp   string         `json:"timeStamp"`
 	HostName    string         `json:"hostName"`
-	IPAddress   string         `json:"ipAddress"`
 	Application string         `json:"application"`
-	Process     int            `json:"process"`
+	Process     string         `json:"process"`
 	MessageID   string         `json:"messageId"`
 	AuditData   *AuditElement  `json:"auditData"`
 	MetricData  *MetricElement `json:"metricData"`
@@ -49,7 +53,7 @@ type AuditElement struct {
 	Actee  string `json:"actee"`
 }
 
-const securityAuditActions = []string{
+var securityAuditActions = []string{
 	"create",
 	"read",
 	"update",
@@ -67,16 +71,11 @@ type MetricElement struct {
 func NewSyslogMessage() *SyslogMessage {
 	var err error
 
-	var ipAddr, host string
-	host, err = os.Hostname()
+	host, err := os.Hostname()
 	if err != nil {
-		host = ""
-		ipAddr, err = GetExternalIP()
-		if err != nil {
-			ipAddr = ""
-			host = "UNKNOWN"
-		}
+		host = "-"
 	}
+	host += " "
 
 	m := &SyslogMessage{
 		Facility:    1,
@@ -84,9 +83,8 @@ func NewSyslogMessage() *SyslogMessage {
 		Version:     1,
 		TimeStamp:   time.Now().Format(time.RFC3339),
 		HostName:    host,
-		IPAddress:   ipAddr,
-		Application: "TODO",
-		Process:     os.Getpid(),
+		Application: "",
+		Process:     strconv.Itoa(os.Getpid()),
 		MessageID:   "",
 		AuditData:   nil,
 		MetricData:  nil,
@@ -99,27 +97,82 @@ func NewSyslogMessage() *SyslogMessage {
 // String builds and returns the RFC5424-style textual representation of a SyslogMessage.
 func (m *SyslogMessage) String() string {
 	pri := m.Facility*8 + m.Severity
+
+	timestamp := ""
+	t, err := time.Parse(time.RFC3339, m.TimeStamp)
+	if err != nil {
+		timestamp += "-"
+	} else {
+		timestamp += t.Format(time.RFC3339)
+	}
+
 	host := m.HostName
 	if host == "" {
-		host = m.IPAddress
+		host = "-"
 	}
 
-	header := fmt.Sprintf("<%d>%d %s %s %s %d %s",
-		pri, m.Facility, m.TimeStamp, host,
-		m.Application, m.Process, m.MessageID)
+	application := m.Application
+	if application == "" {
+		application = "-"
+	}
 
-	audit := ""
+	proc := m.Process
+	if proc == "" {
+		proc = "-"
+	}
+
+	messageID := m.MessageID
+	if messageID == "" {
+		messageID = "-"
+	}
+
+	header := fmt.Sprintf("<%d>%d %s %s %s %s %s",
+		pri, m.Version, timestamp, host,
+		application, proc, messageID)
+
+	sdes := []string{}
 	if m.AuditData != nil {
-		audit := m.AuditData.String()
+		sdes = append(sdes, m.AuditData.String())
 	}
-
-	metric := ""
 	if m.MetricData != nil {
-		metric := m.MetricData.String()
+		sdes = append(sdes, m.MetricData.String())
+	}
+	sde := strings.Join(sdes, " ")
+	if sde == "" {
+		sde = "-"
 	}
 
-	s := fmt.Sprintf("%s %s %s %s", header, audit, metric, m.Message)
+	mssg := m.Message
+
+	s := fmt.Sprintf("%s %s %s", header, sde, mssg)
 	return s
+}
+
+func ParseSyslogMessage(s string) (*SyslogMessage, error) {
+	m := &SyslogMessage{}
+
+	buff := []byte(s)
+	p := rfc5424.NewParser(buff)
+	err := p.Parse()
+	if err != nil {
+		return nil, err
+	}
+
+	parts := p.Dump()
+	m.Facility = parts["facility"].(int)
+	m.Severity = parts["severity"].(int)
+	m.Version = parts["version"].(int)
+	m.TimeStamp = parts["timestamp"].(time.Time).Format(time.RFC3339)
+	m.HostName = parts["hostname"].(string)
+	m.Application = parts["app_name"].(string)
+	m.Process = parts["proc_id"].(string)
+	m.MessageID = parts["msg_id"].(string)
+	m.Message = parts["message"].(string)
+
+	//sdes := parts["structured_data"].(string)
+	//log.Printf("SDES: %s", sdes)
+
+	return m, nil
 }
 
 // IsSecurityAudit returns true iff the audit action is something we need to formally
@@ -152,18 +205,15 @@ func (m *SyslogMessage) validate() error {
 		return fmt.Errorf("Invalid Message.Time value or format: %s", m.TimeStamp)
 	}
 
-	if m.HostName == "" && m.IPAddress == "" {
-		return fmt.Errorf("Neither Message.HostnName nor Message.IPAddress were supplied")
-	} else if m.HostName != "" && m.IPAddress != "" {
-		return fmt.Errorf("Both Message.HostName and Message.IPAddress were supplied: %s, %s",
-			m.HostName, m.IPAddress)
+	if m.HostName == "" {
+		return fmt.Errorf("Message.HostnName not set")
 	}
 
 	if m.Application == "" {
 		return fmt.Errorf("Message.Application not set")
 	}
 
-	if m.Process == 0 {
+	if m.Process == "" {
 		return fmt.Errorf("Message.Process not set")
 	}
 
@@ -186,6 +236,7 @@ func (ae *AuditElement) validate() error {
 	return nil
 }
 
+// String builds and returns the RFC5424-style textual representation of an Audit SDE
 func (ae *AuditElement) String() string {
 	s := fmt.Sprintf("[pzaudit@%s Actor=\"%s\" Action=\"%s\" Actee=\"%s\"]",
 		privateEnterpriseNumber, ae.Actor, ae.Action, ae.Actee)
@@ -205,6 +256,7 @@ func (me *MetricElement) validate() error {
 	return nil
 }
 
+// String builds and returns the RFC5424-style textual representation of an Metric SDE
 func (me *MetricElement) String() string {
 	s := fmt.Sprintf("[pzmetric@%s Name=\"%s\" Value=\"%f\" Object=\"%s\"]",
 		privateEnterpriseNumber, me.Name, me.Value, me.Object)
@@ -313,7 +365,7 @@ type Syslog struct {
 func (syslog *Syslog) Warning(text string) {
 	mssg := NewSyslogMessage()
 	mssg.Message = text
-	mssg.Severity = 123
+	mssg.Severity = 4
 
 	syslog.Writer.Write(mssg)
 }
@@ -322,7 +374,7 @@ func (syslog *Syslog) Warning(text string) {
 func (syslog *Syslog) Error(text string) {
 	mssg := NewSyslogMessage()
 	mssg.Message = text
-	mssg.Severity = 345
+	mssg.Severity = 3
 
 	syslog.Writer.Write(mssg)
 }
@@ -331,7 +383,7 @@ func (syslog *Syslog) Error(text string) {
 func (syslog *Syslog) Fatal(text string) {
 	mssg := NewSyslogMessage()
 	mssg.Message = text
-	mssg.Severity = 567
+	mssg.Severity = 2
 
 	syslog.Writer.Write(mssg)
 }
