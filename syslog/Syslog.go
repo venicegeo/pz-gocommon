@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package piazza
+package syslog
 
 //---------------------------------------------------------------------
 
@@ -26,7 +26,7 @@ type Syslogger struct {
 func (syslog *Syslogger) Warning(text string) {
 	mssg := NewSyslogMessage()
 	mssg.Message = text
-	mssg.Severity = 4
+	mssg.Severity = Warning
 
 	syslog.Writer.Write(mssg)
 }
@@ -35,7 +35,7 @@ func (syslog *Syslogger) Warning(text string) {
 func (syslog *Syslogger) Error(text string) {
 	mssg := NewSyslogMessage()
 	mssg.Message = text
-	mssg.Severity = 3
+	mssg.Severity = Error
 
 	syslog.Writer.Write(mssg)
 }
@@ -44,7 +44,7 @@ func (syslog *Syslogger) Error(text string) {
 func (syslog *Syslogger) Fatal(text string) {
 	mssg := NewSyslogMessage()
 	mssg.Message = text
-	mssg.Severity = 2
+	mssg.Severity = Fatal
 
 	syslog.Writer.Write(mssg)
 }

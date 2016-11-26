@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package piazza
+package syslog
 
 import (
 	"fmt"
@@ -58,9 +58,9 @@ func makeMessage(sde bool) (*SyslogMessage, string) {
 	now := time.Now().Format(time.RFC3339)
 
 	m := NewSyslogMessage()
-	m.Facility = 2
-	m.Severity = 2 // pri = 2*8 + 2 = 18
-	m.Version = 1
+	m.Facility = DefaultFacility
+	m.Severity = Fatal // pri = 1*8 + 2 = 10
+	m.Version = DefaultVersion
 	m.TimeStamp = now
 	m.HostName = "HOST"
 	m.Application = "APPLICATION"
@@ -70,7 +70,7 @@ func makeMessage(sde bool) (*SyslogMessage, string) {
 	m.MetricData = nil
 	m.Message = "Yow"
 
-	expected := "<18>1 " + m.TimeStamp + " HOST APPLICATION 1234 msg1of2 - Yow"
+	expected := "<10>1 " + m.TimeStamp + " HOST APPLICATION 1234 msg1of2 - Yow"
 
 	if sde {
 		m.AuditData = &AuditElement{
@@ -84,7 +84,7 @@ func makeMessage(sde bool) (*SyslogMessage, string) {
 			Object: "_object_",
 		}
 
-		expected = "<18>1 " + m.TimeStamp + " HOST APPLICATION 1234 msg1of2 " +
+		expected = "<10>1 " + m.TimeStamp + " HOST APPLICATION 1234 msg1of2 " +
 			"[pzaudit@48851 Actor=\"=actor=\" Action=\"-action-\" Actee=\"_actee_\"] " +
 			"[pzmetric@48851 Name=\"=name=\" Value=\"-3.140000\" Object=\"_object_\"] " +
 			"Yow"
@@ -208,17 +208,17 @@ func Test05Syslog(t *testing.T) {
 
 	mssg := buf.String()
 
-	pri := func(severity int, str string) {
-		facility := 1
+	pri := func(severity Severity, str string) {
+		facility := DefaultFacility
 		host, err := os.Hostname()
 		assert.NoError(err)
-		assert.Contains(mssg, fmt.Sprintf("<%d>", facility*8+severity))
+		assert.Contains(mssg, fmt.Sprintf("<%d>", facility*8+severity.Value()))
 		assert.Contains(mssg, fmt.Sprintf(" %d ", os.Getpid()))
 		assert.Contains(mssg, fmt.Sprintf(" %s ", host))
 		assert.Contains(mssg, str)
 	}
 
-	pri(4, "bonk")
-	pri(3, "Bonk")
-	pri(2, "BONK")
+	pri(Warning, "bonk")
+	pri(Error, "Bonk")
+	pri(Fatal, "BONK")
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package piazza
+package syslog
 
 import (
 	"fmt"
@@ -27,11 +27,29 @@ import (
 
 //---------------------------------------------------------------------
 
+type Severity int
+
+func (s Severity) Value() int { return int(s) }
+
+const (
+	Emergency     Severity = 0
+	Alert         Severity = 1
+	Fatal         Severity = 2 // called Critical in the spec
+	Error         Severity = 3
+	Warning       Severity = 4
+	Notice        Severity = 5
+	Informational Severity = 6
+	Debug         Severity = 7
+)
+
+const DefaultFacility = 1
+const DefaultVersion = 1
+
 // SyslogMessage represents all the fields of a native RFC5424 object, plus
 // our own two SDEs.
 type SyslogMessage struct {
 	Facility    int            `json:"facility"`
-	Severity    int            `json:"severity"`
+	Severity    Severity       `json:"severity"`
 	Version     int            `json:"version"`
 	TimeStamp   string         `json:"timeStamp"`
 	HostName    string         `json:"hostName"`
@@ -54,9 +72,9 @@ func NewSyslogMessage() *SyslogMessage {
 	host += " "
 
 	m := &SyslogMessage{
-		Facility:    1,
-		Severity:    6,
-		Version:     1,
+		Facility:    DefaultFacility,
+		Severity:    Informational,
+		Version:     DefaultVersion,
 		TimeStamp:   time.Now().Format(time.RFC3339),
 		HostName:    host,
 		Application: "",
@@ -72,7 +90,7 @@ func NewSyslogMessage() *SyslogMessage {
 
 // String builds and returns the RFC5424-style textual representation of a SyslogMessage.
 func (m *SyslogMessage) String() string {
-	pri := m.Facility*8 + m.Severity
+	pri := m.Facility*8 + m.Severity.Value()
 
 	timestamp := ""
 	t, err := time.Parse(time.RFC3339, m.TimeStamp)
@@ -136,7 +154,7 @@ func ParseSyslogMessage(s string) (*SyslogMessage, error) {
 
 	parts := p.Dump()
 	m.Facility = parts["facility"].(int)
-	m.Severity = parts["severity"].(int)
+	m.Severity = Severity(parts["severity"].(int))
 	m.Version = parts["version"].(int)
 	m.TimeStamp = parts["timestamp"].(time.Time).Format(time.RFC3339)
 	m.HostName = parts["hostname"].(string)
@@ -167,13 +185,13 @@ func (m *SyslogMessage) IsSecurityAudit() bool {
 }
 
 func (m *SyslogMessage) validate() error {
-	if m.Facility != 1 {
+	if m.Facility != DefaultFacility {
 		return fmt.Errorf("Invalid Message.Facility: %d", m.Facility)
 	}
-	if m.Severity < 0 || m.Severity > 7 {
+	if m.Severity < Emergency || m.Severity > Debug {
 		return fmt.Errorf("Invalid Message.Severity: %d", m.Severity)
 	}
-	if m.Version != 1 {
+	if m.Version != DefaultVersion {
 		return fmt.Errorf("Invalid Message.Version: %d", m.Version)
 	}
 	_, err := time.Parse(time.RFC3339, m.TimeStamp)
