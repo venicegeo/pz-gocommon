@@ -51,7 +51,7 @@ type SyslogMessage struct {
 	Facility    int            `json:"facility"`
 	Severity    Severity       `json:"severity"`
 	Version     int            `json:"version"`
-	TimeStamp   string         `json:"timeStamp"`
+	TimeStamp   time.Time      `json:"timeStamp"`
 	HostName    string         `json:"hostName"`
 	Application string         `json:"application"`
 	Process     string         `json:"process"`
@@ -75,7 +75,7 @@ func NewSyslogMessage() *SyslogMessage {
 		Facility:    DefaultFacility,
 		Severity:    Informational,
 		Version:     DefaultVersion,
-		TimeStamp:   time.Now().Format(time.RFC3339),
+		TimeStamp:   time.Now().Round(time.Millisecond),
 		HostName:    host,
 		Application: "",
 		Process:     strconv.Itoa(os.Getpid()),
@@ -92,13 +92,7 @@ func NewSyslogMessage() *SyslogMessage {
 func (m *SyslogMessage) String() string {
 	pri := m.Facility*8 + m.Severity.Value()
 
-	timestamp := ""
-	t, err := time.Parse(time.RFC3339, m.TimeStamp)
-	if err != nil {
-		timestamp += "-"
-	} else {
-		timestamp += t.Format(time.RFC3339)
-	}
+	timestamp := m.TimeStamp.Format(time.RFC3339)
 
 	host := m.HostName
 	if host == "" {
@@ -156,7 +150,7 @@ func ParseSyslogMessage(s string) (*SyslogMessage, error) {
 	m.Facility = parts["facility"].(int)
 	m.Severity = Severity(parts["severity"].(int))
 	m.Version = parts["version"].(int)
-	m.TimeStamp = parts["timestamp"].(time.Time).Format(time.RFC3339)
+	m.TimeStamp = parts["timestamp"].(time.Time)
 	m.HostName = parts["hostname"].(string)
 	m.Application = parts["app_name"].(string)
 	m.Process = parts["proc_id"].(string)
@@ -194,11 +188,7 @@ func (m *SyslogMessage) validate() error {
 	if m.Version != DefaultVersion {
 		return fmt.Errorf("Invalid Message.Version: %d", m.Version)
 	}
-	_, err := time.Parse(time.RFC3339, m.TimeStamp)
-	if err != nil {
-		return fmt.Errorf("Invalid Message.Time value or format: %s", m.TimeStamp)
-	}
-
+	// nothing to check for m.TimeStamp
 	if m.HostName == "" {
 		return fmt.Errorf("Message.HostnName not set")
 	}
