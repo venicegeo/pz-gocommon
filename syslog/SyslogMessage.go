@@ -32,9 +32,9 @@ type Severity int
 func (s Severity) Value() int { return int(s) }
 
 const (
-	Emergency     Severity = 0
-	Alert         Severity = 1
-	Fatal         Severity = 2 // called Critical in the spec
+	Emergency     Severity = 0	// not used by Piazza
+	Alert         Severity = 1	// not used by Piazza
+	Fatal         Severity = 2 	// called Critical in the spec
 	Error         Severity = 3
 	Warning       Severity = 4
 	Notice        Severity = 5

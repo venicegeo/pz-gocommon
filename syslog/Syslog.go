@@ -22,6 +22,33 @@ type Syslogger struct {
 	Writer SyslogWriterI
 }
 
+// Debug sends a log message with severity "Debug".
+func (syslog *Syslogger) Debug(text string) {
+	mssg := NewSyslogMessage()
+	mssg.Message = text
+	mssg.Severity = Debug
+
+	syslog.Writer.Write(mssg)
+}
+
+// Info sends a log message with severity "Informational".
+func (syslog *Syslogger) Info(text string) {
+	mssg := NewSyslogMessage()
+	mssg.Message = text
+	mssg.Severity = Informational
+
+	syslog.Writer.Write(mssg)
+}
+
+// Notice sends a log message with severity "Notice".
+func (syslog *Syslogger) Notice(text string) {
+	mssg := NewSyslogMessage()
+	mssg.Message = text
+	mssg.Severity = Notice
+
+	syslog.Writer.Write(mssg)
+}
+
 // Warning sends a log message with severity "Warning".
 func (syslog *Syslogger) Warning(text string) {
 	mssg := NewSyslogMessage()
