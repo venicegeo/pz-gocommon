@@ -20,8 +20,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-
-	"github.com/jeromer/syslogparser/rfc5424"
 )
 
 //---------------------------------------------------------------------
@@ -133,6 +131,7 @@ func (m *Message) String() string {
 	return s
 }
 
+/*
 func ParseMessageString(s string) (*Message, error) {
 	m := &Message{}
 
@@ -159,6 +158,7 @@ func ParseMessageString(s string) (*Message, error) {
 
 	return m, nil
 }
+*/
 
 func (m *Message) validate() error {
 	if m.Facility != DefaultFacility {
