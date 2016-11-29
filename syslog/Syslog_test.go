@@ -298,5 +298,16 @@ func Test09AuditEnvVar(t *testing.T) {
 	assert.Len(logger.auditActions, 3)
 	assert.EqualValues([]string{"one", "two", "three"}, logger.auditActions)
 
+	m := &Message{
+		AuditData: &AuditElement{
+			Action: "two",
+		},
+	}
+	assert.True(logger.IsSecurityAudit(m))
+	m.AuditData.Action = "bazmumph"
+	assert.False(logger.IsSecurityAudit(m))
+	m.AuditData = nil
+	assert.False(logger.IsSecurityAudit(m))
+
 	os.Unsetenv("PZ_AUDIT_ACTIONS")
 }
