@@ -163,8 +163,11 @@ func getRequiredFieldsHelper(in interface{}, res map[string]interface{}, path []
 			v = json_not_required
 		}
 		parts := strings.Split(jsnTags, ",")
+		for k, v := range parts {
+			parts[k] = strings.Trim(v, " ")
+		}
 		if len(parts) > 0 {
-			if parts[0] != json_not_required && parts[0] != json_not_required {
+			if parts[0] != json_required && parts[0] != json_not_required && parts[0] != "" {
 				k = parts[0]
 			}
 		}
