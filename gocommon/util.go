@@ -106,8 +106,14 @@ func SplitString(str string, whereToSplit int) (string, string) {
 
 func UnmarshalRequired(data []byte, in interface{}) error {
 	var mapp map[string]interface{}
-	json.Unmarshal(data, in)
-	json.Unmarshal(data, &mapp)
+	err := json.Unmarshal(data, in)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(data, &mapp)
+	if err != nil {
+		return err
+	}
 	inMap, err := StructInterfaceToMap(in)
 	if err != nil {
 		return err
@@ -142,6 +148,11 @@ func UnmarshalRequired(data []byte, in interface{}) error {
 			return errors.New(fmt.Sprintf("Field \"%s\" was specified as required but not found", k))
 		}
 	}
+	mapp = nil
+	inMap = nil
+	inVars = nil
+	mapVars = nil
+	jsonFields = nil
 	return nil
 }
 
