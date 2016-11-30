@@ -160,6 +160,12 @@ func ParseMessageString(s string) (*Message, error) {
 }
 */
 
+// IsSecurityAudit returns true iff the audit action is something we need to formally
+// record as an auidtable event.
+func (m *Message) IsSecurityAudit() bool {
+	return m.AuditData != nil
+}
+
 func (m *Message) validate() error {
 	if m.Facility != DefaultFacility {
 		return fmt.Errorf("Invalid Message.Facility: %d", m.Facility)
