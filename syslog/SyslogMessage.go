@@ -231,7 +231,7 @@ func (m *Message) Validate() error {
 type AuditElement struct {
 	Actor  string `json:"actor"`
 	Action string `json:"action"`
-	Actee  string `json:"actee"`
+	Actee  string `json:"actee"` // optional
 }
 
 func (ae *AuditElement) validate() error {
@@ -240,9 +240,6 @@ func (ae *AuditElement) validate() error {
 	}
 	if ae.Action == "" {
 		return fmt.Errorf("AuditElement.Action not set")
-	}
-	if ae.Actee == "" {
-		return fmt.Errorf("AuditElement.Actee not set")
 	}
 
 	// TODO: check for valid UUIDs?
