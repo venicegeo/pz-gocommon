@@ -22,8 +22,8 @@ import (
 
 //---------------------------------------------------------------------
 
-// WriterI is an interface for writing a Message to some sort of output.
-type WriterI interface {
+// Writer is an interface for writing a Message to some sort of output.
+type Writer interface {
 	Write(*Message) error
 }
 
