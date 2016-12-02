@@ -29,13 +29,13 @@ type WriterI interface {
 
 //---------------------------------------------------------------------
 
-// Writer implements the WriterI interface, writing to a generic "io.Writer" target
-type Writer struct {
+// IOWriter implements the WriterI interface, writing to a generic "io.Writer" target
+type IOWriter struct {
 	Writer io.Writer
 }
 
 // Write writes the message to the io.Writer supplied.
-func (w *Writer) Write(mssg *Message) error {
+func (w *IOWriter) Write(mssg *Message) error {
 	if w == nil || w.Writer == nil {
 		return fmt.Errorf("writer not set not set")
 	}
@@ -45,6 +45,25 @@ func (w *Writer) Write(mssg *Message) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+//---------------------------------------------------------------------
+
+// StringWriter implements the WriterI interface, writing to an array of strings
+type StringWriter struct {
+	Messages []string
+}
+
+// Write writes the message to the string array
+func (w *StringWriter) Write(mssg *Message) error {
+	if w.Messages == nil {
+		w.Messages = make([]string, 0)
+	}
+
+	s := mssg.String()
+	w.Messages = append(w.Messages, s)
+
 	return nil
 }
 

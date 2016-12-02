@@ -39,7 +39,6 @@ func NewLogger(writer WriterI, application string) *Logger {
 	if err != nil {
 		hostname = "UNKNOWN_HOSTNAME"
 	}
-	log.Printf("Hostname: %s", hostname)
 
 	processId := strconv.Itoa(os.Getpid())
 
