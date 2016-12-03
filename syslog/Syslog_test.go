@@ -95,20 +95,6 @@ func makeMessage(sde bool) (*Message, string) {
 	return m, expected
 }
 
-func check(t *testing.T, writer *StringWriter, index int, severity Severity, str string) {
-	assert := assert.New(t)
-
-	mssg := writer.Messages[index]
-	facility := DefaultFacility
-	host, err := os.Hostname()
-	assert.NoError(err)
-
-	assert.Contains(mssg, fmt.Sprintf("<%d>", facility*8+severity.Value()))
-	assert.Contains(mssg, fmt.Sprintf(" %d ", os.Getpid()))
-	assert.Contains(mssg, fmt.Sprintf(" %s ", host))
-	assert.Contains(mssg, str)
-}
-
 //---------------------------------------------------------------------
 
 func Test01Message(t *testing.T) {
@@ -139,14 +125,14 @@ func Test02MessageSDE(t *testing.T) {
 	//assert.EqualValues(m, mm)
 }
 
-func Test03IOWriter(t *testing.T) {
+func Test03Writer(t *testing.T) {
 	assert := assert.New(t)
 
 	m, expected := makeMessage(false)
 
 	{
 		// verify error if no io.Writer given
-		w := &IOWriter{Writer: nil}
+		w := &Writer{Writer: nil}
 		err := w.Write(m)
 		assert.Error(err)
 	}
@@ -154,7 +140,7 @@ func Test03IOWriter(t *testing.T) {
 	{
 		// a simple kind of writer
 		var buf bytes.Buffer
-		w := &IOWriter{Writer: &buf}
+		w := &Writer{Writer: &buf}
 		err := w.Write(m)
 		assert.NoError(err)
 
@@ -163,35 +149,7 @@ func Test03IOWriter(t *testing.T) {
 	}
 }
 
-func Test04StringWriter(t *testing.T) {
-	var err error
-
-	assert := assert.New(t)
-
-	m1, expected1 := makeMessage(false)
-	m2, expected2 := makeMessage(true)
-
-	w := &StringWriter{}
-
-	{
-		err = w.Write(m1)
-		assert.NoError(err)
-
-		assert.Len(w.Messages, 1)
-		assert.EqualValues(expected1, w.Messages[0])
-	}
-
-	{
-		err = w.Write(m2)
-		assert.NoError(err)
-
-		assert.Len(w.Messages, 2)
-		assert.EqualValues(expected1, w.Messages[0])
-		assert.EqualValues(expected2, w.Messages[1])
-	}
-}
-
-func Test05FileWriter(t *testing.T) {
+func Test04FileWriter(t *testing.T) {
 	var err error
 
 	assert := assert.New(t)
@@ -226,14 +184,17 @@ func Test05FileWriter(t *testing.T) {
 	assert.NoError(err)
 }
 
-func Test06Logger(t *testing.T) {
+func Test05Logger(t *testing.T) {
+	assert := assert.New(t)
 
 	// the following clause is what a developer would do
-	writer := &StringWriter{}
+	var buf bytes.Buffer
 	{
+		writer := &Writer{
+			Writer: &buf,
+		}
 		logger := NewLogger(writer, "testapp")
 		logger.UseSourceElement = false
-
 		logger.Debug("debug %d", 999)
 		logger.Info("info %d", 123)
 		logger.Notice("notice %d", 321)
@@ -244,23 +205,38 @@ func Test06Logger(t *testing.T) {
 		logger.Metric("i", 5952567, "k", "lazy%s", "dog")
 	}
 
-	check(t, writer, 0, Debug, "debug 999")
-	check(t, writer, 1, Informational, "info 123")
-	check(t, writer, 2, Notice, "notice 321")
-	check(t, writer, 3, Warning, "bonk 3")
-	check(t, writer, 4, Error, "Bonk .1")
-	check(t, writer, 5, Fatal, "BONK 4.0")
-	check(t, writer, 6, Notice, "actor=\"1\"")
-	check(t, writer, 6, Notice, "brownfox")
-	check(t, writer, 7, Notice, "value=\"5952567.0")
-	check(t, writer, 7, Notice, "lazydog")
+	mssg := buf.String()
+
+	check := func(severity Severity, str string) {
+		facility := DefaultFacility
+		host, err := os.Hostname()
+		assert.NoError(err)
+		assert.Contains(mssg, fmt.Sprintf("<%d>", facility*8+severity.Value()))
+		assert.Contains(mssg, fmt.Sprintf(" %d ", os.Getpid()))
+		assert.Contains(mssg, fmt.Sprintf(" %s ", host))
+		assert.Contains(mssg, str)
+	}
+
+	check(Debug, "debug 999")
+	check(Informational, "info 123")
+	check(Notice, "notice 321")
+	check(Warning, "bonk 3")
+	check(Error, "Bonk .1")
+	check(Fatal, "BONK 4.0")
+	check(Notice, "Actor=\"1\"")
+	check(Notice, "brownfox")
+	check(Notice, "Value=\"5952567.0")
+	check(Notice, "lazydog")
 }
 
-func Test07LogLevel(t *testing.T) {
+func Test06LogLevel(t *testing.T) {
 	assert := assert.New(t)
 
-	writer := &StringWriter{}
+	var buf bytes.Buffer
 	{
+		writer := &Writer{
+			Writer: &buf,
+		}
 		logger := NewLogger(writer, "testapp")
 		logger.UseSourceElement = false
 		logger.MinimumSeverity = Error
@@ -269,13 +245,26 @@ func Test07LogLevel(t *testing.T) {
 		logger.Fatal("BONK")
 	}
 
-	assert.Len(writer.Messages, 2)
+	mssg := buf.String()
 
-	check(t, writer, 0, Error, "Bonk")
-	check(t, writer, 1, Fatal, "BONK")
+	check := func(severity Severity, str string) {
+		facility := DefaultFacility
+		host, err := os.Hostname()
+		assert.NoError(err)
+		assert.Contains(mssg, fmt.Sprintf("<%d>", facility*8+severity.Value()))
+		assert.Contains(mssg, fmt.Sprintf(" %d ", os.Getpid()))
+		assert.Contains(mssg, fmt.Sprintf(" %s ", host))
+		assert.Contains(mssg, str)
+	}
+
+	//pri(Warning, "bonk")
+	assert.NotContains(mssg, "bonk")
+
+	check(Error, "Bonk")
+	check(Fatal, "BONK")
 }
 
-func Test08StackFrame(t *testing.T) {
+func Test07StackFrame(t *testing.T) {
 	assert := assert.New(t)
 
 	function, file, line := stackFrame(-1)
@@ -288,5 +277,5 @@ func Test08StackFrame(t *testing.T) {
 	//log.Printf("%s\t%s\t%d", function, file, line)
 	assert.EqualValues(file, "Syslog_test.go")
 	assert.True(line > 1 && line < 1000)
-	assert.EqualValues("syslog.Test08StackFrame", function)
+	assert.EqualValues("syslog.Test07StackFrame", function)
 }
