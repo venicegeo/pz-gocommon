@@ -15,6 +15,7 @@
 package piazza
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -111,4 +112,32 @@ func TestSplitString(t *testing.T) {
 	p, q := SplitString("asdf", 2)
 	assert.Equal("as", p)
 	assert.Equal("df", q)
+}
+
+type A struct {
+	Foo    string `json:"foo" rules:"required"`
+	Bar    string `json:"bar" rules:"deny"`
+	FooBar B      `json:"foobar" rules:"required"`
+}
+
+type B struct {
+	Foo string `json:"foo" rules:"deny"`
+	Bar string `json:"bar" rules:"required"`
+}
+
+func TestUnmarshal(t *testing.T) {
+	assert := assert.New(t)
+	jsn1 := `{
+		"foo": "bar",
+		"bar": "foo",
+		"foobar": {
+			"foo": "bar",
+			"bar": "foo"
+		}
+	}`
+
+	var a A
+	err := Unmarshal([]byte(jsn1), &a)
+	fmt.Println(err)
+	assert.NotNil(err)
 }
