@@ -17,6 +17,7 @@ package syslog
 import (
 	"fmt"
 	"io"
+	syslogd "log/syslog"
 	"os"
 )
 
@@ -110,4 +111,57 @@ func (w *MessageWriter) Read(count int) ([]*Message, error) {
 	a := w.messages[n-count : n]
 
 	return a, nil
+}
+
+//---------------------------------------------------------------------
+
+// SyslogdWriter implements a Writer that writes to the syslogd system service.
+// This will almost certainly not work on Windows, but that is okay because Piazza
+// does not support Windows.
+type SyslogdWriter struct {
+	// one writer for each of the 8 severity levels
+	writer []*syslogd.Writer
+}
+
+func (w *SyslogdWriter) init() error {
+	w.writer = make([]*syslogd.Writer, 8)
+
+	for p := 0; p < 8; p++ {
+
+		tag := "TTAAGG"
+		tw, err := syslogd.Dial("", "", syslogd.Priority(p), tag)
+		if err != nil {
+			return err
+		}
+
+		w.writer[p] = tw
+	}
+
+	return nil
+}
+
+// Write writes the message to the backing array
+func (w *SyslogdWriter) Write(mssg *Message) error {
+	var err error
+
+	if w.writer == nil {
+		err = w.init()
+		if err != nil {
+			return err
+		}
+	}
+
+	s := mssg.String()
+
+	tw := w.writer[mssg.Severity]
+
+	cnt, err := tw.Write([]byte(s))
+	if err != nil {
+		return err
+	}
+	if cnt < len(s) {
+		return fmt.Errorf("count was %d, expected at least %d", cnt, len(s))
+	}
+
+	return nil
 }

@@ -291,3 +291,13 @@ func Test07StackFrame(t *testing.T) {
 	assert.True(line > 1 && line < 1000)
 	assert.EqualValues("syslog.Test07StackFrame", function)
 }
+
+func Test08Syslogd(t *testing.T) {
+	assert := assert.New(t)
+
+	m1, _ := makeMessage(false)
+
+	w := &SyslogdWriter{}
+	err := w.Write(m1)
+	assert.NoError(err)
+}
