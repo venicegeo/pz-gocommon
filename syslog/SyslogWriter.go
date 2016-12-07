@@ -22,27 +22,17 @@ import (
 
 //---------------------------------------------------------------------
 
-// WriterI is an interface for writing a Message to some sort of output.
-type WriterI interface {
+// Writer is an interface for writing a Message to some sort of output.
+type Writer interface {
 	Write(*Message) error
 }
 
-//---------------------------------------------------------------------
-
-// Writer implements the WriterI interface, writing to a generic "io.Writer" target
-type Writer struct {
-	Writer io.Writer
-}
-
-// Write writes the message to the io.Writer supplied.
-func (w *Writer) Write(mssg *Message) error {
-	if w == nil || w.Writer == nil {
-		return fmt.Errorf("writer not set not set")
-	}
-
-	s := mssg.String()
-	_, err := io.WriteString(w.Writer, s)
-	return err
+// Reader is an interface for reading Messages from some sort of input.
+// count is the number of messages to read: 1 means the latest message,
+// 2 means the two latest messages, etc. The newest message is at the end
+// of the array.
+type Reader interface {
+	Read(count int) ([]*Message, error)
 }
 
 //---------------------------------------------------------------------
@@ -78,4 +68,46 @@ func (w *FileWriter) Write(mssg *Message) error {
 // Close closes the file. The creator of the FileWriter must call this.
 func (w *FileWriter) Close() error {
 	return w.file.Close()
+}
+
+//---------------------------------------------------------------------
+
+// MessageWriter implements Reader and Writer, using an array of Messages
+// as the backing store
+type MessageWriter struct {
+	messages []*Message
+}
+
+// Write writes the message to the backing array
+func (w *MessageWriter) Write(mssg *Message) error {
+
+	if w.messages == nil {
+		w.messages = make([]*Message, 0)
+	}
+
+	w.messages = append(w.messages, mssg)
+
+	return nil
+}
+
+// Read reads messages from the backing array. Will only return as many as are
+// available; asking for too many is not an error.
+func (w *MessageWriter) Read(count int) ([]*Message, error) {
+
+	if count < 0 {
+		return nil, fmt.Errorf("invalid count: %d", count)
+	}
+
+	if w.messages == nil || count == 0 {
+		return make([]*Message, 0), nil
+	}
+
+	if count > len(w.messages) {
+		count = len(w.messages)
+	}
+
+	n := len(w.messages)
+	a := w.messages[n-count : n]
+
+	return a, nil
 }
