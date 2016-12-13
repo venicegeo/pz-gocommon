@@ -19,6 +19,8 @@ import (
 	"io"
 	syslogd "log/syslog"
 	"os"
+
+	"github.com/venicegeo/pz-gocommon/elasticsearch"
 )
 
 //---------------------------------------------------------------------
@@ -163,5 +165,44 @@ func (w *SyslogdWriter) Write(mssg *Message) error {
 		return fmt.Errorf("count was %d, expected at least %d", cnt, len(s))
 	}
 
+	return nil
+}
+
+//---------------------------------------------------------------------
+
+//ElasticWriter implements the Writer, writing to elasticsearch
+type ElasticWriter struct {
+	Esi elasticsearch.IIndex
+	typ string
+	id  string
+}
+
+//Write writes the message to the elasticsearch index, type, id
+func (w *ElasticWriter) Write(mssg *Message) error {
+	var err error
+
+	if w == nil || w.Esi == nil || w.typ == "" {
+		return fmt.Errorf("writer not set not set")
+	}
+
+	_, err = w.Esi.PostData(w.typ, w.id, mssg)
+	return err
+}
+
+//SetType sets the type to write to
+func (w *ElasticWriter) SetType(typ string) error {
+	if w == nil {
+		return fmt.Errorf("writer not set not set")
+	}
+	w.typ = typ
+	return nil
+}
+
+//SetID sets the id to write to
+func (w *ElasticWriter) SetID(id string) error {
+	if w == nil {
+		return fmt.Errorf("writer not set not set")
+	}
+	w.id = id
 	return nil
 }
