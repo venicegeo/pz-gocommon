@@ -39,6 +39,7 @@ type MockIndex struct {
 	exists   bool
 	open     bool
 	settings interface{}
+	idSource int
 }
 
 func NewMockIndex(indexName string) *MockIndex {
@@ -171,6 +172,11 @@ func (esi *MockIndex) SetMapping(typeName string, mapping piazza.JsonString) err
 	return esi.addType(typeName, string(mapping))
 }
 
+func (esi *MockIndex) newId() string {
+	esi.idSource++
+	return strconv.Itoa(esi.idSource)
+}
+
 func (esi *MockIndex) PostData(typeName string, id string, obj interface{}) (*IndexResponse, error) {
 	ok, err := esi.IndexExists()
 	if err != nil {
@@ -203,6 +209,11 @@ func (esi *MockIndex) PostData(typeName string, id string, obj interface{}) (*In
 	if err != nil {
 		return nil, err
 	}
+
+	if id == "" {
+		id = esi.newId()
+	}
+
 	typ.items[id] = &raw
 
 	r := &IndexResponse{Created: true, ID: id, Index: esi.name, Type: typeName}
