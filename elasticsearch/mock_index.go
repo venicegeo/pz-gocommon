@@ -287,11 +287,21 @@ func srhSortMatches(matches []*SearchResultHit) []*SearchResultHit {
 }
 
 func (esi *MockIndex) FilterByMatchAll(typeName string, realFormat *piazza.JsonPagination) (*SearchResult, error) {
+	// pagination SortBy and Order are not supported!
+
 	format := NewQueryFormat(realFormat)
 
 	objs := make(map[string]*json.RawMessage)
 
+	emptyResp := &SearchResult{
+		totalHits: 0,
+		hits:      make([]*SearchResultHit, 0),
+	}
+
 	if typeName == "" {
+		if esi.types == nil {
+			return emptyResp, nil
+		}
 		for tk, tv := range esi.types {
 			if tk == percolateTypeName {
 				continue
@@ -301,6 +311,9 @@ func (esi *MockIndex) FilterByMatchAll(typeName string, realFormat *piazza.JsonP
 			}
 		}
 	} else {
+		if esi.types[typeName] == nil {
+			return emptyResp, nil
+		}
 		for ik, iv := range esi.types[typeName].items {
 			objs[ik] = iv
 		}
@@ -331,10 +344,14 @@ func (esi *MockIndex) FilterByMatchAll(typeName string, realFormat *piazza.JsonP
 
 	if from >= len(resp.hits) {
 		resp.hits = make([]*SearchResultHit, 0)
+		return resp, nil
 	}
+
 	if from+size >= len(resp.hits) {
-		size = len(resp.hits)
+		resp.hits = resp.hits[from:]
+		return resp, nil
 	}
+
 	resp.hits = resp.hits[from : from+size]
 
 	return resp, nil
@@ -391,24 +408,7 @@ func (esi *MockIndex) FilterByTermQuery(typeName string, name string, value inte
 }
 
 func (esi *MockIndex) SearchByJSON(typ string, jsn string) (*SearchResult, error) {
-
-	/*var obj interface{}
-	err := json.Unmarshal([]byte(jsn), &obj)
-	if err != nil {
-		return nil, err
-	}
-
-	searchResult, err := esi.lib.Search().
-		Index(esi.index).
-		Type(typ).
-		Source(obj).Do()
-
-	return searchResult, err*/
-
-	////resp := &SearchResult{}
-	////return resp, nil
-
-	return nil, errors.New("SearchByJSON not supported under mocking")
+	return nil, fmt.Errorf("SearchByJSON not supported under mocking")
 }
 
 func (esi *MockIndex) GetTypes() ([]string, error) {
