@@ -17,10 +17,10 @@ package syslog
 import (
 	"fmt"
 	"io"
-	syslogd "log/syslog"
 	"os"
 
 	"github.com/venicegeo/pz-gocommon/elasticsearch"
+	piazza "github.com/venicegeo/pz-gocommon/gocommon"
 )
 
 const (
@@ -33,6 +33,7 @@ const (
 // Writer is an interface for writing a Message to some sort of output.
 type Writer interface {
 	Write(*Message) error
+	Close() error
 }
 
 // Reader is an interface for reading Messages from some sort of input.
@@ -123,14 +124,68 @@ func (w *LocalReaderWriter) Read(count int) ([]*Message, error) {
 	return a, nil
 }
 
+func (w *LocalReaderWriter) Close() error {
+	return nil
+}
+
+//---------------------------------------------------------------------
+
+// HttpWriter implements Writer, by talking to the actual pz-logger service
+type HttpWriter struct {
+	sys *piazza.SystemConfig
+	url string
+	h   piazza.Http
+}
+
+func NewHttpWriter(sys *piazza.SystemConfig) (*HttpWriter, error) {
+	var err error
+
+	w := &HttpWriter{}
+
+	w.sys = sys
+
+	url, err := sys.GetURL(piazza.PzLogger)
+	if err != nil {
+		return nil, err
+	}
+
+	w.url = url
+	w.h = piazza.Http{
+		BaseUrl: url,
+		//ApiKey:  apiKey,
+		//Preflight:  piazza.SimplePreflight,
+		//Postflight: piazza.SimplePostflight,
+	}
+
+	err = sys.WaitForService(piazza.PzLogger)
+	if err != nil {
+		return nil, err
+	}
+
+	return w, nil
+}
+
+func (w *HttpWriter) Write(mssg *Message) error {
+
+	jresp := w.h.PzPost("/syslog", mssg)
+	if jresp.IsError() {
+		return jresp.ToError()
+	}
+
+	return nil
+}
+
+func (w *HttpWriter) Close() error {
+	return nil
+}
+
 //---------------------------------------------------------------------
 
 // SyslogdWriter implements a Writer that writes to the syslogd system service.
 // This will almost certainly not work on Windows, but that is okay because Piazza
 // does not support Windows.
 type SyslogdWriter struct {
-	writer     *syslogd.Writer
-	NumWritten int // used only as a unit testing spy
+	writer *DaemonWriter
 }
 
 func (w *SyslogdWriter) initWriter() error {
@@ -138,8 +193,7 @@ func (w *SyslogdWriter) initWriter() error {
 		return nil
 	}
 
-	tag := "TTAAGG"
-	tw, err := syslogd.Dial(SyslogdNetwork, SyslogdRaddr, syslogd.Priority(Debug), tag)
+	tw, err := Dial(SyslogdNetwork, SyslogdRaddr)
 	if err != nil {
 		return err
 	}
@@ -163,34 +217,20 @@ func (w *SyslogdWriter) Write(mssg *Message) error {
 
 	s := mssg.String()
 
-	// TODO: Go's syslogd library isn't sufficient for our needs (see 12771)
-
-	switch mssg.Severity {
-	case Emergency:
-		err = w.writer.Emerg(s)
-	case Alert:
-		err = w.writer.Alert(s)
-	case Fatal:
-		err = w.writer.Crit(s)
-	case Error:
-		err = w.writer.Err(s)
-	case Warning:
-		err = w.writer.Warning(s)
-	case Notice:
-		err = w.writer.Notice(s)
-	case Informational:
-		err = w.writer.Info(s)
-	case Debug:
-		err = w.writer.Debug(s)
-	}
-
+	w.writer.Write(s)
 	if err != nil {
 		return err
 	}
 
-	w.NumWritten++
-
 	return nil
+}
+
+// Close closes the underlying network connection.
+func (w *SyslogdWriter) Close() error {
+	if w.writer == nil {
+		return nil
+	}
+	return w.writer.Close()
 }
 
 //---------------------------------------------------------------------
@@ -239,5 +279,10 @@ func (w *ElasticWriter) SetID(id string) error {
 		return fmt.Errorf("writer not set not set")
 	}
 	w.id = id
+	return nil
+}
+
+// Close does nothing but satisfy an interface.
+func (w *ElasticWriter) Close() error {
 	return nil
 }

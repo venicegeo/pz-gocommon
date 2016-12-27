@@ -303,17 +303,18 @@ func Test08Syslogd(t *testing.T) {
 
 	w := &SyslogdWriter{}
 
-	assert.Equal(0, w.NumWritten)
-
 	err := w.Write(m1)
 	assert.NoError(err)
-	assert.Equal(1, w.NumWritten)
+	assert.Equal(1, w.writer.numWritten)
 
 	err = w.Write(m2)
 	assert.NoError(err)
-	assert.Equal(2, w.NumWritten)
+	assert.Equal(2, w.writer.numWritten)
 
 	// TODO: how can we check the syslogd system got our messages?
+
+	err = w.Close()
+	assert.NoError(err)
 }
 
 func Test09ElasticsearchWriter(t *testing.T) {
