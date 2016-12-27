@@ -15,6 +15,7 @@
 package syslog
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -132,51 +133,88 @@ func (w *LocalReaderWriter) Close() error {
 
 // HttpWriter implements Writer, by talking to the actual pz-logger service
 type HttpWriter struct {
-	sys *piazza.SystemConfig
 	url string
 	h   piazza.Http
 }
 
-func NewHttpWriter(sys *piazza.SystemConfig) (*HttpWriter, error) {
-	var err error
-
+func NewHttpWriter(url string) (*HttpWriter, error) {
 	w := &HttpWriter{}
-
-	w.sys = sys
-
-	url, err := sys.GetURL(piazza.PzLogger)
-	if err != nil {
-		return nil, err
-	}
-
 	w.url = url
-	w.h = piazza.Http{
-		BaseUrl: url,
-		//ApiKey:  apiKey,
-		//Preflight:  piazza.SimplePreflight,
-		//Postflight: piazza.SimplePostflight,
-	}
-
-	err = sys.WaitForService(piazza.PzLogger)
-	if err != nil {
-		return nil, err
-	}
-
+	w.h = piazza.Http{BaseUrl: url}
 	return w, nil
 }
 
 func (w *HttpWriter) Write(mssg *Message) error {
-
 	jresp := w.h.PzPost("/syslog", mssg)
 	if jresp.IsError() {
 		return jresp.ToError()
 	}
-
 	return nil
 }
 
 func (w *HttpWriter) Close() error {
 	return nil
+}
+
+// GetMessages is only implemented for HttpWriter as it is most likely the only
+// Writer to be used for reading back data.
+func (w *HttpWriter) GetMessages(
+	format *piazza.JsonPagination,
+	params *piazza.HttpQueryParams) ([]Message, int, error) {
+
+	formatString := format.String()
+	paramString := params.String()
+
+	var ext string
+	if formatString != "" && paramString != "" {
+		ext = "?" + formatString + "&" + paramString
+	} else if formatString == "" && paramString != "" {
+		ext = "?" + paramString
+	} else if formatString != "" && paramString == "" {
+		ext = "?" + formatString
+	} else if formatString == "" && paramString == "" {
+		ext = ""
+	} else {
+		return nil, 0, errors.New("Internal error: failed to parse query params")
+	}
+
+	endpoint := "/syslog" + ext
+	jresp := w.h.PzGet(endpoint)
+	if jresp.IsError() {
+		return nil, 0, jresp.ToError()
+	}
+	var mssgs []Message
+	err := jresp.ExtractData(&mssgs)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return mssgs, jresp.Pagination.Count, nil
+}
+
+func (w *HttpWriter) GetVersion() (*piazza.Version, error) {
+	jresp := w.h.PzGet("/version")
+	if jresp.IsError() {
+		return nil, jresp.ToError()
+	}
+
+	var version piazza.Version
+	err := jresp.ExtractData(&version)
+	if err != nil {
+		return nil, err
+	}
+
+	return &version, nil
+}
+
+func (w *HttpWriter) GetStats(output interface{}) error {
+
+	jresp := w.h.PzGet("/admin/stats")
+	if jresp.IsError() {
+		return jresp.ToError()
+	}
+
+	return jresp.ExtractData(output)
 }
 
 //---------------------------------------------------------------------
