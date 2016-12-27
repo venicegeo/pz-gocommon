@@ -68,7 +68,7 @@ func NewMessage() *Message {
 		Version:     DefaultVersion,
 		TimeStamp:   time.Now().Round(time.Millisecond),
 		HostName:    "",
-		Application: "",
+		Application: "",  // Go's syslogd library calls this "tag"
 		Process:     "",
 		MessageID:   "",
 		AuditData:   nil,

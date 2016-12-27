@@ -23,6 +23,11 @@ import (
 	"github.com/venicegeo/pz-gocommon/elasticsearch"
 )
 
+const (
+	SyslogdNetwork = ""
+	SyslogdRaddr   = ""
+)
+
 //---------------------------------------------------------------------
 
 // Writer is an interface for writing a Message to some sort of output.
@@ -79,13 +84,13 @@ func (w *FileWriter) Close() error {
 
 // MessageWriter implements Reader and Writer, using an array of Messages
 // as the backing store
-type MessageWriter struct {
+type LocalReaderWriter struct {
 	messages []*Message
 }
 
 // Write writes the message to the backing array
-func (w *MessageWriter) Write(mssg *Message) error {
-	var _ Writer = (*MessageWriter)(nil)
+func (w *LocalReaderWriter) Write(mssg *Message) error {
+	var _ Writer = (*LocalReaderWriter)(nil)
 
 	if w.messages == nil {
 		w.messages = make([]*Message, 0)
@@ -98,7 +103,7 @@ func (w *MessageWriter) Write(mssg *Message) error {
 
 // Read reads messages from the backing array. Will only return as many as are
 // available; asking for too many is not an error.
-func (w *MessageWriter) Read(count int) ([]*Message, error) {
+func (w *LocalReaderWriter) Read(count int) ([]*Message, error) {
 
 	if count < 0 {
 		return nil, fmt.Errorf("invalid count: %d", count)
@@ -124,58 +129,73 @@ func (w *MessageWriter) Read(count int) ([]*Message, error) {
 // This will almost certainly not work on Windows, but that is okay because Piazza
 // does not support Windows.
 type SyslogdWriter struct {
-	// one writer for each of the 8 severity levels
-	writer []*syslogd.Writer
+	writer     *syslogd.Writer
+	NumWritten int // used only as a unit testing spy
 }
 
-func (w *SyslogdWriter) init() error {
-	w.writer = make([]*syslogd.Writer, 8)
-
-	for p := 0; p < 8; p++ {
-
-		tag := "TTAAGG"
-		tw, err := syslogd.Dial("", "", syslogd.Priority(p), tag)
-		if err != nil {
-			return err
-		}
-
-		w.writer[p] = tw
+func (w *SyslogdWriter) initWriter() error {
+	if w.writer != nil {
+		return nil
 	}
+
+	tag := "TTAAGG"
+	tw, err := syslogd.Dial(SyslogdNetwork, SyslogdRaddr, syslogd.Priority(Debug), tag)
+	if err != nil {
+		return err
+	}
+
+	w.writer = tw
 
 	return nil
 }
 
-// Write writes the message to the backing array
+// Write writes the message to the OS's syslogd system.
 func (w *SyslogdWriter) Write(mssg *Message) error {
+	// compile-time check if interface is implemented
 	var _ Writer = (*SyslogdWriter)(nil)
 
 	var err error
 
-	if w.writer == nil {
-		err = w.init()
-		if err != nil {
-			return err
-		}
+	err = w.initWriter()
+	if err != nil {
+		return err
 	}
 
 	s := mssg.String()
 
-	tw := w.writer[mssg.Severity]
+	// TODO: Go's syslogd library isn't sufficient for our needs (see 12771)
 
-	cnt, err := tw.Write([]byte(s))
+	switch mssg.Severity {
+	case Emergency:
+		err = w.writer.Emerg(s)
+	case Alert:
+		err = w.writer.Alert(s)
+	case Fatal:
+		err = w.writer.Crit(s)
+	case Error:
+		err = w.writer.Err(s)
+	case Warning:
+		err = w.writer.Warning(s)
+	case Notice:
+		err = w.writer.Notice(s)
+	case Informational:
+		err = w.writer.Info(s)
+	case Debug:
+		err = w.writer.Debug(s)
+	}
+
 	if err != nil {
 		return err
 	}
-	if cnt < len(s) {
-		return fmt.Errorf("count was %d, expected at least %d", cnt, len(s))
-	}
+
+	w.NumWritten++
 
 	return nil
 }
 
 //---------------------------------------------------------------------
 
-//ElasticWriter implements the Writer, writing to elasticsearch
+// ElasticWriter implements the Writer, writing to elasticsearch
 type ElasticWriter struct {
 	Esi elasticsearch.IIndex
 	typ string
@@ -190,7 +210,7 @@ func NewElasticWriter(esi elasticsearch.IIndex, typ string) *ElasticWriter {
 	return ew
 }
 
-//Write writes the message to the elasticsearch index, type, id
+// Write writes the message to the elasticsearch index, type, id
 func (w *ElasticWriter) Write(mssg *Message) error {
 	var _ Writer = (*ElasticWriter)(nil)
 
@@ -204,7 +224,7 @@ func (w *ElasticWriter) Write(mssg *Message) error {
 	return err
 }
 
-//SetType sets the type to write to
+// SetType sets the type to write to
 func (w *ElasticWriter) SetType(typ string) error {
 	if w == nil {
 		return fmt.Errorf("writer not set not set")
@@ -213,7 +233,7 @@ func (w *ElasticWriter) SetType(typ string) error {
 	return nil
 }
 
-//SetID sets the id to write to
+// SetID sets the id to write to
 func (w *ElasticWriter) SetID(id string) error {
 	if w == nil {
 		return fmt.Errorf("writer not set not set")
