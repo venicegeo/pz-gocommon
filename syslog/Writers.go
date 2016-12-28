@@ -43,6 +43,12 @@ type Writer interface {
 // of the array.
 type Reader interface {
 	Read(count int) ([]*Message, error)
+	GetMessages(*piazza.JsonPagination, *piazza.HttpQueryParams) ([]Message, int, error)
+}
+
+type WriterReader interface {
+	Reader
+	Writer
 }
 
 //---------------------------------------------------------------------
@@ -106,6 +112,7 @@ func (w *LocalReaderWriter) Write(mssg *Message) error {
 // Read reads messages from the backing array. Will only return as many as are
 // available; asking for too many is not an error.
 func (w *LocalReaderWriter) Read(count int) ([]*Message, error) {
+	var _ Reader = (*LocalReaderWriter)(nil)
 
 	if count < 0 {
 		return nil, fmt.Errorf("invalid count: %d", count)
@@ -123,6 +130,10 @@ func (w *LocalReaderWriter) Read(count int) ([]*Message, error) {
 	a := w.messages[n-count : n]
 
 	return a, nil
+}
+
+func (w *LocalReaderWriter) GetMessages(*piazza.JsonPagination, *piazza.HttpQueryParams) ([]Message, int, error) {
+	return nil, 0, fmt.Errorf("LocalReaderWriter.GetMessages() not supported")
 }
 
 func (w *LocalReaderWriter) Close() error {
@@ -145,6 +156,8 @@ func NewHttpWriter(url string) (*HttpWriter, error) {
 }
 
 func (w *HttpWriter) Write(mssg *Message) error {
+	var _ Writer = (*HttpWriter)(nil)
+
 	jresp := w.h.PzPost("/syslog", mssg)
 	if jresp.IsError() {
 		return jresp.ToError()
@@ -156,11 +169,18 @@ func (w *HttpWriter) Close() error {
 	return nil
 }
 
+func (w *HttpWriter) Read(count int) ([]*Message, error) {
+	var _ Reader = (*HttpWriter)(nil)
+
+	return nil, fmt.Errorf("HttpWriter.Read() not supported")
+}
+
 // GetMessages is only implemented for HttpWriter as it is most likely the only
 // Writer to be used for reading back data.
 func (w *HttpWriter) GetMessages(
 	format *piazza.JsonPagination,
 	params *piazza.HttpQueryParams) ([]Message, int, error) {
+	var _ Reader = (*HttpWriter)(nil)
 
 	formatString := format.String()
 	paramString := params.String()
@@ -190,31 +210,6 @@ func (w *HttpWriter) GetMessages(
 	}
 
 	return mssgs, jresp.Pagination.Count, nil
-}
-
-func (w *HttpWriter) GetVersion() (*piazza.Version, error) {
-	jresp := w.h.PzGet("/version")
-	if jresp.IsError() {
-		return nil, jresp.ToError()
-	}
-
-	var version piazza.Version
-	err := jresp.ExtractData(&version)
-	if err != nil {
-		return nil, err
-	}
-
-	return &version, nil
-}
-
-func (w *HttpWriter) GetStats(output interface{}) error {
-
-	jresp := w.h.PzGet("/admin/stats")
-	if jresp.IsError() {
-		return jresp.ToError()
-	}
-
-	return jresp.ExtractData(output)
 }
 
 //---------------------------------------------------------------------
@@ -323,4 +318,11 @@ func (w *ElasticWriter) SetID(id string) error {
 // Close does nothing but satisfy an interface.
 func (w *ElasticWriter) Close() error {
 	return nil
+}
+
+func (w *ElasticWriter) GetMessages(*piazza.JsonPagination, *piazza.HttpQueryParams) ([]Message, int, error) {
+	return nil, 0, fmt.Errorf("ElasticWriter.GetMessages not supported")
+}
+func (w *ElasticWriter) Read(count int) ([]*Message, error) {
+	return nil, fmt.Errorf("ElasticWriter.Read not supported")
 }
