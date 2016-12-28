@@ -510,21 +510,6 @@ func Test11HttpWriter(t *testing.T) {
 		assert.Equal(17, count)
 	}
 
-	// test misc
-	{
-		ww := w.(*HttpWriter)
-		assert.NotNil(ww)
-
-		version, err := ww.GetVersion()
-		assert.NoError(err)
-		assert.EqualValues("1.2.3.4", version.Version)
-
-		output := &TThingStats{}
-		err = ww.GetStats(output)
-		assert.NoError(err)
-		assert.Equal(19, output.Count)
-	}
-
 	{
 		err = w.Close()
 		assert.NoError(err)
