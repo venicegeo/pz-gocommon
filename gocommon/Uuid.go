@@ -79,6 +79,6 @@ func ValidUuid(uuid string) bool {
 	return true
 }
 
-func (u Uuid) Valid() bool {
-	return ValidUuid(u.String())
+func (uuid Uuid) Valid() bool {
+	return ValidUuid(uuid.String())
 }
