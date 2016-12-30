@@ -72,10 +72,13 @@ func NewUuid() Uuid {
 	return uuid
 }
 
-//TODO
 func ValidUuid(uuid string) bool {
 	if len(uuid) != 36 || uuid[8] != '-' || uuid[13] != '-' || uuid[18] != '-' || uuid[23] != '-' {
 		return false
 	}
 	return true
+}
+
+func (u Uuid) Valid() bool {
+	return ValidUuid(u.String())
 }
