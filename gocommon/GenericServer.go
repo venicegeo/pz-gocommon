@@ -64,7 +64,7 @@ func (server *GenericServer) Start() (chan error, error) {
 		done <- err
 	}()
 
-	err := sys.WaitForServiceByAddress(sys.Name, sys.BindTo)
+	err := sys.WaitForServiceByAddress(sys.Name, sys.Address+sys.BindTo)
 	if err != nil {
 		return nil, err
 	}
