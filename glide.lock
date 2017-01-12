@@ -1,5 +1,5 @@
 hash: a3ef1ed44c69b1f82632020fc6a02fb2bbc8b94d4ca1af324bbacb6ff5f5a5da
-updated: 2017-01-10T12:02:05.376805588-05:00
+updated: 2017-01-12T12:03:50.408347693-05:00
 imports:
 - name: github.com/braintree/manners
   version: 82a8879fc5fd0381fa8b2d8033b19bf255252088
