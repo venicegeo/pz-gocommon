@@ -16,6 +16,7 @@ package piazza
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -43,4 +44,25 @@ func TestTimeStamp01(t *testing.T) {
 	//log.Printf("*** %s", ts2.String()[:19])
 
 	assert.EqualValues(ts1.String()[:19], ts2.String()[:19])
+}
+
+func TestTimeStamp02(t *testing.T) {
+	assert := assert.New(t)
+
+	var err error
+
+	s := `"2017-01-12T23:35:24Z"`
+	//log.Printf("A: %s", s)
+
+	ts := &TimeStamp{}
+	err = ts.UnmarshalJSON([]byte(s))
+	assert.NoError(err)
+
+	//log.Printf("B: %s", ts2.String())
+
+	tt := time.Time(*ts)
+	assert.False(tt.IsZero())
+
+	assert.EqualValues(s, `"`+tt.Format(time.RFC3339)+`"`)
+	assert.EqualValues(s, `"`+ts.String()+`"`)
 }
