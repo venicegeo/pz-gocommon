@@ -51,7 +51,7 @@ func NewLogger(logWriter Writer, auditWriter Writer, application string) *Logger
 		application:      application,
 		hostname:         hostname,
 		processId:        processId,
-		Async:            false,
+		Async:            true,
 	}
 
 	return logger
