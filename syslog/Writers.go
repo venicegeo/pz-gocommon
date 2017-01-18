@@ -104,16 +104,19 @@ type WriterReader interface {
 
 type writeWork func(*Message) error
 
-func aSyncLogic(write writeWork, mssg *Message, async bool) error {
+func aSyncLogic(write writeWork, mssg *Message, async bool) (err error) {
 	if async {
 		go func() {
-			if err := write(mssg); err != nil {
-				log.Println(fmt.Sprintf("Unable to log message [%s] : %s", mssg.String(), err.Error()))
+			if err = write(mssg); err != nil {
+				log.Printf("Unable to log message [%s] : %s\n", mssg.String(), err.Error())
 			}
 		}()
 		return nil
 	}
-	return write(mssg)
+	if err = write(mssg); err != nil {
+		log.Printf("Unable to log message [%s] : %s\n", mssg.String(), err.Error())
+	}
+	return err
 }
 
 //---------------------------------------------------------------------
