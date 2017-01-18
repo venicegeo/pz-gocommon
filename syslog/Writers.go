@@ -108,7 +108,7 @@ func aSyncLogic(write writeWork, mssg *Message, async bool) error {
 	if async {
 		go func() {
 			if err := write(mssg); err != nil {
-				log.Println(err.Error())
+				log.Println(fmt.Sprintf("Unable to log message [%s] : %s", mssg.String(), err.Error()))
 			}
 		}()
 		return nil
