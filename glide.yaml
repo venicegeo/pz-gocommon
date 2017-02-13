@@ -10,6 +10,7 @@ import:
   version: 96b262cf1d25006d71bd495fd99b590493cff29e
 testImport:
 - package: github.com/stretchr/testify
+  version: f390dcf405f7b83c997eac1b06768bb9f44dec18
   subpackages:
   - assert
   - suite
