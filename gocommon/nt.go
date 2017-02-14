@@ -17,6 +17,7 @@ limitations under the License.
 package piazza
 
 import (
+	"crypto/tls"
 	"encoding/base64"
 	"io"
 	"io/ioutil"
@@ -60,7 +61,7 @@ func HTTP(requestType, url string, headers [][2]string, toSend io.Reader) (int, 
 	for _, v := range headers {
 		req.Header.Set(v[0], v[1])
 	}
-	client := &http.Client{}
+	client := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
 	response, err := client.Do(req)
 	if err != nil {
 		return 0, nil, nil, err

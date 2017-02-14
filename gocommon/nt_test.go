@@ -60,11 +60,10 @@ func TestNT(t *testing.T) {
 
 	GetValueFromHeader(http.Header{}, "Content-Type")
 	_, _, _, err := HTTP(GET, "localhost:"+LocalPortNumbers[PzGoCommonTest], NewHeaderBuilder().AddJsonContentType().AddBasicAuth("foo", "bar").GetHeader(), nil)
+	sErr := genericServer.Stop()
 	if err != nil {
 		assert.FailNow(err.Error())
 	}
-
-	err = genericServer.Stop()
-	assert.NoError(err)
+	assert.NoError(sErr)
 
 }
