@@ -178,7 +178,7 @@ func (w *StderrWriter) Write(mssg *Message, async bool) error {
 }
 
 func (w *StderrWriter) writeWork(mssg *Message) error {
-	log.Println(mssg.String())
+	fmt.Fprintln(os.Stderr, mssg.String())
 	return nil
 }
 
