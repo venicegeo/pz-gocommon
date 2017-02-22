@@ -31,15 +31,12 @@ const (
 	SyslogdRaddr   = ""
 )
 
-func GetRequiredEnvVars() (string, string, error) {
-	var loggerIndex, loggerType string
+func GetRequiredEnvVars() (string, error) {
+	var loggerIndex string
 	if loggerIndex = os.Getenv("LOGGER_INDEX"); loggerIndex == "" {
-		return "", "", errors.New("Elasticsearch index name not set")
+		return "", errors.New("Elasticsearch index name not set")
 	}
-	if loggerType = os.Getenv("LOGGER_TYPE"); loggerType == "" {
-		return "", "", errors.New("Elasticsearch type name not set")
-	}
-	return loggerIndex, loggerType, nil
+	return loggerIndex, nil
 }
 
 func GetRequiredWriters(sys *piazza.SystemConfig, loggerIndex string, loggerType string) (Writer, Writer, error) {
