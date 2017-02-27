@@ -496,9 +496,6 @@ func (esi *Index) GetTypes() ([]string, error) {
 			}
 		}
 	}
-	if indexName == "" {
-		return nil, fmt.Errorf("Unable to find index name associated with alias [%s]", esi.IndexName())
-	}
 
 	typs := (*getresp[indexName]).Mappings
 	result := []string{}
