@@ -477,14 +477,20 @@ func (esi *Index) GetTypes() ([]string, error) {
 		return nil, fmt.Errorf("Index %s does not exist", esi.index)
 	}
 
+	getresp, err := esi.lib.IndexGet().Feature("_mappings").Index(esi.index).Do()
+	if err != nil {
+		return nil, err
+	}
+
+	indexName := esi.IndexName()
+
 	aliases, err := esi.lib.IndexGet().Feature("_aliases").Index(esi.index).Do()
 	if err != nil {
 		return nil, err
 	}
-	var indexName string
 	for testIndexName, al := range aliases {
 		for alName, _ := range al.Aliases {
-			if alName == esi.IndexName() {
+			if alName == indexName {
 				indexName = testIndexName
 				break
 			}
@@ -492,11 +498,6 @@ func (esi *Index) GetTypes() ([]string, error) {
 	}
 	if indexName == "" {
 		return nil, fmt.Errorf("Unable to find index name associated with alias [%s]", esi.IndexName())
-	}
-
-	getresp, err := esi.lib.IndexGet().Feature("_mappings").Index(esi.index).Do()
-	if err != nil {
-		return nil, err
 	}
 
 	typs := (*getresp[indexName]).Mappings
