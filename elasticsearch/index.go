@@ -482,26 +482,12 @@ func (esi *Index) GetTypes() ([]string, error) {
 		return nil, err
 	}
 
-	indexName := esi.IndexName()
-
-	aliases, err := esi.lib.IndexGet().Feature("_aliases").Index(esi.index).Do()
-	if err != nil {
-		return nil, err
-	}
-	for testIndexName, al := range aliases {
-		for alName, _ := range al.Aliases {
-			if alName == indexName {
-				indexName = testIndexName
-				break
-			}
-		}
-	}
-
-	typs := (*getresp[indexName]).Mappings
 	result := []string{}
-	for k := range typs {
-		if k != "_default_" && k != ".percolator" {
-			result = append(result, k)
+	for _, index := range getresp {
+		for typ, _ := range index.Mappings {
+			if typ != "_default_" && typ != ".percolator" {
+				result = append(result, typ)
+			}
 		}
 	}
 
