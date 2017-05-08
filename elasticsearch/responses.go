@@ -17,7 +17,7 @@ package elasticsearch
 import (
 	"encoding/json"
 
-	"gopkg.in/olivere/elastic.v3"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 type SearchResultHit struct {

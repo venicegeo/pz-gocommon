@@ -22,7 +22,7 @@ import (
 
 	"github.com/venicegeo/pz-gocommon/gocommon"
 
-	"gopkg.in/olivere/elastic.v3"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 // Index is a representation of the Elasticsearch index.
