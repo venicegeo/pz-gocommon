@@ -583,12 +583,13 @@ func (esi *Index) AddPercolationDocument(typ string, doc interface{}) (*Percolat
 		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
 	}
 
-	percolateResponse, err := esi.lib.
-		Percolate().
-		Index(esi.index).
-		Type(typ).
-		Doc(doc).
-		Do(context.Background())
+	percolateResponse, err := elastic.NewPercolatorQuery().DocumentType(typ).Document(doc).Source()
+	//	percolateResponse, err := esi.lib.
+	//		Percolate().
+	//		Index(esi.index).
+	//		Type(typ).
+	//		Doc(doc).
+	//		Do(context.Background())
 	if err != nil {
 		return nil, err
 	}
