@@ -29,6 +29,8 @@ node {
           cat ${root}/\$i.cov.txt
         done
 
+        cd ${root}
+
         tar -cvzf pz-gocommon.tgz \
             *.cov \
             *.cov.txt \
