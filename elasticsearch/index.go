@@ -469,7 +469,7 @@ func (esi *Index) SetMapping(typename string, jsn piazza.JsonString) error {
 }
 
 // GetTypes returns the list of types within the index.
-func (esi *Index) GetTypes() ([]string, error) {
+func (esi *Index) GetTypes(includeHidden bool) ([]string, error) {
 	ok, err := esi.IndexExists()
 	if err != nil {
 		return nil, err
@@ -486,9 +486,10 @@ func (esi *Index) GetTypes() ([]string, error) {
 	result := []string{}
 	for _, index := range getresp {
 		for typ, _ := range index.Mappings {
-			if typ != "_default_" && typ != ".percolator" {
-				result = append(result, typ)
+			if (typ == "_default_" || typ == ".percolator") && !includeHidden {
+				continue
 			}
+			result = append(result, typ)
 		}
 	}
 
@@ -519,82 +520,6 @@ func (esi *Index) GetMapping(typ string) (interface{}, error) {
 	}
 
 	return nil, fmt.Errorf("type not found after loop; got: %v", getresp)
-}
-
-// AddPercolationQuery adds a percolation query to the index.
-// For more detail on percolation, see
-// https://www.elastic.co/guide/en/elasticsearch/reference/current/search-percolate.html
-func (esi *Index) AddPercolationQuery(id string, query piazza.JsonString) (*IndexResponse, error) {
-
-	ok, err := esi.IndexExists()
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		return nil, fmt.Errorf("Index %s does not exist", esi.index)
-	}
-
-	indexResponse, err := esi.lib.
-		Index().
-		Index(esi.index).
-		Type(".percolator").
-		Id(id).
-		BodyString(string(query)).
-		Do(context.Background())
-	if err != nil {
-		return nil, err
-	}
-
-	return NewIndexResponse(indexResponse), nil
-}
-
-// DeletePercolationQuery removes a percolation query from the index.
-func (esi *Index) DeletePercolationQuery(id string) (*DeleteResponse, error) {
-	typ := ".percolator"
-	ok, err := esi.ItemExists(typ, id)
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		return &DeleteResponse{Found: false}, fmt.Errorf("Item %s in index %s and type %s does not exist", id, esi.index, typ)
-	}
-
-	deleteResponse, err := esi.lib.Delete().
-		Index(esi.index).
-		Type(".percolator").
-		Id(id).
-		Do(context.Background())
-	if err != nil {
-		return nil, err
-	}
-
-	return NewDeleteResponse(deleteResponse), nil
-}
-
-// AddPercolationDocument adds a document to the index that is to be percolated.
-// For more detail on percolation, see
-// https://www.elastic.co/guide/en/elasticsearch/reference/current/search-percolate.html
-func (esi *Index) AddPercolationDocument(typ string, doc interface{}) (*PercolateResponse, error) {
-	ok, err := esi.TypeExists(typ)
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		return nil, fmt.Errorf("Type %s in index %s does not exist", typ, esi.index)
-	}
-
-	percolateResponse, err := elastic.NewPercolatorQuery().DocumentType(typ).Document(doc).Source()
-	//	percolateResponse, err := esi.lib.
-	//		Percolate().
-	//		Index(esi.index).
-	//		Type(typ).
-	//		Doc(doc).
-	//		Do(context.Background())
-	if err != nil {
-		return nil, err
-	}
-
-	return NewPercolateResponse(percolateResponse), nil
 }
 
 func (esi *Index) DirectAccess(verb string, endpoint string, input interface{}, output interface{}) error {
