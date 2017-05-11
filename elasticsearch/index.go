@@ -469,7 +469,7 @@ func (esi *Index) SetMapping(typename string, jsn piazza.JsonString) error {
 }
 
 // GetTypes returns the list of types within the index.
-func (esi *Index) GetTypes(includeHidden bool) ([]string, error) {
+func (esi *Index) GetTypes() ([]string, error) {
 	ok, err := esi.IndexExists()
 	if err != nil {
 		return nil, err
@@ -486,9 +486,6 @@ func (esi *Index) GetTypes(includeHidden bool) ([]string, error) {
 	result := []string{}
 	for _, index := range getresp {
 		for typ, _ := range index.Mappings {
-			if (typ == "_default_" || typ == ".percolator") && !includeHidden {
-				continue
-			}
 			result = append(result, typ)
 		}
 	}
