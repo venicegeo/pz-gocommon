@@ -5,7 +5,7 @@ node {
 
   stage('Setup') {
     git([
-      url: "https://github.com/venicegeo/pz-gocommon",
+      url: env.GIT_URL ? env.GIT_URL : 'https://github.com/venicegeo/pz-workflow',
       branch: "master"
     ])
   }
