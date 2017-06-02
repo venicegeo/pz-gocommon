@@ -17,6 +17,7 @@ package piazza
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
 	"strings"
 	"unicode"
