@@ -98,7 +98,7 @@ func (p *JsonPagination) String() string {
 	return s
 }
 
-func (format *JsonPagination) syncPagination(dslString string) (string, error) {
+func (format *JsonPagination) SyncPagination(dslString string) (string, error) {
 	// Overwrite any from/size in params with what's in the dsl
 	b := []byte(dslString)
 	var f interface{}
