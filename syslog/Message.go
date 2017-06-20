@@ -236,9 +236,10 @@ func (m *Message) Validate() error {
 
 // AuditElement represents an SDE for auditing (security-specific of just general).
 type AuditElement struct {
-	Actor  string `json:"actor"`
-	Action string `json:"action"`
-	Actee  string `json:"actee"` // optional
+	Actor   string `json:"actor"`
+	Action  string `json:"action"`
+	Actee   string `json:"actee"`   // optional
+	Request string `json:"request"` // optional
 }
 
 func (ae *AuditElement) validate() error {
