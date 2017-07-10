@@ -75,7 +75,7 @@ node {
         ]) {
             sh """
               mkdir -p ${GOPATH}/src/github.com/venicegeo/pz-gocommon
-              find . -maxdepth 1 -mindepth 1 -not -name gopath -exec cp -R '{}' gopath/src/github.com/venicegeo/pz-gocommon/ \\;
+              find . -maxdepth 2 -mindepth 1 -not -name gopath -exec cp -R '{}' gopath/src/github.com/venicegeo/pz-gocommon/ \\;
               cd "\$GOPATH/src/github.com/venicegeo/pz-gocommon"
               go install
               cd gocommon 
