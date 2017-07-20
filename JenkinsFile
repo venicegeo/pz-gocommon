@@ -42,7 +42,7 @@ node {
               cd gocommon
               go test -v -coverprofile=${root}/gocommon.cov
               cd ../elasticsearch
-              go test -v coverprofile=${root}/elasticsearch.cov
+              go test -v -coverprofile=${root}/elasticsearch.cov
               cd ${root}
               go tool cover -func=gocommon.cov -o gocommon.cov.txt
               go tool cover -func=elasticsearch.cov -o elasticsearch.cov.txt
