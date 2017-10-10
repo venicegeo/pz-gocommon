@@ -21,10 +21,8 @@ import (
 	"strings"
 )
 
-const DefaultElasticsearchAddress = "localhost:9200"
-const DefaultKafkaAddress = "localhost:9092"
-const DefaultPzLoggerAddress = "localhost:14600"
-const DefaultPzUuidgenAddress = "localhost:14800"
+const DefaultElasticsearchAddress = "http://localhost:9200"
+const DefaultKafkaAddress = "http://localhost:9092"
 const DefaultDomain = ".venicegeo.io"
 const DefaultProtocol = "https"
 const GenericServerProtocol = "http"
@@ -197,7 +195,10 @@ func (sys *SystemConfig) runHealthChecks() error {
 			continue
 		}
 
-		url := fmt.Sprintf("%s://%s%s", DefaultProtocol, addr, HealthcheckEndpoints[name])
+		url := addr + HealthcheckEndpoints[name]
+		if !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")) {
+			url = DefaultProtocol + url
+		}
 
 		resp, err := http.Get(url)
 		if err != nil {
@@ -237,7 +238,10 @@ func (sys *SystemConfig) GetURL(name ServiceName) (string, error) {
 		return "", err
 	}
 
-	url := fmt.Sprintf("%s://%s%s", DefaultProtocol, addr, EndpointPrefixes[name])
+	url := addr + EndpointPrefixes[name]
+	if !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")) {
+		url = DefaultProtocol + url
+	}
 
 	return url, nil
 }
