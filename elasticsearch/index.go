@@ -82,7 +82,6 @@ func NewIndex2(url string, index string, settings string) (*Index, error) {
 
 func IndexExists(sys *piazza.SystemConfig, index string) (bool, error) {
 	url, err := sys.GetURL(piazza.PzElasticSearch)
-	fmt.Println(url)
 	if err != nil {
 		return false, err
 	}
