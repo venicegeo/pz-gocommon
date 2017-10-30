@@ -30,7 +30,7 @@ func Test06VcapServices(t *testing.T) {
 	vcap, err := NewVcapServices()
 	assert.NoError(err)
 
-	assert.EqualValues("http://localhost:9092", vcap.Services["pz-kafka"])
+	assert.EqualValues("localhost:9092", vcap.Services["pz-kafka"])
 	assert.EqualValues("pz-kafka", vcap.UserProvided[1].Name)
 
 	env :=

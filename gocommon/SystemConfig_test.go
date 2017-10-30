@@ -52,7 +52,7 @@ func Test04Services(t *testing.T) {
 
 		actual, err = sys.GetURL(PzLogger)
 		assert.NoError(err)
-		assert.EqualValues(addr, actual)
+		assert.EqualValues(DefaultProtocol + "://" + addr, actual)
 	}
 
 	{
@@ -70,7 +70,7 @@ func Test04Services(t *testing.T) {
 
 		actual, err = sys.GetAddress(PzLogger)
 		assert.NoError(err)
-		assert.EqualValues(addr, actual)
+		assert.EqualValues(DefaultProtocol + "://" + addr, actual)
 
 		actual, err = sys.GetURL(PzLogger)
 		assert.NoError(err)
