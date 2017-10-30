@@ -74,6 +74,6 @@ func Test04Services(t *testing.T) {
 
 		actual, err = sys.GetURL(PzLogger)
 		assert.NoError(err)
-		assert.EqualValues(DefaultOutboundProtocol+"://"+addr, actual)
+		assert.EqualValues(DefaultProtocol+"://"+addr, actual)
 	}
 }
