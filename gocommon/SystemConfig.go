@@ -26,8 +26,7 @@ const DefaultKafkaAddress = "localhost:9092"
 const DefaultPzLoggerAddress = "localhost:14600"
 const DefaultPzUuidgenAddress = "localhost:14800"
 const DefaultDomain = ".venicegeo.io"
-const DefaultProtocol = "https"
-const GenericServerProtocol = "http"
+const DefaultProtocol = "http"
 
 const waitTimeoutMs = 3000
 const waitSleepMs = 250
@@ -101,7 +100,7 @@ type SystemConfig struct {
 	// our external services
 	endpoints ServicesMap
 
-	Space        string // int or stage or prod or...
+	Space string // int or stage or prod or...
 	PiazzaSystem string // System-level username
 
 	vcapApplication *VcapApplication
