@@ -197,7 +197,7 @@ func (sys *SystemConfig) runHealthChecks() error {
 
 		url := addr + HealthcheckEndpoints[name]
 		if !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")) {
-			url = DefaultOutboundProtocol + "://" + url
+			url = DefaultOutboundProtocol + url
 		}
 
 		resp, err := http.Get(url)
@@ -240,7 +240,7 @@ func (sys *SystemConfig) GetURL(name ServiceName) (string, error) {
 
 	url := addr + EndpointPrefixes[name]
 	if !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")) {
-		url = DefaultOutboundProtocol + "://" + url
+		url = DefaultOutboundProtocol + url
 	}
 
 	return url, nil

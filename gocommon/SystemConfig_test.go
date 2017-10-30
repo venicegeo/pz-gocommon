@@ -41,7 +41,7 @@ func Test04Services(t *testing.T) {
 		assert.NoError(err)
 
 		actual := sys.GetDomain()
-		assert.EqualValues(DefaultDomain, actual)
+		assert.EqualValues(actual, DefaultDomain)
 
 		addr := "1.2.3.4"
 		sys.AddService(PzLogger, addr)
@@ -52,7 +52,7 @@ func Test04Services(t *testing.T) {
 
 		actual, err = sys.GetURL(PzLogger)
 		assert.NoError(err)
-		assert.EqualValues(DefaultOutboundProtocol+"://"+addr, actual)
+		assert.EqualValues(actual, "http://"+addr)
 	}
 
 	{
@@ -63,7 +63,7 @@ func Test04Services(t *testing.T) {
 		assert.NoError(err)
 
 		actual := sys.GetDomain()
-		assert.EqualValues(".abc.xyz", actual)
+		assert.EqualValues(actual, ".abc.xyz")
 
 		addr := "1.2.3.4"
 		sys.AddService(PzLogger, addr)
@@ -74,6 +74,6 @@ func Test04Services(t *testing.T) {
 
 		actual, err = sys.GetURL(PzLogger)
 		assert.NoError(err)
-		assert.EqualValues(DefaultOutboundProtocol+"://"+addr, actual)
+		assert.EqualValues(actual, "http://"+addr)
 	}
 }
