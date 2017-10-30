@@ -21,10 +21,12 @@ import (
 	"strings"
 )
 
-const DefaultElasticsearchAddress = "http://localhost:9200"
-const DefaultKafkaAddress = "http://localhost:9092"
+const DefaultElasticsearchAddress = "localhost:9200"
+const DefaultKafkaAddress = "localhost:9092"
+const DefaultPzLoggerAddress = "localhost:14600"
+const DefaultPzUuidgenAddress = "localhost:14800"
 const DefaultDomain = ".venicegeo.io"
-const DefaultOutboundProtocol = "https"
+const DefaultProtocol = "https"
 const GenericServerProtocol = "http"
 
 const waitTimeoutMs = 3000
@@ -195,10 +197,7 @@ func (sys *SystemConfig) runHealthChecks() error {
 			continue
 		}
 
-		url := addr + HealthcheckEndpoints[name]
-		if !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")) {
-			url = DefaultOutboundProtocol + url
-		}
+		url := fmt.Sprintf("%s://%s%s", DefaultProtocol, addr, HealthcheckEndpoints[name])
 
 		resp, err := http.Get(url)
 		if err != nil {
@@ -238,10 +237,7 @@ func (sys *SystemConfig) GetURL(name ServiceName) (string, error) {
 		return "", err
 	}
 
-	url := addr + EndpointPrefixes[name]
-	if !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")) {
-		url = DefaultOutboundProtocol + url
-	}
+	url := fmt.Sprintf("%s://%s%s", DefaultProtocol, addr, EndpointPrefixes[name])
 
 	return url, nil
 }
@@ -256,7 +252,7 @@ func (sys *SystemConfig) WaitForService(name ServiceName) error {
 		return err
 	}
 
-	url := fmt.Sprintf("%s://%s", DefaultOutboundProtocol, addr)
+	url := fmt.Sprintf("%s://%s", DefaultProtocol, addr)
 	return WaitForService(name, url)
 }
 
@@ -266,6 +262,6 @@ func (sys *SystemConfig) WaitForServiceToDie(name ServiceName) error {
 		return err
 	}
 
-	url := fmt.Sprintf("%s://%s", DefaultOutboundProtocol, addr)
+	url := fmt.Sprintf("%s://%s", DefaultProtocol, addr)
 	return WaitForServiceToDie(name, url)
 }
