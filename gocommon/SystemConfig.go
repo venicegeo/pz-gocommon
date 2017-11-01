@@ -22,7 +22,7 @@ import (
 	"strings"
 )
 
-const DefaultElasticsearchAddress = "localhost:9200"
+const DefaultElasticsearchAddress = "http://localhost:9200"
 const DefaultKafkaAddress = "localhost:9092"
 const DefaultPzLoggerAddress = "localhost:14600"
 const DefaultPzUuidgenAddress = "localhost:14800"
@@ -199,10 +199,7 @@ func (sys *SystemConfig) runHealthChecks() error {
 			continue
 		}
 
-		url := addr + HealthcheckEndpoints[name]
-		if !hasProtocol.MatchString(url) {
-			url = DefaultProtocol + "://" + url
-		}
+		url := createUrl(addr, HealthcheckEndpoints[name])
 
 		resp, err := http.Get(url)
 		if err != nil {
@@ -242,11 +239,7 @@ func (sys *SystemConfig) GetURL(name ServiceName) (string, error) {
 		return "", err
 	}
 
-	url := addr + EndpointPrefixes[name]
-	if !hasProtocol.MatchString(url) {
-		url = DefaultProtocol + "://" + url
-	}
-
+	url := createUrl(addr, EndpointPrefixes[name])
 	return url, nil
 }
 
@@ -260,10 +253,7 @@ func (sys *SystemConfig) WaitForService(name ServiceName) error {
 		return err
 	}
 
-	url := addr
-	if !hasProtocol.MatchString(url) {
-		url = DefaultProtocol + "://" + url
-	}
+	url := createUrl(addr)
 	return WaitForService(name, url)
 }
 
@@ -273,9 +263,17 @@ func (sys *SystemConfig) WaitForServiceToDie(name ServiceName) error {
 		return err
 	}
 
-	url := addr
+	url := createUrl(addr)
+	return WaitForServiceToDie(name, url)
+}
+
+func createUrl(parts ...string) string {
+	url := ""
+	for _, p := range parts {
+		url += p
+	}
 	if !hasProtocol.MatchString(url) {
 		url = DefaultProtocol + "://" + url
 	}
-	return WaitForServiceToDie(name, url)
+	return url
 }

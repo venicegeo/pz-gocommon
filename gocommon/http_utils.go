@@ -147,10 +147,7 @@ func GetPiazzaUrl() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	url := host
-	if !hasProtocol.MatchString(url) {
-		url = DefaultProtocol + "://" + url
-	}
+	url := createUrl(host)
 	return url, nil
 }
 
@@ -168,10 +165,7 @@ func GetPiazzaServiceUrl(serviceName ServiceName) (string, error) {
 
 	serviceHost := string(serviceName) + pzHost[i:]
 
-	url := serviceHost
-	if !hasProtocol.MatchString(url) {
-		url = DefaultProtocol + "://" + url
-	}
+	url := createUrl(serviceHost)
 	return url, nil
 }
 

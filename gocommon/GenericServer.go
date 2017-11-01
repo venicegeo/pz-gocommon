@@ -64,10 +64,7 @@ func (server *GenericServer) Start() (chan error, error) {
 		done <- err
 	}()
 
-	url := sys.BindTo
-	if !hasProtocol.MatchString(url) {
-		url = DefaultProtocol + "://" + url
-	}
+	url := createUrl(sys.BindTo)
 	err := WaitForService(sys.Name, url)
 	if err != nil {
 		return nil, err
