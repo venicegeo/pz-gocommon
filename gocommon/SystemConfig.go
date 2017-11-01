@@ -22,7 +22,7 @@ import (
 	"strings"
 )
 
-const DefaultElasticsearchAddress = "http://localhost:9200"
+const DefaultElasticsearchAddress = "localhost:9200"
 const DefaultKafkaAddress = "localhost:9092"
 const DefaultPzLoggerAddress = "localhost:14600"
 const DefaultPzUuidgenAddress = "localhost:14800"
