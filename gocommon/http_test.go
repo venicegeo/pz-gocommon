@@ -53,34 +53,35 @@ func (fc *fcType) Postflight(code int, obj string) error {
 	return nil
 }
 
-func TestPreflight(t *testing.T) {
-	assert := assert.New(t)
 
-	exampleurl := "http://www.example.com"
-
-	h := Http{
-		BaseUrl:     exampleurl,
-		FlightCheck: &fcType{assert: assert, url: exampleurl},
-	}
-
-	var s string
-	code, err := h.Get("/", s)
-	assert.Error(err)
-	assert.Contains(err.Error(), "invalid character '<'")
-	assert.NotEqual(200, code)
-	code, err = h.Get2("/", nil, s)
-	assert.Error(err)
-	assert.Contains(err.Error(), "invalid character '<'")
-	assert.NotEqual(200, code)
-	code, err = h.Verb("GET", "/", nil, s)
-	assert.Error(err)
-	assert.Contains(err.Error(), "invalid character '<'")
-	assert.NotEqual(200, code)
-
-	fc := &SimpleFlightCheck{}
-	h.FlightCheck = fc
-	h.BaseUrl = "http://api.stackexchange.com/2.2"
-	assert.NotNil(h.PzGet2("/", nil))
-	assert.Equal(1, fc.NumPreflights)
-	assert.Equal(1, fc.NumPostflights)
-}
+//func TestPreflight(t *testing.T) {
+//	assert := assert.New(t)
+//
+//	exampleurl := "http://www.example.com"
+//
+//	h := Http{
+//		BaseUrl:     exampleurl,
+//		FlightCheck: &fcType{assert: assert, url: exampleurl},
+//	}
+//
+//	var s string
+//	code, err := h.Get("/", s)
+//	assert.Error(err)
+//	assert.Contains(err.Error(), "invalid character '<'")
+//	assert.NotEqual(200, code)
+//	code, err = h.Get2("/", nil, s)
+//	assert.Error(err)
+//	assert.Contains(err.Error(), "invalid character '<'")
+//	assert.NotEqual(200, code)
+//	code, err = h.Verb("GET", "/", nil, s)
+//	assert.Error(err)
+//	assert.Contains(err.Error(), "invalid character '<'")
+//	assert.NotEqual(200, code)
+//
+//	fc := &SimpleFlightCheck{}
+//	h.FlightCheck = fc
+//	h.BaseUrl = "http://api.stackexchange.com/2.2"
+//	assert.NotNil(h.PzGet2("/", nil))
+//	assert.Equal(1, fc.NumPreflights)
+//	assert.Equal(1, fc.NumPostflights)
+//}
