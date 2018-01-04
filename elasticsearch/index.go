@@ -22,7 +22,7 @@ import (
 
 	"github.com/venicegeo/pz-gocommon/gocommon"
 
-	"gopkg.in/olivere/elastic.v3"
+	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic.v3"
 )
 
 // Index is a representation of the Elasticsearch index.
@@ -178,7 +178,6 @@ func (esi *Index) Create(settings string) error {
 	}
 
 	createIndex, err := esi.lib.CreateIndex(esi.index).Body(settings).Do()
-
 	if err != nil {
 		return err
 	}

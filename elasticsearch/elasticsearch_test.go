@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/olivere/elastic.v3"
+	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic.v3"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"

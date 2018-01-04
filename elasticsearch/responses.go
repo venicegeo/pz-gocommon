@@ -17,7 +17,7 @@ package elasticsearch
 import (
 	"encoding/json"
 
-	"gopkg.in/olivere/elastic.v3"
+	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic.v3"
 )
 
 type SearchResultHit struct {
