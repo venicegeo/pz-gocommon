@@ -40,10 +40,10 @@ func NewIndex(sys *piazza.SystemConfig, index string, settings string) (*Index, 
 		return nil, err
 	}
 
-	return NewIndex2(url, index, settings)
+	return NewIndex2(url, "", "", index, settings)
 }
 
-func NewIndex2(url string, index string, settings string) (*Index, error) {
+func NewIndex2(url, user, pass, index, settings string) (*Index, error) {
 	if strings.HasSuffix(index, "$") {
 		index = fmt.Sprintf("%s.%x", index[0:len(index)-1], time.Now().Nanosecond())
 	}
@@ -59,6 +59,7 @@ func NewIndex2(url string, index string, settings string) (*Index, error) {
 		elastic.SetURL(url),
 		elastic.SetSniff(false),
 		elastic.SetMaxRetries(5),
+		elastic.SetBasicAuth(user, pass),
 		//elastic.SetErrorLog(log.New(os.Stderr, "ELASTIC ", log.LstdFlags)), // TODO
 		//elastic.SetInfoLog(log.New(os.Stdout, "", log.LstdFlags)),
 	)
