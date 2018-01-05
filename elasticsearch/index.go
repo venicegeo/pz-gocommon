@@ -22,7 +22,7 @@ import (
 
 	"github.com/venicegeo/pz-gocommon/gocommon"
 
-	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic.v3"
+	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic-api"
 )
 
 // Index is a representation of the Elasticsearch index.

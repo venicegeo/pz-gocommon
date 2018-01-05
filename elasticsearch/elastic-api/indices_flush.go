@@ -11,7 +11,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic.v3/uritemplates"
+	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic-api/uritemplates"
 )
 
 // Flush allows to flush one or more indices. The flush process of an index

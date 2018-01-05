@@ -13,7 +13,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic.v3/uritemplates"
+	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic-api/uritemplates"
 )
 
 // Search for documents in Elasticsearch.

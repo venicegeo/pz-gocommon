@@ -11,7 +11,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic.v3/uritemplates"
+	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic-api/uritemplates"
 )
 
 // PercolateService is documented at http://www.elasticsearch.org/guide/en/elasticsearch/reference/1.4/search-percolate.html.

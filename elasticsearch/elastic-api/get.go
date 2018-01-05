@@ -12,7 +12,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic.v3/uritemplates"
+	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic-api/uritemplates"
 )
 
 // GetService allows to get a typed JSON document from the index based

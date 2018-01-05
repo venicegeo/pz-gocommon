@@ -17,7 +17,7 @@ package elasticsearch
 import (
 	"encoding/json"
 
-	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic.v3"
+	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic-api"
 )
 
 type SearchResultHit struct {

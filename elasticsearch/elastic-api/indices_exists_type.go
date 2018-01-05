@@ -12,7 +12,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic.v3/uritemplates"
+	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic-api/uritemplates"
 )
 
 // IndicesExistsTypeService checks if one or more types exist in one or more indices.
