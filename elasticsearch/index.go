@@ -22,8 +22,8 @@ import (
 
 	"github.com/venicegeo/pz-gocommon/gocommon"
 
+	"github.com/venicegeo/pz-gocommon/elasticsearch/elastic-5-api"
 	"golang.org/x/net/context"
-	"gopkg.in/olivere/elastic.v5"
 )
 
 // Index is a representation of the Elasticsearch index.
