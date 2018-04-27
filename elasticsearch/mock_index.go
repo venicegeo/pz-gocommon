@@ -33,6 +33,8 @@ type MockIndexType struct {
 	mapping interface{}
 }
 
+var _ IIndex = (*MockIndex)(nil)
+
 type MockIndex struct {
 	name     string
 	types    map[string]*MockIndexType
@@ -260,7 +262,10 @@ func (esi *MockIndex) DeleteByID(typeName string, id string) (*DeleteResponse, e
 	delete(typ.items, id)
 	r := &DeleteResponse{Found: true, ID: id}
 	return r, nil
+}
 
+func (esi *MockIndex) DeleteByIDWait(typeName string, id string) (*DeleteResponse, error) {
+	return esi.DeleteByID(typeName, id)
 }
 
 type srhByID []*SearchResultHit
