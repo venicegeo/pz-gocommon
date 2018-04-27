@@ -418,27 +418,6 @@ func (esi *MockIndex) GetMapping(typ string) (interface{}, error) {
 	return nil, errors.New("GetMapping not supported under mocking")
 }
 
-func (esi *MockIndex) AddPercolationQuery(id string, query piazza.JsonString) (*IndexResponse, error) {
-	return esi.PostData(percolateTypeName, id, query)
-}
-
-func (esi *MockIndex) DeletePercolationQuery(id string) (*DeleteResponse, error) {
-	return esi.DeleteByID(percolateTypeName, id)
-}
-
-var percid int
-
-func (esi *MockIndex) AddPercolationDocument(typeName string, doc interface{}) (*PercolateResponse, error) {
-
-	_, err := esi.PostData(percolateTypeName, strconv.Itoa(percid), doc)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := &PercolateResponse{}
-	return resp, nil
-}
-
 func (esi *MockIndex) DirectAccess(verb string, endpoint string, input interface{}, output interface{}) error {
 	return fmt.Errorf("DirectAccess not supported")
 }
