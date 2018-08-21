@@ -537,10 +537,21 @@ func (esi *MockIndex) handle_aggs(aggs interface{}, items []*AnyType) (elastic.A
 	keys := map[interface{}]int64{}
 	for _, i := range items {
 		if value, ok := i.vars[field]; ok {
-			if _, ok = keys[value]; !ok {
-				keys[value] = 1
+			if piazza.ValueIsValidArray(value) {
+				vals := value.([]interface{})
+				for _, v := range vals {
+					if _, ok = keys[v]; !ok {
+						keys[v] = 1
+					} else {
+						keys[v]++
+					}
+				}
 			} else {
-				keys[value]++
+				if _, ok = keys[value]; !ok {
+					keys[value] = 1
+				} else {
+					keys[value]++
+				}
 			}
 		}
 	}
