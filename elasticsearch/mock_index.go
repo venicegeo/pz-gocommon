@@ -435,9 +435,16 @@ func (esi *MockIndex) FilterByTermQuery(typeName string, name string, value inte
 	return resp, nil
 }
 
-func (esi *MockIndex) SearchByJSON(typ string, jsn map[string]interface{}) (*elastic.SearchResult, error) {
+func (esi *MockIndex) SearchByJSON(typ string, ijsn map[string]interface{}) (*elastic.SearchResult, error) {
+	dat, err := json.Marshal(ijsn)
+	if err != nil {
+		return nil, err
+	}
+	jsn := map[string]interface{}{}
+	if err = json.Unmarshal(dat, &jsn); err != nil {
+		return nil, err
+	}
 	var ret []*anyType
-	var err error
 	var aggs elastic.Aggregations = nil
 	query, hasQuery := jsn["query"]
 	if hasQuery {
