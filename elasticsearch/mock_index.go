@@ -563,12 +563,15 @@ func (esi *MockIndex) query(query interface{}, items map[string]*AnyType) ([]*An
 	var ret []*AnyType
 	term, hasTerm := query.(map[string]interface{})["term"]
 	boool, hasBool := query.(map[string]interface{})["bool"]
+	terms, hasTerms := query.(map[string]interface{})["terms"]
 	if len(query.(map[string]interface{})) == 0 {
 		ret = esi.convertToSlice(items)
-	} else if hasTerm && hasBool {
-		return nil, fmt.Errorf("Cannot use both term and bool in mock SearchByJSON")
+	} else if hasTerm && hasBool || hasTerms && hasBool {
+		return nil, fmt.Errorf("Cannot use both term(s) and bool in mock SearchByJSON")
 	} else if hasTerm {
-		ret = esi.convertToSlice(esi.terms_query(term, items))
+		ret = esi.convertToSlice(esi.term_query(term, items))
+	} else if hasTerms {
+		ret = esi.convertToSlice(esi.terms_query(terms, items))
 	} else if hasBool {
 		ret = esi.convertToSlice(esi.bool_query(boool, items))
 	} else {
@@ -577,7 +580,7 @@ func (esi *MockIndex) query(query interface{}, items map[string]*AnyType) ([]*An
 	return ret, nil
 }
 
-func (esi *MockIndex) terms_query(term interface{}, items map[string]*AnyType) map[string]*AnyType {
+func (esi *MockIndex) term_query(term interface{}, items map[string]*AnyType) map[string]*AnyType {
 	hits := map[string]*AnyType{}
 	var key string
 	var value interface{}
@@ -588,6 +591,26 @@ func (esi *MockIndex) terms_query(term interface{}, items map[string]*AnyType) m
 		if v, ok := item.vars[key]; ok {
 			if v == value {
 				hits[id] = item
+			}
+		}
+	}
+	return hits
+}
+func (esi *MockIndex) terms_query(terms interface{}, items map[string]*AnyType) map[string]*AnyType {
+	hits := map[string]*AnyType{}
+	var key string
+	var ivalues interface{}
+	var values []interface{}
+	for key, ivalues = range terms.(map[string]interface{}) {
+		break
+	}
+	values = ivalues.([]interface{})
+	for id, item := range items {
+		if v, ok := item.vars[key]; ok {
+			for _, vv := range values {
+				if v == vv {
+					hits[id] = item
+				}
 			}
 		}
 	}
@@ -613,13 +636,17 @@ func (esi *MockIndex) bool_query(boool interface{}, items map[string]*AnyType) m
 }
 func (esi *MockIndex) bool_must_query(must interface{}, items map[string]*AnyType) map[string]*AnyType {
 	finds := make([][]string, len(must.([]interface{})), len(must.([]interface{})))
-	for i, terms := range must.([]interface{}) {
-		if term, hasTerm := terms.(map[string]interface{})["term"]; hasTerm {
-			found := esi.terms_query(term, items)
-			finds[i] = make([]string, 0, len(found))
-			for k, _ := range found {
-				finds[i] = append(finds[i], k)
-			}
+	add := func(i int, found map[string]*AnyType) {
+		finds[i] = make([]string, 0, len(found))
+		for k, _ := range found {
+			finds[i] = append(finds[i], k)
+		}
+	}
+	for i, keys := range must.([]interface{}) {
+		if term, hasTerm := keys.(map[string]interface{})["term"]; hasTerm {
+			add(i, esi.term_query(term, items))
+		} else if terms, hasTerms := keys.(map[string]interface{})["terms"]; hasTerms {
+			add(i, esi.terms_query(terms, items))
 		} else {
 			finds[i] = []string{}
 		}
@@ -657,13 +684,17 @@ func (esi *MockIndex) bool_must_query(must interface{}, items map[string]*AnyTyp
 }
 func (esi *MockIndex) bool_should_query(should interface{}, items map[string]*AnyType) map[string]*AnyType {
 	finds := make([][]string, len(should.([]interface{})), len(should.([]interface{})))
-	for i, terms := range should.([]interface{}) {
-		if term, hasTerm := terms.(map[string]interface{})["term"]; hasTerm {
-			found := esi.terms_query(term, items)
-			finds[i] = make([]string, 0, len(found))
-			for k, _ := range found {
-				finds[i] = append(finds[i], k)
-			}
+	add := func(i int, found map[string]*AnyType) {
+		finds[i] = make([]string, 0, len(found))
+		for k, _ := range found {
+			finds[i] = append(finds[i], k)
+		}
+	}
+	for i, keys := range should.([]interface{}) {
+		if term, hasTerm := keys.(map[string]interface{})["term"]; hasTerm {
+			add(i, esi.term_query(term, items))
+		} else if terms, hasTerms := keys.(map[string]interface{})["terms"]; hasTerms {
+			add(i, esi.terms_query(terms, items))
 		} else {
 			finds[i] = []string{}
 		}
