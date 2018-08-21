@@ -15,6 +15,7 @@
 package elasticsearch
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,14 +28,17 @@ import (
 
 const percolateTypeName = ".percolate"
 
-type anyType struct {
-	id   string
-	s    map[string]interface{}
+type AnyType struct {
+	Id   string
+	S    map[string]interface{}
 	vars map[string]interface{}
 	raw  *json.RawMessage
 }
 
-func newAnyType(id string, i interface{}) (*anyType, error) {
+func newAnyType(id string, i interface{}) (*AnyType, error) {
+	if id == "" {
+		id = piazza.NewUuid().String()
+	}
 	dat, err := json.Marshal(i)
 	if err != nil {
 		return nil, err
@@ -47,19 +51,19 @@ func newAnyType(id string, i interface{}) (*anyType, error) {
 	if err = raw.UnmarshalJSON(dat); err != nil {
 		return nil, err
 	}
-	ret := new(anyType)
-	ret.s = s
+	ret := new(AnyType)
+	ret.S = s
 	if ret.vars, err = piazza.GetVarsFromStruct(s); err != nil {
 		return nil, err
 	}
 	ret.raw = raw
-	ret.id = id
+	ret.Id = id
 	return ret, nil
 }
 
 type MockIndexType struct {
 	// maps from id string to document body
-	items map[string]*anyType
+	items map[string]*AnyType
 
 	mapping interface{}
 }
@@ -195,7 +199,7 @@ func (esi *MockIndex) addType(typeName string, mapping string) error {
 
 	esi.types[typeName] = &MockIndexType{
 		mapping: obj,
-		items:   make(map[string]*anyType),
+		items:   make(map[string]*AnyType),
 	}
 
 	return nil
@@ -226,7 +230,7 @@ func (esi *MockIndex) PostData(typeName string, id string, obj interface{}) (*el
 	var typ *MockIndexType
 	if !ok {
 		typ = &MockIndexType{}
-		typ.items = make(map[string]*anyType)
+		typ.items = make(map[string]*AnyType)
 		esi.types[typeName] = typ
 	} else {
 		typ = esi.types[typeName]
@@ -441,10 +445,10 @@ func (esi *MockIndex) SearchByJSON(typ string, ijsn map[string]interface{}) (*el
 		return nil, err
 	}
 	jsn := map[string]interface{}{}
-	if err = json.Unmarshal(dat, &jsn); err != nil {
+	if err = piazza.UnmarshalNumber(bytes.NewReader(dat), &jsn); err != nil {
 		return nil, err
 	}
-	var ret []*anyType
+	var ret []*AnyType
 	var aggs elastic.Aggregations = nil
 	query, hasQuery := jsn["query"]
 	if hasQuery {
@@ -463,7 +467,8 @@ func (esi *MockIndex) SearchByJSON(typ string, ijsn map[string]interface{}) (*el
 
 	size := 10
 	if isize, ok := jsn["size"]; ok {
-		size = int(isize.(int64))
+		tmp, _ := isize.(json.Number).Int64()
+		size = int(tmp)
 	}
 	if len(ret) < size {
 		size = len(ret)
@@ -490,22 +495,22 @@ func (esi *MockIndex) DirectAccess(verb string, endpoint string, input interface
 	return fmt.Errorf("DirectAccess not supported")
 }
 
-func (esi *MockIndex) convertToSlice(any map[string]*anyType) []*anyType {
-	res := make([]*anyType, 0, len(any))
+func (esi *MockIndex) convertToSlice(any map[string]*AnyType) []*AnyType {
+	res := make([]*AnyType, 0, len(any))
 	for _, v := range any {
 		res = append(res, v)
 	}
 	return res
 }
-func (esi *MockIndex) convertToResult(any []*anyType, aggs elastic.Aggregations) *elastic.SearchResult {
+func (esi *MockIndex) convertToResult(any []*AnyType, aggs elastic.Aggregations) *elastic.SearchResult {
 	hits := make([]*elastic.SearchHit, 0, len(any))
 	for _, item := range any {
-		hits = append(hits, &elastic.SearchHit{Id: item.id, Source: item.raw})
+		hits = append(hits, &elastic.SearchHit{Id: item.Id, Source: item.raw})
 	}
 	return &elastic.SearchResult{Hits: &elastic.SearchHits{int64(len(hits)), nil, hits}, Aggregations: aggs}
 }
 
-func (esi *MockIndex) handle_aggs(aggs interface{}, items []*anyType) (elastic.Aggregations, error) {
+func (esi *MockIndex) handle_aggs(aggs interface{}, items []*AnyType) (elastic.Aggregations, error) {
 	if len(aggs.(map[string]interface{})) != 1 {
 		return nil, fmt.Errorf("Malformed agg query")
 	}
@@ -554,8 +559,8 @@ func (esi *MockIndex) handle_aggs(aggs interface{}, items []*anyType) (elastic.A
 	return res, nil
 }
 
-func (esi *MockIndex) query(query interface{}, items map[string]*anyType) ([]*anyType, error) {
-	var ret []*anyType
+func (esi *MockIndex) query(query interface{}, items map[string]*AnyType) ([]*AnyType, error) {
+	var ret []*AnyType
 	term, hasTerm := query.(map[string]interface{})["term"]
 	boool, hasBool := query.(map[string]interface{})["bool"]
 	if len(query.(map[string]interface{})) == 0 {
@@ -572,8 +577,8 @@ func (esi *MockIndex) query(query interface{}, items map[string]*anyType) ([]*an
 	return ret, nil
 }
 
-func (esi *MockIndex) terms_query(term interface{}, items map[string]*anyType) map[string]*anyType {
-	hits := map[string]*anyType{}
+func (esi *MockIndex) terms_query(term interface{}, items map[string]*AnyType) map[string]*AnyType {
+	hits := map[string]*AnyType{}
 	var key string
 	var value interface{}
 	for key, value = range term.(map[string]interface{}) {
@@ -588,11 +593,11 @@ func (esi *MockIndex) terms_query(term interface{}, items map[string]*anyType) m
 	}
 	return hits
 }
-func (esi *MockIndex) bool_query(boool interface{}, items map[string]*anyType) map[string]*anyType {
+func (esi *MockIndex) bool_query(boool interface{}, items map[string]*AnyType) map[string]*AnyType {
 	must, hasMust := boool.(map[string]interface{})["must"]
 	should, hasShould := boool.(map[string]interface{})["should"]
 	mustNot, hasMustNot := boool.(map[string]interface{})["must_not"]
-	var anyTypes map[string]*anyType
+	var anyTypes map[string]*AnyType
 	if hasMust {
 		anyTypes = esi.bool_must_query(must, items)
 	} else {
@@ -606,7 +611,7 @@ func (esi *MockIndex) bool_query(boool interface{}, items map[string]*anyType) m
 	}
 	return anyTypes
 }
-func (esi *MockIndex) bool_must_query(must interface{}, items map[string]*anyType) map[string]*anyType {
+func (esi *MockIndex) bool_must_query(must interface{}, items map[string]*AnyType) map[string]*AnyType {
 	finds := make([][]string, len(must.([]interface{})), len(must.([]interface{})))
 	for i, terms := range must.([]interface{}) {
 		if term, hasTerm := terms.(map[string]interface{})["term"]; hasTerm {
@@ -637,7 +642,7 @@ func (esi *MockIndex) bool_must_query(must interface{}, items map[string]*anyTyp
 		return res
 	}
 
-	res := map[string]*anyType{}
+	res := map[string]*AnyType{}
 	if len(finds) == 0 {
 		return res
 	}
@@ -650,7 +655,7 @@ func (esi *MockIndex) bool_must_query(must interface{}, items map[string]*anyTyp
 	}
 	return res
 }
-func (esi *MockIndex) bool_should_query(should interface{}, items map[string]*anyType) map[string]*anyType {
+func (esi *MockIndex) bool_should_query(should interface{}, items map[string]*AnyType) map[string]*AnyType {
 	finds := make([][]string, len(should.([]interface{})), len(should.([]interface{})))
 	for i, terms := range should.([]interface{}) {
 		if term, hasTerm := terms.(map[string]interface{})["term"]; hasTerm {
@@ -669,14 +674,14 @@ func (esi *MockIndex) bool_should_query(should interface{}, items map[string]*an
 			allKeys[k] = struct{}{}
 		}
 	}
-	res := map[string]*anyType{}
+	res := map[string]*AnyType{}
 	for k, _ := range allKeys {
 		res[k] = items[k]
 	}
 	return res
 }
-func (esi *MockIndex) bool_must_not_query(must_not interface{}, items map[string]*anyType) map[string]*anyType {
-	res := map[string]*anyType{}
+func (esi *MockIndex) bool_must_not_query(must_not interface{}, items map[string]*AnyType) map[string]*AnyType {
+	res := map[string]*AnyType{}
 	for k, v := range items {
 		res[k] = v
 	}
