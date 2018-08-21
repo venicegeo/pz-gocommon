@@ -280,8 +280,6 @@ func (suite *EsTester) Test03Operations() {
 	assert.Error(err)
 	_, err = esi.FilterByMatchQuery("", "", "", nil)
 	assert.Error(err)
-	_, err = esi.SearchByJSON("", map[string]interface{}{})
-	assert.Error(err)
 	_, err = esi.GetMapping("")
 	assert.Error(err)
 }
@@ -799,4 +797,19 @@ func (suite *EsTester) Test16SearchByJson() {
 	assert.NoError(err)
 	assert.Equal(hits.TotalHits(), int64(2))
 	assert.Len(hits.Hits.Hits, 2)
+
+	hits, err = esi.SearchByJSON(mapping, map[string]interface{}{
+		"aggs": map[string]interface{}{
+			"data": map[string]interface{}{
+				"terms": map[string]interface{}{
+					"field": "data",
+				},
+			},
+		},
+		"size": int64(0),
+	})
+	assert.NoError(err)
+	agg, ok := hits.Aggregations.Terms("data")
+	assert.True(ok)
+	assert.Len(agg.Buckets, 3)
 }

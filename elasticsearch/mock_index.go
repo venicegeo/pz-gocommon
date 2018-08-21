@@ -436,48 +436,33 @@ func (esi *MockIndex) FilterByTermQuery(typeName string, name string, value inte
 }
 
 func (esi *MockIndex) SearchByJSON(typ string, jsn map[string]interface{}) (*elastic.SearchResult, error) {
-	fmt.Println(jsn)
-	query, ok := jsn["query"]
-	if !ok {
-		return nil, fmt.Errorf("Must include a query in mock SearchByJSON")
-	}
-	convertToSlice := func(any map[string]*anyType) []*anyType {
-		res := make([]*anyType, 0, len(any))
-		for _, v := range any {
-			res = append(res, v)
-		}
-		return res
-	}
-	convertToResult := func(any []*anyType) *elastic.SearchResult {
-		hits := make([]*elastic.SearchHit, 0, len(any))
-		for _, item := range any {
-			hits = append(hits, &elastic.SearchHit{Id: item.id, Source: item.raw})
-		}
-		return &elastic.SearchResult{Hits: &elastic.SearchHits{int64(len(hits)), nil, hits}}
-	}
 	var ret []*anyType
-	term, hasTerm := query.(map[string]interface{})["term"]
-	boool, hasBool := query.(map[string]interface{})["bool"]
-	if len(query.(map[string]interface{})) == 0 {
-		ret = convertToSlice(esi.types[typ].items)
-	} else if hasTerm && hasBool {
-		return nil, fmt.Errorf("Cannot use both term and bool in mock SearchByJSON")
-	} else if hasTerm {
-		ret = convertToSlice(esi.terms_query(term, esi.types[typ].items))
-	} else if hasBool {
-		ret = convertToSlice(esi.bool_query(boool, esi.types[typ].items))
+	var err error
+	var aggs elastic.Aggregations = nil
+	query, hasQuery := jsn["query"]
+	if hasQuery {
+		if ret, err = esi.query(query, esi.types[typ].items); err != nil {
+			return nil, err
+		}
 	} else {
-		return nil, fmt.Errorf("Unsupported operation in mock SearchByJSON")
+		ret = esi.convertToSlice(esi.types[typ].items)
 	}
+	iaggs, hasAggs := jsn["aggs"]
+	if hasAggs {
+		if aggs, err = esi.handle_aggs(iaggs, ret); err != nil {
+			return nil, err
+		}
+	}
+
 	size := 10
 	if isize, ok := jsn["size"]; ok {
 		size = int(isize.(int64))
-		if len(ret) < size {
-			size = len(ret)
-		}
+	}
+	if len(ret) < size {
+		size = len(ret)
 	}
 	ret = ret[:size]
-	return convertToResult(ret), nil
+	return esi.convertToResult(ret, aggs), nil
 }
 
 func (esi *MockIndex) GetTypes() ([]string, error) {
@@ -496,6 +481,88 @@ func (esi *MockIndex) GetMapping(typ string) (interface{}, error) {
 
 func (esi *MockIndex) DirectAccess(verb string, endpoint string, input interface{}, output interface{}) error {
 	return fmt.Errorf("DirectAccess not supported")
+}
+
+func (esi *MockIndex) convertToSlice(any map[string]*anyType) []*anyType {
+	res := make([]*anyType, 0, len(any))
+	for _, v := range any {
+		res = append(res, v)
+	}
+	return res
+}
+func (esi *MockIndex) convertToResult(any []*anyType, aggs elastic.Aggregations) *elastic.SearchResult {
+	hits := make([]*elastic.SearchHit, 0, len(any))
+	for _, item := range any {
+		hits = append(hits, &elastic.SearchHit{Id: item.id, Source: item.raw})
+	}
+	return &elastic.SearchResult{Hits: &elastic.SearchHits{int64(len(hits)), nil, hits}, Aggregations: aggs}
+}
+
+func (esi *MockIndex) handle_aggs(aggs interface{}, items []*anyType) (elastic.Aggregations, error) {
+	if len(aggs.(map[string]interface{})) != 1 {
+		return nil, fmt.Errorf("Malformed agg query")
+	}
+	var aggName string
+	var agg map[string]interface{}
+	for k, v := range aggs.(map[string]interface{}) {
+		aggName = k
+		agg = v.(map[string]interface{})
+		break
+	}
+	if len(agg) != 1 {
+		return nil, fmt.Errorf("Cannot handle this agg query")
+	}
+	terms, ok := agg["terms"]
+	if !ok {
+		return nil, fmt.Errorf("Cannot handle this agg query")
+	}
+	ifield, ok := terms.(map[string]interface{})["field"]
+	if !ok {
+		return nil, fmt.Errorf("Agg terms needs a field")
+	}
+	field := ifield.(string)
+
+	keys := map[interface{}]int64{}
+	for _, i := range items {
+		if value, ok := i.vars[field]; ok {
+			if _, ok = keys[value]; !ok {
+				keys[value] = 1
+			} else {
+				keys[value]++
+			}
+		}
+	}
+	buckets := make([]*elastic.AggregationBucketKeyItem, 0, len(keys))
+	for k, i := range keys {
+		buckets = append(buckets, &elastic.AggregationBucketKeyItem{Key: k, DocCount: i})
+	}
+	dat, err := json.Marshal(elastic.AggregationBucketKeyItems{Buckets: buckets})
+	if err != nil {
+		return nil, err
+	}
+	jsn := json.RawMessage(dat)
+	res := elastic.Aggregations{
+		aggName: &jsn,
+	}
+	return res, nil
+}
+
+func (esi *MockIndex) query(query interface{}, items map[string]*anyType) ([]*anyType, error) {
+	var ret []*anyType
+	term, hasTerm := query.(map[string]interface{})["term"]
+	boool, hasBool := query.(map[string]interface{})["bool"]
+	if len(query.(map[string]interface{})) == 0 {
+		ret = esi.convertToSlice(items)
+	} else if hasTerm && hasBool {
+		return nil, fmt.Errorf("Cannot use both term and bool in mock SearchByJSON")
+	} else if hasTerm {
+		ret = esi.convertToSlice(esi.terms_query(term, items))
+	} else if hasBool {
+		ret = esi.convertToSlice(esi.bool_query(boool, items))
+	} else {
+		return nil, fmt.Errorf("Unsupported operation in mock SearchByJSON")
+	}
+	return ret, nil
 }
 
 func (esi *MockIndex) terms_query(term interface{}, items map[string]*anyType) map[string]*anyType {
@@ -602,7 +669,10 @@ func (esi *MockIndex) bool_should_query(should interface{}, items map[string]*an
 	return res
 }
 func (esi *MockIndex) bool_must_not_query(must_not interface{}, items map[string]*anyType) map[string]*anyType {
-	res := items
+	res := map[string]*anyType{}
+	for k, v := range items {
+		res[k] = v
+	}
 	musts := esi.bool_must_query(must_not, items)
 	for k, _ := range musts {
 		delete(res, k)
