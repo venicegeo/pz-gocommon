@@ -9,6 +9,8 @@ Before building and running the pz-gocommon project, please ensure that the foll
 - [Go](https://golang.org/doc/install) v1.7 or later
 - [Glide](https://glide.sh)
 
+For additional details on prerequisites, please refer to the Piazza Developer's Guide repository content for [Core Overview](https://github.com/venicegeo/pz-docs/blob/master/documents/devguide/02-pz-core.md) or [Piazza Job Common](https://github.com/venicegeo/pz-docs/blob/master/documents/devguide/16-job-common.md) sections. Also refer to the [prerequisites for using Piazza](https://github.com/venicegeo/pz-docs/blob/master/documents/devguide/03-jobs.md) section for additional details.
+
 ***
 ## Setup
 
